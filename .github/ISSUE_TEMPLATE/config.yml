@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 使用说明 / Usage guide
+    url: https://github.com/TheoYuuu/tsx/blob/main/Docs/USAGE.md
+    about: 翻译入口、快捷键、权限与服务说明 / Translation, shortcuts, permissions, and services
+  - name: 版本与下载 / Releases
+    url: https://github.com/TheoYuuu/tsx/releases
+    about: 首个公开安装包准备中 / The first public installer is in preparation

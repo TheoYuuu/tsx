@@ -1,0 +1,88 @@
+{
+  "LumaxTranslate/Resources/Assets.xcassets/AppBrand.imageset/AppBrand.png": [
+    "b45ef3bf5b53cb796a2b42f4bce513d7670f896b289540c295d29eed86826df7",
+    "eaa613e3f0a6161c9564891fc20ef8affd67b69e4786708aaa11e83e24b85e8b"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/AppBrand.imageset/AppBrand@2x.png": [
+    "088cadbe0925468bca38538129f072144f9f11799b08d173a585d89d08345f66",
+    "718a9ed719f225fd0be8eb133c8d81766927833aad73ff788364fef6447e6f1a"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/AppBrand.imageset/AppBrand@3x.png": [
+    "dc06ff2eb84ee459bf16fffa6c5412c3a6a1d9c04d0936f910f450c60e4b5bc3",
+    "fd153ddd46b052289da6213816a1e89d93a80c163bff03ad704767b2d918b43c"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/AppIcon.appiconset/icon_128x128.png": [
+    "afdcb37a30df73e2de08c395ff690c071d8085a68c32e445346281d9a9505ae0",
+    "b45ef3bf5b53cb796a2b42f4bce513d7670f896b289540c295d29eed86826df7",
+    "eaa613e3f0a6161c9564891fc20ef8affd67b69e4786708aaa11e83e24b85e8b"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/AppIcon.appiconset/icon_128x128@2x.png": [
+    "088cadbe0925468bca38538129f072144f9f11799b08d173a585d89d08345f66",
+    "4739fc3d30c36cf5bbaecd698dd532d48845355c9411a00648cf2ef5efcb7c99",
+    "718a9ed719f225fd0be8eb133c8d81766927833aad73ff788364fef6447e6f1a"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/AppIcon.appiconset/icon_16x16.png": [
+    "52cc45eb00ce901c80f3d8fbcef06e4b049f978f9cc1b79078bcfc34e105aedb",
+    "b13345f8c21693b4c0e0355a74c07cfaadbeec950f1c9901c6697983b807fe36",
+    "f2706096989e53b89b90d657a8830afd99d4484213bbc8fcb49260eddeca30c9"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/AppIcon.appiconset/icon_16x16@2x.png": [
+    "3e038299b2584fd83b14fda7393c01935fbce0cc54cc35df0daf0bb222d42ed4",
+    "8adc23b1007da40beb8794af53ae396a63dc97ad0f67d7d6eeac105265259952",
+    "994292a2048b0c5bfb94069e723a20189d462f0a1c5d348d31eb70e1a5526d49"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/AppIcon.appiconset/icon_256x256.png": [
+    "088cadbe0925468bca38538129f072144f9f11799b08d173a585d89d08345f66",
+    "4739fc3d30c36cf5bbaecd698dd532d48845355c9411a00648cf2ef5efcb7c99",
+    "718a9ed719f225fd0be8eb133c8d81766927833aad73ff788364fef6447e6f1a"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/AppIcon.appiconset/icon_256x256@2x.png": [
+    "4143c28c8e5debb9873514f097941b607c0b0a7a3306022e559efcae8a1d99de",
+    "7eee7e49c0e2f32670e245314ed4f3f45f228577a46b95360e957059e38c9623",
+    "dbe8e70913f0eeae3fe72a3fdd1361cf96826c30358d6e2eb1c5afc4c3c34c9e"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/AppIcon.appiconset/icon_32x32.png": [
+    "3e038299b2584fd83b14fda7393c01935fbce0cc54cc35df0daf0bb222d42ed4",
+    "8adc23b1007da40beb8794af53ae396a63dc97ad0f67d7d6eeac105265259952",
+    "994292a2048b0c5bfb94069e723a20189d462f0a1c5d348d31eb70e1a5526d49"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/AppIcon.appiconset/icon_32x32@2x.png": [
+    "8717cc61a33c3af02069363f465d522ed2ec255136576ea007b37a3654f2ab23",
+    "9a43c167d52f864b492e9cfc6e4e8c4d92984ff9e2aa8ca4eac9b6b847959c7e",
+    "e31f0bb287bcea13c3afd32df6593e5be891bf8f73ab5badc0cc8b705e8e7fe8"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/AppIcon.appiconset/icon_512x512.png": [
+    "4143c28c8e5debb9873514f097941b607c0b0a7a3306022e559efcae8a1d99de",
+    "7eee7e49c0e2f32670e245314ed4f3f45f228577a46b95360e957059e38c9623",
+    "dbe8e70913f0eeae3fe72a3fdd1361cf96826c30358d6e2eb1c5afc4c3c34c9e"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/AppIcon.appiconset/icon_512x512@2x.png": [
+    "3cb8f67fdeb37e90fe84fe538378e8973f7ee61436b9622e5be78e60762af759",
+    "4b8be3032296dc7b487043cfae3ddb3bb1a63789669f3185af5884bf7c343c95",
+    "a6a6c7affe098ac19489dac11df0157e49f124123c556f4f72b0a870bace922a"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/LumaxSignature.imageset/lumax-signature.png": [
+    "93f11f0af681c5c140a3b06039232631de3e3b21d9bdb57aa892a266d98c6259"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/LumaxSignature.imageset/lumax-signature@2x.png": [
+    "95f2c939340aa6f2bd7c8bd1d918ec402114f99f9108d87f63577dded1ad7008"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/LumaxSignature.imageset/lumax-signature@3x.png": [
+    "b3a218f221f91d06863395193a8c7f2866e8fa3663fb108e6a79fc9d22e54018"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon.png": [
+    "571dfe59a080bc257794620754ce13dcdc63a1f2ac3fd1fbbb127a340bd06530",
+    "aa58095db6fc4a91710fb0f930cb72085c56ff04aeec96e585f81d78290267d5"
+  ],
+  "LumaxTranslate/Resources/Assets.xcassets/MenuBarIcon.imageset/MenuBarIcon@2x.png": [
+    "366db847d408f2dd551665a82d69591c1e71dc901685b8ba589b280c205b1ae1",
+    "5815074efc2d8ee8d52968600f767a27360e076e61b765f7657ce447ee65b5c5"
+  ],
+  "Tools/Assets/AppIcon.png": [
+    "4042e0ad08966357c064b3a69ad9e477207fd96625c10b522c38666796357931",
+    "9addf6b5b44ec07c15c2e880312b53b2eea1d2cc77a61040a9e8cc6081f919c6"
+  ],
+  "assets/app-icon.png": [
+    "088cadbe0925468bca38538129f072144f9f11799b08d173a585d89d08345f66"
+  ]
+}

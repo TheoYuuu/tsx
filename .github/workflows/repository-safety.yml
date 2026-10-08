@@ -1,0 +1,33 @@
+name: Repository safety
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  repository-safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Prepare checksum-verified secret scanner
+        run: python3 Tools/Repository/bootstrap_gitleaks.py
+      - name: Exercise repository safety checks
+        run: python3 -m unittest discover -s Tools/Repository -p 'test_*.py'
+      - name: Check every reachable public commit and file version
+        if: ${{ !github.event.repository.private }}
+        run: |
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            Scripts/check-public-repo.sh history "$GITHUB_REF"
+          else
+            Scripts/check-public-repo.sh history HEAD
+          fi
+      - name: Check private development history for secrets
+        if: ${{ github.event.repository.private }}
+        run: .build/RepositoryTools/gitleaks git . --config .gitleaks.toml --redact --no-banner --log-opts="--all"

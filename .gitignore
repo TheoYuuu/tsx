@@ -1,0 +1,44 @@
+.DS_Store
+.build/
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcresult
+.env
+.env.*
+!.env.example
+*.p12
+*.mobileprovision
+*.provisionprofile
+Config/Local.xcconfig
+
+# Local signing and notarization keys must never be published.
+*.p8
+*.pem
+*.key
+__pycache__/
+
+# Private development archives and exported credentials are never public source.
+/Design/
+*.pfx
+*.keychain
+*.keychain-db
+auth.json
+credentials.json
+credentials.toml
+*.app/
+*.dmg
+*.xcarchive/
+*.zip
+*.log
+# Internal historical planning lives outside this checkout.
+Docs/*
+!Docs/Architecture.md
+!Docs/BUILDING.md
+!Docs/Distribution.md
+!Docs/PRIVACY.md
+!Docs/RELEASING.md
+!Docs/USAGE.md
+!Docs/Validation.md
+!Docs/PUBLIC_REPOSITORY.md

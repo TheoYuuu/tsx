@@ -1,0 +1,52 @@
+name: 问题反馈 / Bug report
+description: 报告 TSX 的使用问题 / Report a problem with TSX
+title: "[Bug] "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        中英文均可。请先搜索已有问题，使用不含私人内容的样例。
+        Chinese and English are welcome. Search existing reports and use examples without private information.
+        请勿提交 API Key、登录令牌或私人截图。Do not include API keys, login tokens, or private screenshots.
+  - type: input
+    id: version
+    attributes:
+      label: TSX 版本 / TSX version
+      description: 见「关于 TSX」或你收到的试用版本说明 / Check About TSX or your trial build information.
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS 版本 / macOS version
+    validations:
+      required: true
+  - type: dropdown
+    id: chip
+    attributes:
+      label: 芯片 / Chip
+      options:
+        - Apple silicon
+        - Intel
+        - 不确定 / Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤 / Steps to reproduce
+      description: 如涉及取词，请注明来源应用；如涉及服务，请只提供服务名称，不要提供密钥或私人地址。 / Include the source app or service name when relevant, without credentials or private endpoints.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: 预期与实际结果 / Expected and actual result
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: 补充信息 / Additional context
+      description: 可附不含私人信息的示例或截图，无需上传完整日志。 / Optional non-sensitive examples or screenshots; full logs are not needed.

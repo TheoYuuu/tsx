@@ -1,0 +1,3 @@
+"CFBundleName" = "TSX";
+"CFBundleDisplayName" = "TSX";
+"NSScreenCaptureUsageDescription" = "Capture only your selected area and recognize text on your Mac. The recognized text is translated by your selected service.";

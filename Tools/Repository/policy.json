@@ -1,0 +1,158 @@
+{
+  "root_files": [
+    ".gitignore",
+    ".gitleaks.toml",
+    "AGENTS.md",
+    "LICENSE",
+    "README.md",
+    "README.en.md",
+    "THIRD_PARTY_NOTICES.md",
+    "project.yml"
+  ],
+  "public_docs": [
+    "Architecture.md",
+    "BUILDING.md",
+    "Distribution.md",
+    "PRIVACY.md",
+    "RELEASING.md",
+    "USAGE.md",
+    "Validation.md",
+    "PUBLIC_REPOSITORY.md"
+  ],
+  "source_roots": [
+    "Config",
+    "LumaxTranslate",
+    "LumaxTranslateTests",
+    "Runtime",
+    "Scripts",
+    "Tools"
+  ],
+  "text_extensions": [
+    ".md",
+    ".swift",
+    ".py",
+    ".sh",
+    ".cjs",
+    ".rs",
+    ".toml",
+    ".lock",
+    ".json",
+    ".plist",
+    ".yml",
+    ".yaml",
+    ".txt",
+    ".strings",
+    ".entitlements",
+    ".svg"
+  ],
+  "png_paths": [
+    "Tools/Assets/AppIcon.png",
+    "assets/app-icon.png"
+  ],
+  "png_asset_sets": [
+    "AppBrand.imageset",
+    "AppIcon.appiconset",
+    "LumaxSignature.imageset",
+    "MenuBarIcon.imageset"
+  ],
+  "max_file_bytes": 2097152,
+  "home_path_exceptions": {
+    "Runtime/CodexHelper/src/connection.rs": [
+      "\u002fUsers\u002fconstructed\u002f.codex\u002fconfig.toml"
+    ]
+  },
+  "source_directories": [
+    "Config",
+    "Config/Licenses",
+    "LumaxTranslate/App",
+    "LumaxTranslate/Resources",
+    "LumaxTranslate/Resources/Assets.xcassets",
+    "LumaxTranslate/Resources/Assets.xcassets/AppBrand.imageset",
+    "LumaxTranslate/Resources/Assets.xcassets/AppIcon.appiconset",
+    "LumaxTranslate/Resources/Assets.xcassets/LumaxSignature.imageset",
+    "LumaxTranslate/Resources/Assets.xcassets/MenuBarIcon.imageset",
+    "LumaxTranslate/Resources/Assets.xcassets/ProviderAzure.imageset",
+    "LumaxTranslate/Resources/Assets.xcassets/ProviderClaude.imageset",
+    "LumaxTranslate/Resources/Assets.xcassets/ProviderDeepL.imageset",
+    "LumaxTranslate/Resources/Assets.xcassets/ProviderDeepSeek.imageset",
+    "LumaxTranslate/Resources/Assets.xcassets/ProviderGoogleCloud.imageset",
+    "LumaxTranslate/Resources/Assets.xcassets/ProviderOllama.imageset",
+    "LumaxTranslate/Resources/Assets.xcassets/ProviderOpenAI.imageset",
+    "LumaxTranslate/Resources/Assets.xcassets/ProviderQwen.imageset",
+    "LumaxTranslate/Resources/Assets.xcassets/ProviderTencentCloud.imageset",
+    "LumaxTranslate/Resources/en.lproj",
+    "LumaxTranslate/Resources/zh-Hans.lproj",
+    "LumaxTranslate/Settings",
+    "LumaxTranslate/Support",
+    "LumaxTranslate/System",
+    "LumaxTranslate/System/Capture",
+    "LumaxTranslate/System/OCR",
+    "LumaxTranslate/System/Selection",
+    "LumaxTranslate/System/Shortcuts",
+    "LumaxTranslate/System/Updates",
+    "LumaxTranslate/Translation",
+    "LumaxTranslate/Translation/Services",
+    "LumaxTranslate/Translation/Services/Codex",
+    "LumaxTranslate/UI/Design",
+    "LumaxTranslate/UI/Settings",
+    "LumaxTranslate/UI/Translation",
+    "LumaxTranslate/UI/Welcome",
+    "LumaxTranslate/Windows",
+    "LumaxTranslateTests",
+    "Runtime/CodexHelper",
+    "Runtime/CodexHelper/src",
+    "Scripts",
+    "Tools/Assets",
+    "Tools/Assets/ProviderLogos",
+    "Tools/Assets/ProviderLogos/Source",
+    "Tools/CodexRuntime",
+    "Tools/Probes",
+    "Tools/QA",
+    "Tools/QA/CodexAuthProbe",
+    "Tools/QA/CodexAuthProbe/fixtures",
+    "Tools/QA/CodexAuthProbe/native",
+    "Tools/QA/CodexAuthProbe/src",
+    "Tools/QA/CodexTranslationProbe",
+    "Tools/QA/CodexTranslationProbe/src",
+    "Tools/Release",
+    "Tools/Repository"
+  ],
+  "source_documents": [
+    "Runtime/CodexHelper/README.md",
+    "Tools/Assets/ProviderLogos/README.md",
+    "Tools/Assets/README.md",
+    "Tools/CodexRuntime/PACKAGING.md",
+    "Tools/QA/CodexAuthProbe/PROTOCOL.md",
+    "Tools/QA/CodexAuthProbe/README.md",
+    "Tools/QA/CodexAuthProbe/fixtures/CONTRACT.md",
+    "Tools/QA/CodexTranslationProbe/README.md",
+    "Tools/QA/README.md"
+  ],
+  "export": {
+    "target_owned_files": [
+      ".gitignore",
+      ".gitleaks.toml",
+      "AGENTS.md",
+      "README.md",
+      "README.en.md",
+      "Scripts/check-public-repo.sh",
+      ".github/workflows/repository-safety.yml",
+      "Docs/Architecture.md",
+      "Docs/BUILDING.md",
+      "Docs/Distribution.md",
+      "Docs/PRIVACY.md",
+      "Docs/RELEASING.md",
+      "Docs/USAGE.md",
+      "Docs/Validation.md",
+      "Docs/PUBLIC_REPOSITORY.md"
+    ],
+    "target_owned_directories": [
+      ".githooks/",
+      "Tools/Repository/"
+    ],
+    "excluded_source_directories": [
+      "Private/",
+      "Design/"
+    ]
+  }
+}

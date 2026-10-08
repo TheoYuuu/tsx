@@ -1,0 +1,777 @@
+"A global shortcut is already in use. You can still translate from the app menu." = "A global shortcut is already in use. You can still translate from the app menu.";
+"A little clarity." = "A little clarity.";
+"About TSX" = "About TSX";
+"Allow Accessibility" = "Allow Accessibility";
+"Allow Accessibility so TSX can read selected text when you use the shortcut. Your text isn’t collected in the background." = "Allow Accessibility so TSX can read selected text when you use the shortcut. Your text isn’t collected in the background.";
+"Apple may ask to download language files. Keep this window open." = "Apple may ask to download language files. Keep this window open.";
+"Cancel" = "Cancel";
+"Clear" = "Clear";
+"Close" = "Close";
+"Close · Esc" = "Close · Esc";
+"Copy" = "Copy";
+"Copy original" = "Copy original";
+"Copy translation" = "Copy translation";
+"Cut" = "Cut";
+"Detect language" = "Detect language";
+"Edit" = "Edit";
+"File" = "File";
+"Hide TSX" = "Hide TSX";
+"Input translation" = "Input translation";
+"No selected text" = "No selected text";
+"No text is selected. Select some text and try again, or type to translate." = "No text is selected. Select some text and try again, or type to translate.";
+"On-device translation" = "On-device translation";
+"Open in main window" = "Open in main window";
+"Original" = "Original";
+"Original text" = "Original text";
+"Paste" = "Paste";
+"Preparing language files…" = "Preparing language files…";
+"Protected fields can’t be read. Use input translation for other text." = "Protected fields can’t be read. Use input translation for other text.";
+"Quit TSX" = "Quit TSX";
+"Redo" = "Redo";
+"Select All" = "Select All";
+"Select text in another app, then use the shortcut. You can also type to translate." = "Select text in another app, then use the shortcut. You can also type to translate.";
+"Select. Translate. Carry on." = "Select. Translate. Carry on.";
+"Source language" = "Source language";
+"Target language" = "Target language";
+"The previous selection is still finishing. Try again in a moment." = "The previous selection is still finishing. Try again in a moment.";
+"The selection or clipboard changed. Select your text and try again." = "The selection or clipboard changed. Select your text and try again.";
+"This app didn’t provide selected text. Try again, or use input translation." = "This app didn’t provide selected text. Try again, or use input translation.";
+"Release the shortcut keys, then try again." = "Release the shortcut keys, then try again.";
+"This app took too long to respond. Try again, or use input translation." = "This app took too long to respond. Try again, or use input translation.";
+"This app didn’t respond to Copy. Select text and try again, or use input translation." = "This app didn’t respond to Copy. Select text and try again, or use input translation.";
+"Your clipboard couldn’t be backed up, so nothing was copied. Use input translation or try again after your next copy." = "Your clipboard couldn’t be backed up, so nothing was copied. Use input translation or try again after your next copy.";
+"Your previous clipboard couldn’t be restored. Copy the content you want to keep again." = "Your previous clipboard couldn’t be restored. Copy the content you want to keep again.";
+"This language pair isn’t available. Choose another language." = "This language pair isn’t available. Choose another language.";
+"This selection is too long. Try a smaller passage." = "This selection is too long. Try a smaller passage.";
+"This shortcut could not be changed. The previous shortcut is still active." = "This shortcut could not be changed. The previous shortcut is still active.";
+"This shortcut could not be registered. Try another combination." = "This shortcut could not be registered. Try another combination.";
+"This shortcut is already in use. Choose another combination." = "This shortcut is already in use. Choose another combination.";
+"Translate" = "Translate";
+"Translate selection" = "Translate selection";
+"Translate your selection" = "Translate your selection";
+"Translating…" = "Translating…";
+"Translation" = "Translation";
+"Translation cancelled" = "Translation cancelled";
+"Translation couldn’t finish. Check the language pair and your connection if language files are needed, then try again." = "Translation couldn’t finish. Check the language pair and your connection if language files are needed, then try again.";
+"Try again" = "Try again";
+"Type or paste text…" = "Type or paste text…";
+"Type to translate" = "Type to translate";
+"Undo" = "Undo";
+"Use a shortcut with Command or Control and a regular key." = "Use a shortcut with Command or Control and a regular key.";
+"Use input translation" = "Use input translation";
+"Your translation appears here" = "Your translation appears here";
+"This text is too long. Try a smaller passage." = "This text is too long. Try a smaller passage.";
+"Updating translation…" = "Updating translation…";
+"Finish entering your text to translate" = "Finish entering your text to translate";
+"The text is already in the target language. Choose a different target to translate." = "The text is already in the target language. Choose a different target to translate.";
+"No translatable text was found" = "No translatable text was found";
+"The source language isn’t supported. Choose another source language." = "The source language isn’t supported. Choose another source language.";
+"The target language isn’t supported. Choose another target language." = "The target language isn’t supported. Choose another target language.";
+"The source language is unclear. Choose it manually and try again." = "The source language is unclear. Choose it manually and try again.";
+"A network connection is needed to prepare language files. Check your connection and try again." = "A network connection is needed to prepare language files. Check your connection and try again.";
+"Language preparation didn’t finish. Try again to check or download the required files." = "Language preparation didn’t finish. Try again to check or download the required files.";
+"Translation couldn’t finish. Please try again." = "Translation couldn’t finish. Please try again.";
+"Swap languages" = "Swap languages";
+"Screenshot Translation" = "Screenshot Translation";
+"Screenshot" = "Screenshot";
+"Translate a screenshot" = "Translate a screenshot";
+"Allow Screen Recording" = "Allow Screen Recording";
+"Allow Screen Recording to recognize text in an area you select. Screenshots stay in memory on your Mac. After enabling access, start Screenshot Translation again." = "Allow Screen Recording to recognize text in an area you select. Screenshots stay in memory on your Mac. After enabling access, start Screenshot Translation again.";
+"Recognizing text…" = "Recognizing text…";
+"Text recognition stays on your Mac. The first scan may take longer." = "Text recognition stays on your Mac. The first scan may take longer.";
+"Drag to select an area · Esc to cancel" = "Drag to select an area · Esc to cancel";
+"No text was found in this area. Select a clearer or larger passage." = "No text was found in this area. Select a clearer or larger passage.";
+"This area contains too much text. Select a smaller passage." = "This area contains too much text. Select a smaller passage.";
+"Text recognition couldn’t finish. Try selecting the area again." = "Text recognition couldn’t finish. Try selecting the area again.";
+"Screen Recording access is required. Enable it in System Settings and try again." = "Screen Recording access is required. Enable it in System Settings and try again.";
+"This area is too large to capture. Select a smaller area." = "This area is too large to capture. Select a smaller area.";
+"Select an area that includes part of a screen." = "Select an area that includes part of a screen.";
+"No display is available. Connect a display and try again." = "No display is available. Connect a display and try again.";
+"A capture is still finishing. Try again shortly." = "A capture is still finishing. Try again shortly.";
+"The screenshot couldn’t be captured. Try selecting the area again." = "The screenshot couldn’t be captured. Try selecting the area again.";
+"Displays changed. Start a new screenshot." = "Displays changed. Start a new screenshot.";
+/* Settings */
+"Translation preferences" = "Translation preferences";
+"Settings" = "Settings";
+"Settings…" = "Settings…";
+"General" = "General";
+"Shortcuts" = "Shortcuts";
+"Privacy" = "Privacy";
+"Default target language" = "Default target language";
+"Used for new selection and screenshot translations, and when the input workspace is empty." = "Used for new selection and screenshot translations, and when the input workspace is empty.";
+"This language is unavailable on this Mac. Choose another target language." = "This language is unavailable on this Mac. Choose another target language.";
+"Appearance" = "Appearance";
+"Follow System" = "Follow System";
+"Light" = "Light";
+"Dark" = "Dark";
+"Interface" = "Interface";
+"Interface language follows your macOS app language setting." = "Interface language follows your macOS app language setting.";
+"Click a shortcut, then press a new combination. Esc cancels recording." = "Click a shortcut, then press a new combination. Esc cancels recording.";
+"Disable" = "Disable";
+"Reset" = "Reset";
+"Restore this shortcut’s default combination" = "Restore this shortcut’s default combination";
+"Include Command or Control. Common editing and system shortcuts are reserved." = "Include Command or Control. Common editing and system shortcuts are reserved.";
+"Accessibility" = "Accessibility";
+"Screen Recording" = "Screen Recording";
+"Enabled" = "Enabled";
+"Not enabled" = "Not enabled";
+"Open System Settings" = "Open System Settings";
+"Translation text and screenshots aren’t saved. Only your preferences stay on this Mac." = "Translation text and screenshots aren’t saved. Only your preferences stay on this Mac.";
+"Some shortcuts are unavailable. Change them in Settings." = "Some shortcuts are unavailable. Change them in Settings.";
+"Press shortcut…" = "Press shortcut…";
+"Disabled" = "Disabled";
+"Click to record a shortcut. Press Escape to cancel." = "Click to record a shortcut. Press Escape to cancel.";
+"This shortcut is reserved for editing or macOS. Choose another combination." = "This shortcut is reserved for editing or macOS. Choose another combination.";
+
+"Make TSX feel at home." = "Make TSX feel at home.";
+
+"Permissions serve only the actions you start." = "Permissions serve only the actions you start.";
+
+"Interface language" = "Interface language";
+"Choose the language used in TSX. Changes apply immediately." = "Choose the language used in TSX. Changes apply immediately.";
+
+"Material" = "Material";
+
+"Pure Light" = "Pure Light";
+
+"Liquid Glass" = "Liquid Glass";
+
+"Apple Translation" = "Apple Translation";
+
+"Translate now" = "Translate now";
+
+"Already in the target language" = "Already in the target language";
+
+"Unable to complete translation" = "Unable to complete translation";
+
+"Translation, native to Mac" = "Translation, native to Mac";
+
+"Drag to select an area" = "Drag to select an area";
+
+"Translating this passage on your Mac." = "Translating this passage on your Mac.";
+
+"Select an area that contains clear text and try again." = "Select an area that contains clear text and try again.";
+
+"You can start again whenever you’re ready." = "You can start again whenever you’re ready.";
+
+"Content has changed" = "Content has changed";
+
+"This text is protected" = "This text is protected";
+
+"Couldn’t get selected text" = "Couldn’t get selected text";
+
+/* Shortcut settings redesign */
+"Add Option, Control or Command to a regular key." = "Add Option, Control or Command to a regular key.";
+"Open translation window" = "Open translation window";
+"Press a combination" = "Press a combination";
+"Click a combination to change it. Esc cancels." = "Click a combination to change it. Esc cancels.";
+"Turning off a shortcut keeps its combination." = "Turning off a shortcut keeps its combination.";
+"Waiting for keys · Esc cancels without changing the shortcut." = "Waiting for keys · Esc cancels without changing the shortcut.";
+"If a combination is unavailable, your previous setting is kept." = "If a combination is unavailable, your previous setting is kept.";
+"Disabled · combination kept" = "Disabled · combination kept";
+"Enable or pause this shortcut" = "Enable or pause this shortcut";
+"Reset %@ shortcut" = "Reset %@ shortcut";
+"Translation text and screenshots aren’t saved." = "Translation text and screenshots aren’t saved.";
+"Only your preferences stay on this Mac." = "Only your preferences stay on this Mac.";
+"Read the selection and show its translation" = "Read the selection and show its translation";
+"Open the workspace to continue writing" = "Open the workspace to continue writing";
+"Capture an area to recognize and translate" = "Capture an area to recognize and translate";
+"Previous shortcut kept: %@." = "Previous shortcut kept: %@.";
+
+/* Translation services */
+"Translation services" = "Translation services";
+"Translation service" = "Translation service";
+"Choose where your text is translated." = "Choose where your text is translated.";
+"OpenAI-compatible service" = "OpenAI-compatible service";
+"Edit %@" = "Edit %@";
+"Delete %@" = "Delete %@";
+"Add service" = "Add service";
+"Default" = "Default";
+"Use" = "Use";
+"Use %@ for translation" = "Use %@ for translation";
+"Add translation service" = "Add translation service";
+"Edit translation service" = "Edit translation service";
+"Service name" = "Service name";
+"API base URL" = "API base URL";
+"Model" = "Model";
+"API key" = "API key";
+"API key (optional)" = "API key (optional)";
+"Enter API key" = "Enter API key";
+"Leave blank to keep the saved key" = "Leave blank to keep the saved key";
+"Remove saved API key" = "Remove saved API key";
+"Advanced" = "Advanced";
+"Translate automatically after typing pauses" = "Translate automatically after typing pauses";
+"Automatic translation can send repeated requests and incur additional charges." = "Automatic translation can send repeated requests and incur additional charges.";
+"Additional translation instructions" = "Additional translation instructions";
+"Restore default instructions" = "Restore default instructions";
+"Requests go to %@." = "Requests go to %@.";
+"The configured service receives translation text and any API key you provide. A local address can also use cloud models; check your model’s settings." = "The configured service receives translation text and any API key you provide. A local address can also use cloud models; check your model’s settings.";
+"Using this service sends translation text and your API key to this address. Requests use your provider account and may incur charges." = "Using this service sends translation text and your API key to this address. Requests use your provider account and may incur charges.";
+"Use as the default translation service" = "Use as the default translation service";
+"Stop test" = "Stop test";
+"Test translation" = "Test translation";
+"Save service" = "Save service";
+"The test sends only this public sample: “A clear sentence is easy to understand.” (English → Simplified Chinese)" = "The test sends only this public sample: “A clear sentence is easy to understand.” (English → Simplified Chinese)";
+"Receiving test translation…" = "Receiving test translation…";
+"Test completed in %.1f s" = "Test completed in %.1f s";
+"the configured service" = "the configured service";
+"Test cancelled" = "Test cancelled";
+"Couldn’t update translation services. Please try again." = "Couldn’t update translation services. Please try again.";
+"Choose the service for your next translation" = "Choose the service for your next translation";
+"TSX does not save translation text or screenshots." = "TSX does not save translation text or screenshots.";
+"Service keys stay in Keychain. External services receive the text you choose to translate and apply their own data policies." = "Service keys stay in Keychain. External services receive the text you choose to translate and apply their own data policies.";
+"Waiting for your selected translation service." = "Waiting for your selected translation service.";
+"Unable to select this service. Check its settings." = "Unable to select this service. Check its settings.";
+"Unable to read this service’s API key. Open Translation services to update it." = "Unable to read this service’s API key. Open Translation services to update it.";
+"The translation service changed. Translate again to use the selected service." = "The translation service changed. Translate again to use the selected service.";
+"Enter a service name of 1–120 characters." = "Enter a service name of 1–120 characters.";
+"Enter a model identifier without spaces, up to 256 characters." = "Enter a model identifier without spaces, up to 256 characters.";
+"Enter an API base URL without a username, password, query, or fragment." = "Enter an API base URL without a username, password, query, or fragment.";
+"Remote services require HTTPS. HTTP is allowed only for a loopback address." = "Remote services require HTTPS. HTTP is allowed only for a loopback address.";
+"Additional translation instructions must be no longer than 8,000 characters." = "Additional translation instructions must be no longer than 8,000 characters.";
+"Enter an API key for this service." = "Enter an API key for this service.";
+"Enter an API key without spaces or control characters." = "Enter an API key without spaces or control characters.";
+"The service address changed. Re-enter the API key for this address." = "The service address changed. Re-enter the API key for this address.";
+"This translation service is no longer available. Select another service." = "This translation service is no longer available. Select another service.";
+"The API key could not be accessed in Keychain. Unlock Keychain or enter the key again." = "The API key could not be accessed in Keychain. Unlock Keychain or enter the key again.";
+"The translation service could not be saved. Try again." = "The translation service could not be saved. Try again.";
+"translationService.error.missingKey" = "Enter an API key for this service.";
+"translationService.error.invalidKey" = "The API key is invalid or has expired. Check it in Translation services.";
+"translationService.error.forbidden" = "Your account cannot use this service or model. Check your provider’s access settings.";
+"translationService.error.quotaExceeded" = "Your account has insufficient balance or available quota. Check your provider account.";
+"translationService.error.rateLimited" = "The service received too many requests. Wait a moment and try again.";
+"translationService.error.modelUnavailable" = "The model or API endpoint is unavailable. Check the model and API base URL.";
+"translationService.error.invalidRequest" = "The service could not accept this request. Check the model and service settings.";
+"translationService.error.timedOut" = "The translation request timed out. Try again when the service is available.";
+"translationService.error.offline" = "No network connection is available. Check your connection and try again.";
+"translationService.error.connectionFailed" = "Couldn’t connect to the translation service. Check the address and connection.";
+"translationService.error.serviceUnavailable" = "The translation service is temporarily unavailable. Try again later.";
+"translationService.error.redirected" = "The service redirected this request. Check the API base URL; no credentials were forwarded.";
+"translationService.error.invalidResponse" = "The service returned an unsupported or empty response. Check the model and API compatibility.";
+"translationService.error.incompleteResponse" = "The service did not finish the translation. Try a shorter passage or another model.";
+"translationService.error.refused" = "The service declined to translate this text. Try another service.";
+"translationService.error.responseTooLarge" = "The service returned too much data. Try a shorter passage or another model.";
+"translationService.error.inputTooLarge" = "This text exceeds the service’s limit. Try a smaller passage.";
+
+/* Dedicated translation services */
+"DeepL API plan" = "DeepL API plan";
+"Paid API" = "Paid API";
+"This language is unavailable for the selected service. Choose another target language." = "This language is unavailable for the selected service. Choose another target language.";
+"translationService.error.authenticationFailed" = "The provider could not authenticate this request. Check the API key, account permissions, and service address.";
+"Choose the API plan matching your DeepL key. Changing the address requires entering the key again." = "Choose the API plan matching your DeepL key. Changing the address requires entering the key again.";
+"Azure resource region" = "Azure resource region";
+"Leave the region blank for a global resource. Regional and multi-service resources require their Azure region, such as eastus." = "Leave the region blank for a global resource. Regional and multi-service resources require their Azure region, such as eastus.";
+"Enter the API base path without the translate operation or query parameters." = "Enter the API base path without the translate operation or query parameters.";
+"For an Azure custom resource host, you can use its root address or its translation API base path." = "For an Azure custom resource host, you can use its root address or its translation API base path.";
+"Enter the Azure resource region, such as eastus, using only letters and numbers. Leave it blank for a global resource." = "Enter the Azure resource region, such as eastus, using only letters and numbers. Leave it blank for a global resource.";
+"translationService.error.unsupportedLanguage" = "This language or language pair is not supported by the selected service. Choose another language or service.";
+
+/* Native model and dedicated cloud services */
+"Beijing" = "Beijing";
+"Singapore" = "Singapore";
+"This Qwen-MT connection currently supports qwen-mt-flash. Use an OpenAI-compatible connection for general Qwen models." = "This Qwen-MT connection currently supports qwen-mt-flash. Use an OpenAI-compatible connection for general Qwen models.";
+"Choose an output limit from 1 to 131,072 tokens that your Claude model supports." = "Choose an output limit from 1 to 131,072 tokens that your Claude model supports.";
+"Use an Anthropic API key for one workspace. Multi-workspace keys are not supported by this connection." = "Use an Anthropic API key for one workspace. Multi-workspace keys are not supported by this connection.";
+"Uses Qwen-MT Flash and returns the complete translation. Choose the region matching your API key; a workspace base URL is also supported." = "Uses Qwen-MT Flash and returns the complete translation. Choose the region matching your API key; a workspace base URL is also supported.";
+"Requires Google Cloud Translation Basic to be enabled in your project and a project API key." = "Requires Google Cloud Translation Basic to be enabled in your project and a project API key.";
+"Translation API URL" = "Translation API URL";
+"Enter the complete Basic v2 translation URL, without query parameters." = "Enter the complete Basic v2 translation URL, without query parameters.";
+"Maximum response tokens" = "Maximum response tokens";
+"Choose a limit supported by your model. A truncated translation is reported as incomplete and is never continued automatically." = "Choose a limit supported by your model. A truncated translation is reported as incomplete and is never continued automatically.";
+
+// Tencent TokenHub translation
+"Guangzhou" = "Guangzhou";
+"This Tencent translation connection currently supports hy-mt2-plus." = "This Tencent translation connection currently supports hy-mt2-plus.";
+"Uses HY-MT2 Plus through Tencent Cloud China's TokenHub. Choose the region matching your key. International-site accounts use different endpoints." = "Uses HY-MT2 Plus through Tencent Cloud China's TokenHub. Choose the region matching your key. International-site accounts use different endpoints.";
+"Best for short passages. Long input or incomplete output is reported as an error; passages are never split or continued automatically." = "Best for short passages. Long input or incomplete output is reported as an error; passages are never split or continued automatically.";
+
+// Codex account integration
+"Codex / ChatGPT (Experimental)" = "Codex / ChatGPT (Experimental)";
+"Codex / ChatGPT" = "Codex / ChatGPT";
+"Experimental. Account eligibility and usage limits are determined by OpenAI." = "Experimental. Account eligibility and usage limits are determined by OpenAI.";
+"TSX signs in separately and does not read the account used by the Codex app." = "TSX signs in separately and does not read the account used by the Codex app.";
+"Text you choose to translate is sent to OpenAI. Saving this service does not translate text or change your default service." = "Text you choose to translate is sent to OpenAI. Saving this service does not translate text or change your default service.";
+"Back to services" = "Back to services";
+"ChatGPT account" = "ChatGPT account";
+"Stopping the account request…" = "Stopping the account request…";
+"Finishing sign-in…" = "Finishing sign-in…";
+"Sign-in is finishing. Closing this page may still leave you signed in." = "Sign-in is finishing. Closing this page may still leave you signed in.";
+"Open the official OpenAI sign-in page and enter this code." = "Open the official OpenAI sign-in page and enter this code.";
+"Device code" = "Device code";
+"Code copied" = "Code copied";
+"Copy code" = "Copy code";
+"Open OpenAI sign-in" = "Open OpenAI sign-in";
+"Waiting for you to finish in the browser…" = "Waiting for you to finish in the browser…";
+"Preparing sign-in…" = "Preparing sign-in…";
+"Cancel sign-in" = "Cancel sign-in";
+"Sign-in status is not confirmed." = "Sign-in status is not confirmed.";
+"Check sign-in status" = "Check sign-in status";
+"Not signed in" = "Not signed in";
+"Sign in with ChatGPT" = "Sign in with ChatGPT";
+"Signed in with ChatGPT" = "Signed in with ChatGPT";
+"Plan: %@" = "Plan: %@";
+"One ChatGPT account is shared by all Codex services in TSX. Signing out stops their current requests." = "One ChatGPT account is shared by all Codex services in TSX. Signing out stops their current requests.";
+"Sign out of ChatGPT" = "Sign out of ChatGPT";
+"Signing out removes the account from TSX. Ending the OpenAI session cannot be confirmed." = "Signing out removes the account from TSX. Ending the OpenAI session cannot be confirmed.";
+"Refresh models" = "Refresh models";
+"Choose a model" = "Choose a model";
+"Automatic translation can send repeated requests and use more of your account’s allowance." = "Automatic translation can send repeated requests and use more of your account’s allowance.";
+"Checking sign-in status…" = "Checking sign-in status…";
+"Loading available models…" = "Loading available models…";
+"Signing out of ChatGPT…" = "Signing out of ChatGPT…";
+"A translation is in progress." = "A translation is in progress.";
+"Finishing account operation…" = "Finishing account operation…";
+"Sign in to ChatGPT and choose an available model before saving." = "Sign in to ChatGPT and choose an available model before saving.";
+"Refresh models, then choose the model to use." = "Refresh models, then choose the model to use.";
+"No models are currently available for this account." = "No models are currently available for this account.";
+"Choose a model for the current account before saving." = "Choose a model for the current account before saving.";
+"Only models available to this account can be selected." = "Only models available to this account can be selected.";
+"codexAccount.error.runtimeUnavailable" = "The account component is unavailable.";
+"codexAccount.error.invalidConfiguration" = "Choose an account and model before translating.";
+"codexAccount.error.busy" = "Wait for the current account operation to finish.";
+"codexAccount.error.authenticationRequired" = "Check your account status or sign in first.";
+"codexAccount.error.accountChanged" = "This configuration belongs to a different account. Select the account and model again.";
+"codexAccount.error.recoveryRequired" = "Account cleanup could not be confirmed. Restart TSX before trying again.";
+"codexAccount.error.storageUnavailable" = "The saved account is unavailable.";
+"codexAccount.error.loginUnavailable" = "Sign-in is currently unavailable. Try again later.";
+"codexAccount.error.authenticationFailed" = "Your account could not be authenticated. Check its status or sign in again.";
+"codexAccount.error.managedPolicyDenied" = "Your organization’s policy does not allow this operation.";
+"codexAccount.error.modelUnavailable" = "The selected model is unavailable for this account.";
+"codexAccount.error.requestFailed" = "The account request could not be completed.";
+"codexAccount.error.rateLimited" = "Too many requests. Try again later.";
+"codexAccount.error.accessDenied" = "This account cannot access the requested service.";
+"codexAccount.error.networkUnavailable" = "Unable to connect to the account service.";
+"codexAccount.error.timedOut" = "The account request timed out.";
+"codexAccount.error.shuttingDown" = "TSX is closing. Try again after reopening it.";
+"External services receive your translation text and use your configured credentials or account. Your provider may charge for requests or apply usage limits. Screenshots stay on this Mac; only recognized text is sent." = "External services receive your translation text and use your configured credentials or account. Your provider may charge for requests or apply usage limits. Screenshots stay on this Mac; only recognized text is sent.";
+
+/* Translation service settings */
+"%.1f s" = "%.1f s";
+"%d models loaded · Choose a model" = "%d models loaded · Choose a model";
+"%d models loaded · Choose one or enter an ID" = "%d models loaded · Choose one or enter an ID";
+"%d models loaded · Current account model selected" = "%d models loaded · Current account model selected";
+"%d services" = "%d services";
+"A key is unnecessary if the service allows anonymous access" = "A key is unnecessary if the service allows anonymous access";
+"A model list does not guarantee translation suitability. Check with a sample test." = "A model list does not guarantee translation suitability. Check with a sample test.";
+"AI models" = "AI models";
+"API Key" = "API Key";
+"API URL" = "API URL";
+"API plan" = "API plan";
+"Account confirmed. Your plan is determined by the service." = "Account confirmed. Your plan is determined by the service.";
+"Account sign-in" = "Account sign-in";
+"Add your first service" = "Add your first service";
+"Added services" = "Added services";
+"Additional instructions" = "Additional instructions";
+"Advanced settings" = "Advanced settings";
+"Apple Translation will be used after deletion. Existing text will not be sent again." = "Apple Translation will be used after deletion. Existing text will not be sent again.";
+"Automatic translation off" = "Automatic translation off";
+"Automatic translation on" = "Automatic translation on";
+"Available models" = "Available models";
+"Built-in service · Translates on this device" = "Built-in service · Translates on this device";
+"Check status" = "Check status";
+"Choose a provider" = "Choose a provider";
+"Choose a service for typing, selection and screenshot translation." = "Choose a service for typing, selection and screenshot translation.";
+"Choose an account model" = "Choose an account model";
+"Choose or enter a model ID" = "Choose or enter a model ID";
+"Collapse" = "Collapse";
+"Collapsed" = "Collapsed";
+"Configuration saved · Current service unchanged" = "Configuration saved · Current service unchanged";
+"Connect your preferred translation service" = "Connect your preferred translation service";
+"Couldn’t get models. Check the address and permissions, or enter an ID." = "Couldn’t get models. Check the address and permissions, or enter an ID.";
+"Couldn’t load models. Refresh this account’s model list." = "Couldn’t load models. Refresh this account’s model list.";
+"Couldn’t save right now" = "Couldn’t save right now";
+"Dedicated translation" = "Dedicated translation";
+"Delete %@?" = "Delete %@?";
+"Delete service" = "Delete service";
+"Delete service…" = "Delete service…";
+"Discard changes" = "Discard changes";
+"Discard unsaved changes?" = "Discard unsaved changes?";
+"English" = "English";
+"Expanded" = "Expanded";
+"Experimental" = "Experimental";
+"Finish signing in on OpenAI’s official page" = "Finish signing in on OpenAI’s official page";
+"Fixed model" = "Fixed model";
+"For example eastus; leave blank for Global" = "For example eastus; leave blank for Global";
+"Get models" = "Get models";
+"Get the model list, or enter a model ID directly." = "Get the model list, or enter a model ID directly.";
+"Google Cloud" = "Google Cloud";
+"Hidden automatically after 30 seconds or when you leave this field." = "Hidden automatically after 30 seconds or when you leave this field.";
+"Hide API key" = "Hide API key";
+"In use" = "In use";
+"Instructions optional" = "Instructions optional";
+"Keep editing" = "Keep editing";
+"Keep saved key" = "Keep saved key";
+"Key status unconfirmed" = "Key status unconfirmed";
+"Keys stay in this Mac’s Keychain. External services receive the text you translate." = "Keys stay in this Mac’s Keychain. External services receive the text you translate.";
+"Last sample test passed" = "Last sample test passed";
+"Loading" = "Loading";
+"Local model" = "Local model";
+"More options for %@" = "More options for %@";
+"Name this configuration" = "Name this configuration";
+"No matching models." = "No matching models.";
+"No models returned. You can enter a model ID." = "No models returned. You can enter a model ID.";
+"No saved key was found. Enter it again." = "No saved key was found. Enter it again.";
+"Not tested" = "Not tested";
+"Last sample test failed" = "Last sample test failed";
+"Off" = "Off";
+"Off by default. Enabling may send repeated requests and incur charges." = "Off by default. Enabling may send repeated requests and incur charges.";
+"Off by default. Enabling may send repeated requests and use account allowance." = "Off by default. Enabling may send repeated requests and use account allowance.";
+"On" = "On";
+"One-time device code" = "One-time device code";
+"Only this configuration will be deleted. The shared ChatGPT account stays signed in." = "Only this configuration will be deleted. The shared ChatGPT account stays signed in.";
+"Open sign-in page" = "Open sign-in page";
+"Open the sign-in page and enter the device code below." = "Open the sign-in page and enter the device code below.";
+"OpenAI-compatible" = "OpenAI-compatible";
+"Optional" = "Optional";
+"Optional, for example: Keep technical terms in English" = "Optional, for example: Keep technical terms in English";
+"Optional, if required by the service" = "Optional, if required by the service";
+"Other apps’ sign-ins are not read. OpenAI determines account eligibility and available models." = "Other apps’ sign-ins are not read. OpenAI determines account eligibility and available models.";
+"Output limit" = "Output limit";
+"Overlong results are reported as incomplete and never continued automatically." = "Overlong results are reported as incomplete and never continued automatically.";
+"Paste API key" = "Paste API key";
+"Provider" = "Provider";
+"Provider cannot be changed while editing" = "Provider cannot be changed while editing";
+"Public sample · May incur charges" = "Public sample · May incur charges";
+"Qwen-MT" = "Qwen-MT";
+"Receiving sample translation…" = "Receiving sample translation…";
+"Refresh" = "Refresh";
+"Remove saved key" = "Remove saved key";
+"Resource region" = "Resource region";
+"Sample translation completed" = "Sample translation completed";
+"Save" = "Save";
+"Save again" = "Save again";
+"Saved key" = "Saved key";
+"Saved only in this Mac’s Keychain" = "Saved only in this Mac’s Keychain";
+"Saving account status. Please wait." = "Saving account status. Please wait.";
+"Search models…" = "Search models…";
+"Service region" = "Service region";
+"Show API key" = "Show API key";
+"Show model list" = "Show model list";
+"Sign in separately in TSX. No API key is needed." = "Sign in separately in TSX. No API key is needed.";
+"Sign in to ChatGPT" = "Sign in to ChatGPT";
+"Sign in, load available models, then choose from the list." = "Sign in, load available models, then choose from the list.";
+"Sign out" = "Sign out";
+"Simplified Chinese" = "Simplified Chinese";
+"Stopping…" = "Stopping…";
+"Switching services does not automatically send existing text." = "Switching services does not automatically send existing text.";
+"Tencent Translation" = "Tencent Translation";
+"Test again" = "Test again";
+"Test did not complete" = "Test did not complete";
+"Test stopped. Usage already incurred at the service may still be charged." = "Test stopped. Usage already incurred at the service may still be charged.";
+"The address changed. Enter the key again." = "The address changed. Enter the key again.";
+"The new key replaces the saved key after saving" = "The new key replaces the saved key after saving";
+"The old address’s key will not be sent here." = "The old address’s key will not be sent here.";
+"The saved key cannot be read right now. Try again or enter a new key." = "The saved key cannot be read right now. Try again or enter a new key.";
+"The saved key will be removed when you save." = "The saved key will be removed when you save.";
+"The saved key’s status is not confirmed. Enter a key if needed." = "The saved key’s status is not confirmed. Enter a key if needed.";
+"The text and key drafts entered here will be cleared. Saved services stay unchanged." = "The text and key drafts entered here will be cleared. Saved services stay unchanged.";
+"This account is shared by all Codex configurations in TSX." = "This account is shared by all Codex configurations in TSX.";
+"This account returned no available models. Check your account eligibility." = "This account returned no available models. Check your account eligibility.";
+"This configuration and its saved API key will be deleted." = "This configuration and its saved API key will be deleted.";
+"Translating the public sample…" = "Translating the public sample…";
+"Translation URL" = "Translation URL";
+"Translation sends text to %@." = "Translation sends text to %@.";
+"Translation sends text to OpenAI. Saving does not change the current service." = "Translation sends text to OpenAI. Saving does not change the current service.";
+"Unsaved" = "Unsaved";
+"Use the eye to view it; enter a new key to replace it" = "Use the eye to view it; enter a new key to replace it";
+"Use the resource’s region, not your current location." = "Use the resource’s region, not your current location.";
+"Use your API key, local model or ChatGPT account. Apple Translation is always available." = "Use your API key, local model or ChatGPT account. Apple Translation is always available.";
+"Use your ChatGPT account" = "Use your ChatGPT account";
+"translationService.catalogError.unsupportedService" = "This service does not provide a model list here.";
+"translationService.catalogError.catalogUnavailable" = "This address does not provide a model list. Check the address or enter a model ID.";
+"translationService.catalogError.invalidCatalog" = "The service returned an invalid model list. Try again or enter a model ID.";
+"translationService.catalogError.catalogTooLarge" = "The model list exceeds the supported size. Enter a model ID instead.";
+
+"Hover cursor" = "Hover cursor";
+
+"Pointing hand" = "Pointing hand";
+
+"Arrow" = "Arrow";
+
+"Enter a valid API URL before choosing a model." = "Enter a valid API URL before choosing a model.";
+
+"Add an API key first, then get models or enter a model ID." = "Add an API key first, then get models or enter a model ID.";
+
+"Model ID" = "Model ID";
+
+"Enter the exact model ID" = "Enter the exact model ID";
+
+"Cancel model loading" = "Cancel model loading";
+
+"Choose from model list" = "Choose from model list";
+
+"Enter model ID manually" = "Enter model ID manually";
+
+"%d models loaded · Choose from the list" = "%d models loaded · Choose from the list";
+
+"Get models to browse available IDs, or choose manual entry." = "Get models to browse available IDs, or choose manual entry.";
+
+"Get models to browse this service’s directory, or enter an ID manually." = "Get models to browse this service’s directory, or enter an ID manually.";
+
+"Quick translation" = "Quick translation";
+
+"Automatic translation" = "Automatic translation";
+
+"Complete the connection settings before testing." = "Complete the connection settings before testing.";
+
+/* Translation window preferences */
+"Translation window layout" = "Translation window layout";
+"Two equal panes in the main and quick translation windows." = "Two equal panes in the main and quick translation windows.";
+"Side by side" = "Side by side";
+"Stacked" = "Stacked";
+"Use pointing cursor" = "Use pointing cursor";
+"Show a pointing hand when hovering over interactive elements." = "Show a pointing hand when hovering over interactive elements.";
+
+/* Bidirectional translation workspace */
+"Unable to save automatic translation. Try again." = "Unable to save automatic translation. Try again.";
+"Automatic translation on · Applies to your next edit" = "Automatic translation on · Applies to your next edit";
+"Automatic translation off · Both sides remain editable" = "Automatic translation off · Both sides remain editable";
+"Service changed · Edit or translate to continue" = "Service changed · Edit or translate to continue";
+"Swapped · Edit or translate to continue" = "Swapped · Edit or translate to continue";
+"Restored · Continue editing" = "Restored · Continue editing";
+"Updated automatically" = "Updated automatically";
+"Updated" = "Updated";
+"Edited" = "Edited";
+"Swap languages and text without translating" = "Swap languages and text without translating";
+"Translation, editable" = "Translation, editable";
+"Your translation appears here.\nYou can also type directly…" = "Your translation appears here.\nYou can also type directly…";
+"Clear both sides; this can be undone" = "Clear both sides; this can be undone";
+"Auto translate" = "Auto translate";
+"Automatic bidirectional translation" = "Automatic bidirectional translation";
+"After you edit either side, automatically update the other. Turning this off keeps both sides editable." = "After you edit either side, automatically update the other. Turning this off keeps both sides editable.";
+"Choose language" = "Choose language";
+"Numbers and symbols don’t need translation" = "Numbers and symbols don’t need translation";
+"Language unclear · Choose the original language" = "Language unclear · Choose the original language";
+"Update the translation" = "Update the translation";
+"Update the original from your translation" = "Update the original from your translation";
+"Translate again" = "Translate again";
+"Translate back to %@" = "Translate back to %@";
+"Updates after you pause typing" = "Updates after you pause typing";
+"Entering text…" = "Entering text…";
+"Stopped · Incomplete text retained" = "Stopped · Incomplete text retained";
+"Stopped · No translation yet" = "Stopped · No translation yet";
+"Stopped · Existing text retained" = "Stopped · Existing text retained";
+"Choose a different language to translate" = "Choose a different language to translate";
+"Choose a language to translate back" = "Choose a language to translate back";
+"Incomplete text retained" = "Incomplete text retained";
+"Restore" = "Restore";
+"Stop" = "Stop";
+"Edit either side to update the other. Automatic requests use account allowance." = "Edit either side to update the other. Automatic requests use account allowance.";
+"Edit either side to update the other. Automatic requests may incur charges." = "Edit either side to update the other. Automatic requests may incur charges.";
+"Synced · No translation needed" = "Synced · No translation needed";
+
+"Manage translation services…" = "Manage translation services…";
+
+"Translation toolbar" = "Translation toolbar";
+
+"Undo last replacement · Restore both sides" = "Undo last replacement · Restore both sides";
+
+"Nothing to undo" = "Nothing to undo";
+"Finish typing to undo" = "Finish typing to undo";
+"Clear both sides" = "Clear both sides";
+"Translate back" = "Translate back";
+"Swap both sides" = "Swap both sides";
+"Auto translate after typing" = "Auto translate after typing";
+
+"Waiting for input" = "Waiting for input";
+
+"Preparing languages" = "Preparing languages";
+
+"Stopped" = "Stopped";
+
+"Translation failed" = "Translation failed";
+
+"Synced" = "Synced";
+
+"Check language" = "Check language";
+
+"Ready to translate" = "Ready to translate";
+
+"Service" = "Service";
+
+"Last test" = "Last test";
+
+"Actions" = "Actions";
+
+"Retest needed" = "Retest needed";
+"Configuration changed · Retest needed" = "Configuration changed · Retest needed";
+
+"Passed" = "Passed";
+
+"Failed" = "Failed";
+
+"No record" = "No record";
+
+"No sample test has been recorded." = "No sample test has been recorded.";
+
+"Today %@" = "Today %@";
+
+"Yesterday %@" = "Yesterday %@";
+
+"Historical sample result, not live service availability." = "Historical sample result, not live service availability.";
+
+"Text mode" = "Text mode";
+
+"Image mode" = "Image mode";
+
+"Show translation" = "Show translation";
+
+"Show original" = "Show original";
+
+"Zoom out" = "Zoom out";
+
+"Zoom in" = "Zoom in";
+
+"Fit image" = "Fit image";
+
+"Zoom" = "Zoom";
+
+"Capture again" = "Capture again";
+
+"Show screenshot" = "Show screenshot";
+
+"Edit recognized text" = "Edit recognized text";
+
+"Expand image" = "Expand image";
+
+"No recognized text" = "No recognized text";
+
+"Translation pending" = "Translation pending";
+
+"Captured image" = "Captured image";
+
+"Edit region" = "Edit region";
+
+"Region translation" = "Region translation";
+
+"Check recognized text" = "Check recognized text";
+
+"Recognition failed" = "Recognition failed";
+
+/* Service cards and local usage */
+"Stop test for %@" = "Stop test for %@";
+"Stopping test for %@" = "Stopping test for %@";
+"Tokens" = "Tokens";
+"Characters" = "Characters";
+"This service’s local usage records will also be removed." = "This service’s local usage records will also be removed.";
+"%@ characters" = "%@ characters";
+"%@ copy" = "%@ copy";
+"%@ tokens" = "%@ tokens";
+"%d of %d requests reported" = "%d of %d requests reported";
+"%d requests" = "%d requests";
+"%d succeeded · %d failed · %d cancelled" = "%d succeeded · %d failed · %d cancelled";
+"30 days" = "30 days";
+"7 days" = "7 days";
+"Account allowance" = "Account allowance";
+"Account allowance is not available for this configuration" = "Account allowance is not available for this configuration";
+"Account values may include other apps and may be delayed. They are not this Mac’s spending history." = "Account values may include other apps and may be delayed. They are not this Mac’s spending history.";
+"Available balance" = "Available balance";
+"Cancelled" = "Cancelled";
+"Character limit" = "Character limit";
+"Character limit unavailable" = "Character limit unavailable";
+"Characters used in this billing period" = "Characters used in this billing period";
+"Chart metric" = "Chart metric";
+"Check" = "Check";
+"Check %@" = "Check %@";
+"Checks send a fixed translation sample and may incur charges." = "Checks send a fixed translation sample and may incur charges.";
+"Clear all local usage records?" = "Clear all local usage records?";
+"Clear all records…" = "Clear all records…";
+"Clear records" = "Clear records";
+"Clear this service’s local records?" = "Clear this service’s local records?";
+"Close daily details" = "Close daily details";
+"Configuration copied · Add an API key if required" = "Configuration copied · Add an API key if required";
+"Configuration copied · Uses the shared ChatGPT account" = "Configuration copied · Uses the shared ChatGPT account";
+"Daily requests" = "Daily requests";
+"Daily summary" = "Daily summary";
+"Daily usage" = "Daily usage";
+"Day" = "Day";
+"Duplicate configuration" = "Duplicate configuration";
+"Enter an HTTP or HTTPS website without credentials, a query, or a fragment." = "Enter an HTTP or HTTPS website without credentials, a query, or a fragment.";
+"Fetching account allowance…" = "Fetching account allowance…";
+"Granted balance" = "Granted balance";
+"Input %@" = "Input %@";
+"Keep up to 10,000 records from the last 30 days on this Mac, without translation text. Turning this off stops new records." = "Keep up to 10,000 records from the last 30 days on this Mac, without translation text. Turning this off stops new records.";
+"No character limit" = "No character limit";
+"No recorded requests in this period" = "No recorded requests in this period";
+"No recorded requests on this day" = "No recorded requests on this day";
+"No reported values for this unit in the selected period." = "No reported values for this unit in the selected period.";
+"On this Mac" = "On this Mac";
+"Only TSX activity on this Mac is included. Missing usage and failed or cancelled requests do not imply zero charges." = "Only TSX activity on this Mac is included. Missing usage and failed or cancelled requests do not imply zero charges.";
+"Open service website" = "Open service website";
+"Open website for %@" = "Open website for %@";
+"Output %@" = "Output %@";
+"Record local usage" = "Record local usage";
+"Recording is paused. Existing records remain available." = "Recording is paused. Existing records remain available.";
+"Refresh to request the latest allowance. Opening this panel does not contact the service." = "Refresh to request the latest allowance. Opening this panel does not contact the service.";
+"Reported characters" = "Reported characters";
+"Reported tokens" = "Reported tokens";
+"Request type" = "Request type";
+"Requests" = "Requests";
+"Sample test · May incur charges" = "Sample test · May incur charges";
+"Sample tests" = "Sample tests";
+"Select a day for details" = "Select a day for details";
+"Sends a fixed translation sample. May incur charges." = "Sends a fixed translation sample. May incur charges.";
+"Service website" = "Service website";
+"Service-reported account allowance" = "Service-reported account allowance";
+"Show requests for this day" = "Show requests for this day";
+"Some requests did not return usage. Totals include reported values only." = "Some requests did not return usage. Totals include reported values only.";
+"Statistics begin when local recording is enabled. Earlier activity cannot be recovered." = "Statistics begin when local recording is enabled. Earlier activity cannot be recovered.";
+"Statistics period" = "Statistics period";
+"Succeeded" = "Succeeded";
+"This removes local statistics for every service. Configurations and account allowances stay unchanged." = "This removes local statistics for every service. Configurations and account allowances stay unchanged.";
+"This removes local statistics only. Your service configuration and account allowance stay unchanged." = "This removes local statistics only. Your service configuration and account allowance stay unchanged.";
+"This version supports official DeepSeek and DeepL endpoints. Use the service’s website to check other accounts." = "This version supports official DeepSeek and DeepL endpoints. Use the service’s website to check other accounts.";
+"Tokens: %@ · Characters: %@ · %d failed" = "Tokens: %@ · Characters: %@ · %d failed";
+"Topped-up balance" = "Topped-up balance";
+"Translations" = "Translations";
+"Unavailable" = "Unavailable";
+"Updated %@" = "Updated %@";
+"Usage" = "Usage";
+"Usage for %@" = "Usage for %@";
+"Usage unavailable" = "Usage unavailable";
+"Website or account console opened in your browser. Separate from the API URL." = "Website or account console opened in your browser. Separate from the API URL.";
+"translationService.accountUsageError.invalidResponse" = "The service returned invalid account quota data. Try again later.";
+"translationService.accountUsageError.unavailable" = "This service does not provide account quota data.";
+"translationService.accountUsageError.unsupportedService" = "This configuration does not support account quota queries.";
+"Start" = "Start";
+"Copy configuration" = "Copy configuration";
+"Check connectivity" = "Check connectivity";
+"Translates on this Mac" = "Translates on this Mac";
+"Balance" = "Balance";
+"Remaining" = "Remaining";
+"Unlimited" = "Unlimited";
+"Refresh failed" = "Refresh failed";
+"Fetching…" = "Fetching…";
+"Not queried" = "Not queried";
+"Refresh account allowance" = "Refresh account allowance";
+"No account needed" = "No account needed";
+"Local translation" = "Local translation";
+"Check passed" = "Check passed";
+"Check failed" = "Check failed";
+"Local usage" = "Local usage";
+"Known tokens" = "Known tokens";
+"Average duration" = "Average duration";
+"All requests" = "All requests";
+"Usage trend" = "Usage trend";
+"Request history" = "Request history";
+"Request time" = "Request time";
+"Result" = "Result";
+"Input" = "Input";
+"Output" = "Output";
+"Duration" = "Duration";
+"Request information" = "Request information";
+"Usage details" = "Usage details";
+"Input tokens" = "Input tokens";
+"Output tokens" = "Output tokens";
+"Total tokens" = "Total tokens";
+"Sample test" = "Sample test";
+"Missing counts are not zero usage." = "Missing counts are not zero usage.";
+"Numeric records only · Retained for 30 days" = "Numeric records only · Retained for 30 days";
+"Translation request" = "Translation";
+
+/* Software updates */
+"Software updates" = "Software updates";
+"Check for Updates…" = "Check for Updates…";
+"Automatically check for updates" = "Automatically check for updates";
+"Download updates and install when quitting" = "Download updates and install when quitting";
+"Updates connect to lumaxspace.com and GitHub. Copy any text you want to keep before installing and restarting." = "Updates connect to lumaxspace.com and GitHub. Copy any text you want to keep before installing and restarting.";

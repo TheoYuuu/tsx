@@ -1,0 +1,3 @@
+"CFBundleName" = "TSX";
+"CFBundleDisplayName" = "TSX";
+"NSScreenCaptureUsageDescription" = "仅截取你选择的屏幕区域并在本机识别文字，识别出的文字交由你选择的服务翻译。";

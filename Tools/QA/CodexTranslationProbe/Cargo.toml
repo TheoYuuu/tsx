@@ -1,0 +1,30 @@
+[package]
+name = "lumax-codex-translation-prototype"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+codex-api = { path = "../source/codex-36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/codex-api" }
+codex-client = { path = "../source/codex-36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/codex-client" }
+codex-http-client = { path = "../source/codex-36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/http-client" }
+codex-protocol = { path = "../source/codex-36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/protocol" }
+futures = "0.3"
+http = "1"
+serde_json = "1"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "io-util", "io-std", "signal"] }
+reqwest = { version = "0.12", default-features = false, features = ["stream", "rustls-tls"] }
+
+[profile.dev]
+debug = 0
+incremental = false
+
+# Required upstream forks, copied verbatim from the fixed official workspace patch table.
+[patch.crates-io]
+tokio-tungstenite = { git = "https://github.com/openai-oss-forks/tokio-tungstenite", rev = "0e5b2d73aa18dd9f0a50ee9ff199d5aef7594186" }
+tungstenite = { git = "https://github.com/openai-oss-forks/tungstenite-rs", rev = "4fffad30fe373adbdcffab9545e9e9bf4f2fc19f" }
+
+[patch."ssh://git@github.com/openai-oss-forks/tungstenite-rs.git"]
+tungstenite = { git = "https://github.com/openai-oss-forks/tungstenite-rs", rev = "4fffad30fe373adbdcffab9545e9e9bf4f2fc19f" }

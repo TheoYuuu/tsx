@@ -1,0 +1,14 @@
+title = "TSX public repository secrets policy"
+[extend]
+useDefault = true
+
+# Cargo package names joined across adjacent dependency lines are not API keys.
+# Match only this exact dependency pair, only in the three checked-in lockfiles.
+[[rules]]
+id = "generic-api-key"
+[[rules.allowlists]]
+description = "Exact crypto_box dependency pair in audited Cargo lockfiles"
+condition = "AND"
+paths = ['''(^|/)(Runtime/CodexHelper|Tools/QA/CodexAuthProbe|Tools/QA/CodexTranslationProbe)/Cargo\.lock$''']
+regexTarget = "match"
+regexes = ['''(?m)^crypto_secretbox",\r?\n "curve25519-dalek",?$''']

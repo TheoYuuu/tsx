@@ -1,0 +1,82 @@
+{
+  "retrieved": "2026-10-04",
+  "package": "@lobehub/icons-static-svg",
+  "version": "1.95.1",
+  "license": "MIT",
+  "upstreamRepository": "https://github.com/lobehub/lobe-icons",
+  "upstreamCommit": "49a2130df7bfa5eb1b088261bff20a37e2967789",
+  "assets": [
+    {
+      "name": "openai",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/openai.svg",
+      "bytes": 1687,
+      "sha256": "a595df6b423920c67a7f8f73c063e4bfb72d415948097b6cac063a2366bb5186",
+      "asset": "ProviderOpenAI",
+      "vendor": "OpenAI"
+    },
+    {
+      "name": "deepseek-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/deepseek-color.svg",
+      "bytes": 2164,
+      "sha256": "deba5f98a5c1796e20fcac3149bcd7eb8a32f0bdd04d048819400b1f28bd1439",
+      "asset": "ProviderDeepSeek",
+      "vendor": "DeepSeek"
+    },
+    {
+      "name": "ollama",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/ollama.svg",
+      "bytes": 3290,
+      "sha256": "3a268218fb2e6e81fa31df70f70b51331625047794db81db21d35359428fae7a",
+      "asset": "ProviderOllama",
+      "vendor": "Ollama"
+    },
+    {
+      "name": "deepl",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/deepl.svg",
+      "bytes": 1040,
+      "sha256": "ac5e5b11f252bc74067e3d85efb17ab4ffd2ef72244f67cfbb55718a973cfb3d",
+      "asset": "ProviderDeepL",
+      "vendor": "DeepL"
+    },
+    {
+      "name": "azure-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/azure-color.svg",
+      "bytes": 1621,
+      "sha256": "abc639d094593943c1b201270f4903c74d02d2e26acf26abf592a29c222c5181",
+      "asset": "ProviderAzure",
+      "vendor": "Azure"
+    },
+    {
+      "name": "claude-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/claude-color.svg",
+      "bytes": 1696,
+      "sha256": "a3101f3047a119aa11825ad9369510f0c472428c8c52d420e31bc62db44a8364",
+      "asset": "ProviderClaude",
+      "vendor": "Claude"
+    },
+    {
+      "name": "qwen-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/qwen-color.svg",
+      "bytes": 2044,
+      "sha256": "77f5768c66d08ce1d3d14e73373975c1bc0454be88c81523ddd0ffd7e2974029",
+      "asset": "ProviderQwen",
+      "vendor": "Qwen"
+    },
+    {
+      "name": "googlecloud-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/googlecloud-color.svg",
+      "bytes": 925,
+      "sha256": "c0faf37b180dfc1efe12440c039047b0e1c60a3c424cca6616e580f6f219a7dc",
+      "asset": "ProviderGoogleCloud",
+      "vendor": "GoogleCloud"
+    },
+    {
+      "name": "tencentcloud-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/tencentcloud-color.svg",
+      "bytes": 2124,
+      "sha256": "f860dae064a3afd24970efd2bc5892f39438526bf52c3a9748f61fc05c1cfd58",
+      "asset": "ProviderTencentCloud",
+      "vendor": "TencentCloud"
+    }
+  ]
+}
