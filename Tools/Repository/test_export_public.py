@@ -9,12 +9,22 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 EXPORT = ROOT / "Tools/Repository/export_public.py"
 SCANNER = os.environ.get("TSX_TEST_GITLEAKS", str(ROOT / ".build/RepositoryTools/gitleaks"))
 STATE = "Tools/Repository/export-state.json"
 CODE = "LumaxTranslate/App/Sample.swift"
+# Copy reviewed policy/tool inputs only. Runtime export ownership belongs to the
+# real public checkout and must never become a fixture's starting state.
+FIXTURE_FILES = (
+    ".gitignore", ".gitleaks.toml", ".githooks/pre-commit", ".githooks/pre-push",
+    "Scripts/check-public-repo.sh", ".github/workflows/repository-safety.yml",
+    "Tools/Repository/bootstrap_gitleaks.py", "Tools/Repository/check.py",
+    "Tools/Repository/export_public.py", "Tools/Repository/policy.json",
+    "Tools/Repository/reviewed-images.json",
+)
 
 
 class PublicExportTests(unittest.TestCase):
@@ -28,11 +38,7 @@ class PublicExportTests(unittest.TestCase):
             self.git(repo, "init", "-q", "--template=")
             self.git(repo, "config", "user.name", "Export Fixture")
             self.git(repo, "config", "user.email", "123+fixture@users.noreply.github.com")
-        files = [".gitignore", ".gitleaks.toml", "Scripts/check-public-repo.sh",
-                 ".github/workflows/repository-safety.yml"]
-        for directory in (".githooks", "Tools/Repository"):
-            files.extend(str(p.relative_to(ROOT)) for p in (ROOT / directory).iterdir() if p.is_file())
-        for name in files:
+        for name in FIXTURE_FILES:
             path = self.target / name
             path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / name, path)
@@ -43,7 +49,7 @@ class PublicExportTests(unittest.TestCase):
         self.commit(self.source, "Initial private fixture", CODE, "README.md", "Private/notes.md", "Design/proposal.svg")
         self.put(self.target, CODE, "let fixture = 1\n")
         self.put(self.target, "README.md", "Public product description\n")
-        self.commit(self.target, "Independent public fixture", *files, CODE, "README.md")
+        self.commit(self.target, "Independent public fixture", *FIXTURE_FILES, CODE, "README.md")
 
     def tearDown(self):
         self.temporary.cleanup()
@@ -84,6 +90,32 @@ class PublicExportTests(unittest.TestCase):
         result = self.run_export(*args)
         self.assertNotEqual(result.returncode, 0, result.stdout)
         self.assertIn(reason, result.stderr)
+
+    def test_template_export_state_does_not_contaminate_fresh_fixture(self):
+        template = self.base / "template-with-export-state"
+        for name in FIXTURE_FILES:
+            path = template / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(ROOT / name, path)
+        production_only = "LumaxTranslate/App/ProductionOnly.swift"
+        state_bytes = json.dumps({"version": 1, "files": {
+            production_only: {"mode": "100644", "sha256": "0" * 64}
+        }}).encode()
+        (template / STATE).write_bytes(state_bytes)
+        fixture = PublicExportTests("test_preview_does_not_write_or_transfer_history")
+        with mock.patch.object(sys.modules[__name__], "ROOT", template):
+            fixture.setUp()
+        try:
+            self.assertFalse((fixture.target / STATE).exists())
+            self.assertNotIn(STATE, fixture.git(fixture.target, "ls-files").splitlines())
+            preview = fixture.preview()
+            self.assertEqual(preview["adopted_paths"], [CODE])
+            self.assertEqual(preview["managed_files"], 1)
+            fixture.apply()
+            self.assertEqual(set(json.loads((fixture.target / STATE).read_text())["files"]), {CODE})
+            self.assertEqual((template / STATE).read_bytes(), state_bytes)
+        finally:
+            fixture.tearDown()
 
     def test_preview_does_not_write_or_transfer_history(self):
         head = self.git(self.target, "rev-parse", "HEAD")
