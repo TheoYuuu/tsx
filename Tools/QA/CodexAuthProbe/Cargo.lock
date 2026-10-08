@@ -5704,33 +5704,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lumax-codex-auth-prototype"
-version = "0.0.0"
-dependencies = [
- "base64 0.22.1",
- "codex-api",
- "codex-config",
- "codex-file-system",
- "codex-http-client",
- "codex-keyring-store",
- "codex-login",
- "codex-model-provider",
- "codex-protocol",
- "codex-utils-path-uri",
- "futures",
- "http",
- "libc",
- "reqwest",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "tokio",
- "tracing",
- "url",
- "uuid",
-]
-
-[[package]]
 name = "maplit"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9535,6 +9508,33 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "translatex-codex-auth-prototype"
+version = "0.0.0"
+dependencies = [
+ "base64 0.22.1",
+ "codex-api",
+ "codex-config",
+ "codex-file-system",
+ "codex-http-client",
+ "codex-keyring-store",
+ "codex-login",
+ "codex-model-provider",
+ "codex-protocol",
+ "codex-utils-path-uri",
+ "futures",
+ "http",
+ "libc",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "tokio",
+ "tracing",
+ "url",
+ "uuid",
 ]
 
 [[package]]

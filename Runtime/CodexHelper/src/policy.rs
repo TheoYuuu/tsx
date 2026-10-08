@@ -80,7 +80,7 @@ impl fmt::Debug for PolicySnapshot {
 
 impl PolicySnapshot {
     /// No caller-supplied issuer, environment auth, file fallback, or default
-    /// Codex identity. The caller chooses the Lumax-owned home before this call.
+    /// Codex identity. The caller chooses the TranslateX-owned home before this call.
     pub fn auth_config(&self, home: PathBuf, route: AuthRouteConfig) -> Result<AuthConfig, PolicyError> {
         validate_home(&home)?;
         let config = AuthConfig {
@@ -281,7 +281,7 @@ mod tests {
     use std::io;
     use std::sync::Mutex;
 
-    fn home() -> PathBuf { PathBuf::from("/lumax-constructed-policy-only") }
+    fn home() -> PathBuf { PathBuf::from("/translatex-constructed-policy-only") }
 
     struct MemoryFileSystem {
         system: PathBuf,

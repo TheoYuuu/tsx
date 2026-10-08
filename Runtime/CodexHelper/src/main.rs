@@ -1,6 +1,6 @@
 //! Native-only, one-operation entry point. The production binary accepts no
 //! endpoint, issuer, account-home, credential, or diagnostics overrides.
-use lumax_codex_runtime::{host, protocol, supervisor, worker};
+use translatex_codex_runtime::{host, protocol, supervisor, worker};
 use protocol::{Event, Outcome, Request, WorkerInput};
 use std::io::BufReader;
 

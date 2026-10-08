@@ -28,7 +28,7 @@ builder = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(builder)
 common = builder.common
 IDENTIFIER = "com.theoyuuu.LumaxTranslate.CodexRuntime"
-BINARY = "lumax-codex-runtime"
+BINARY = "translatex-codex-runtime"
 RUST_MANIFEST_URL = "https://static.rust-lang.org/dist/channel-rust-1.95.0.toml"
 RUST_MANIFEST_SHA = "821ff14e4c4a1cbe1e8915f35aff0a3fbbdf8d293ad48ab8f31e3b0440c581f9"
 INTEL_STD_URL = "https://static.rust-lang.org/dist/2026-04-16/rust-std-1.95.0-x86_64-apple-darwin.tar.xz"

@@ -4,9 +4,9 @@
 
 use base64::Engine;
 use codex_login::{AuthCredentialsStoreMode, AuthDotJson, AuthKeyringBackendKind};
-use lumax_codex_runtime::account_storage::{AccountStorage, Identity};
-use lumax_codex_runtime::protocol::{Event, Operation, Request, WorkerCommand, WorkerInput};
-use lumax_codex_runtime::{host, worker};
+use translatex_codex_runtime::account_storage::{AccountStorage, Identity};
+use translatex_codex_runtime::protocol::{Event, Operation, Request, WorkerCommand, WorkerInput};
+use translatex_codex_runtime::{host, worker};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fs::{File, OpenOptions};
@@ -422,7 +422,7 @@ async fn child(root: &Path, descriptor: i32) -> i32 {
     let registry = match read_registry(run) { Ok(value) => value, Err(_) => return 64 };
     let Some(entry) = registry.identities.iter().find(|entry| root.file_name().and_then(|part| part.to_str()) == Some(entry.case_id.as_str())) else { return 64 };
     if case_root(run, entry).ok().as_deref() != Some(root) { return 64; }
-    let input = match lumax_codex_runtime::protocol::read_bounded_line(&mut io::stdin().lock(), 16 * 1024) {
+    let input = match translatex_codex_runtime::protocol::read_bounded_line(&mut io::stdin().lock(), 16 * 1024) {
         Ok(Some(bytes)) => match serde_json::from_slice::<WorkerInput>(&bytes) {
             Ok(value) => value,
             Err(_) => return 64,

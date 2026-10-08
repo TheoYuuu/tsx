@@ -517,7 +517,7 @@ mod tests {
             Self::with_cleanup(behavior, "terminal('signed_out')")
         }
         fn with_cleanup(behavior: &str, cleanup: &str) -> Self {
-            let root = std::env::temp_dir().canonicalize().unwrap().join(format!("lumax-supervisor-test-{}", Uuid::new_v4()));
+            let root = std::env::temp_dir().canonicalize().unwrap().join(format!("translatex-supervisor-test-{}", Uuid::new_v4()));
             fs::DirBuilder::new().mode(0o700).create(&root).unwrap();
             let script = root.join("worker.py");
             fs::write(&script, format!("#!/usr/bin/python3\n{}\nif command == 'cleanup':\n    {}\n    sys.exit(0)\n{}\n", r#"

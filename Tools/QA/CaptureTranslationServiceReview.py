@@ -239,13 +239,13 @@ def check_service_editor_gutters(metrics, captured_scenes):
 
 
 root = Path(__file__).resolve().parents[2]
-if subprocess.run(["pgrep", "-x", "Lumax Visual Review"], capture_output=True).returncode == 0:
+if subprocess.run(["pgrep", "-x", "TranslateX Visual Review"], capture_output=True).returncode == 0:
     raise SystemExit("Finish the active native review before starting another capture batch.")
 output = Path(sys.argv[1]).resolve()
 output.mkdir(parents=True, exist_ok=True)
 if (output / "ready.txt").exists():
     raise SystemExit("Choose a new output directory to preserve the previous evidence.")
-app = root / ".build/NativeVisualReview/Lumax Visual Review.app"
+app = root / ".build/NativeVisualReview/TranslateX Visual Review.app"
 subprocess.run(["open", "-n", str(app), "--args", "--translation-services-review",
                 "--review-external-capture", "--review-output", str(output),
                 *sys.argv[2:]], check=True)

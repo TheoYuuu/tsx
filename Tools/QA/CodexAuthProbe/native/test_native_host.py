@@ -19,7 +19,7 @@ BINARY = Path(sys.argv.pop(1)).resolve(strict=True)
 
 class NativeHostTests(unittest.TestCase):
     def run_case(self, behavior, expected, *, short_watchdog=False, fill_input=False, action="none", inheritance_probe=False):
-        with tempfile.TemporaryDirectory(prefix="lumax-native-wire-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="translatex-native-wire-") as tmp:
             root = Path(tmp)
             helper = root / "fake-helper.py"
             helper.write_text("#!/usr/bin/python3\n" + """

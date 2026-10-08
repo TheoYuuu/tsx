@@ -102,7 +102,7 @@ def prepare(args):
     args.directory.mkdir(parents=True)
     derived = args.directory / "DerivedData"
     with (args.directory / "build.log").open("w") as log:
-        subprocess.run(["xcodebuild", "-project", "LumaxTranslate.xcodeproj", "-scheme", "LumaxTranslate",
+        subprocess.run(["xcodebuild", "-project", "TranslateX.xcodeproj", "-scheme", "TranslateX",
                         "-configuration", "Release", "-destination", "generic/platform=macOS",
                         "-derivedDataPath", str(derived), "CODE_SIGN_IDENTITY=-", "CODE_SIGNING_REQUIRED=YES",
                         "ARCHS=arm64 x86_64", "ONLY_ACTIVE_ARCH=NO", "-quiet", "build"],

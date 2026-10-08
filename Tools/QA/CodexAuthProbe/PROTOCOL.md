@@ -4,7 +4,7 @@ This prototype uses unmodified official `codex-login`, `codex-model-provider`, `
 
 ## Invocation
 
-Package/binary: `lumax-codex-auth-prototype`. The tracked `verify.py` stages this crate below the ignored prototype root; its manifest dependencies then resolve to `../../CodexTranslationPrototype/source/codex-36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/...`. It uses the previously verified private Rust 1.95.0 toolchain, a separate cache/target, and `RUSTFLAGS=-D warnings`. It does not modify parent HOME or default Cargo/Rust settings.
+Package/binary: `translatex-codex-auth-prototype`. The tracked `verify.py` stages this crate below the ignored prototype root; its manifest dependencies then resolve to `../../CodexTranslationPrototype/source/codex-36650394c5b38c2990ccf2a3457165ca3e9d9726/codex-rs/...`. It uses the previously verified private Rust 1.95.0 toolchain, a separate cache/target, and `RUSTFLAGS=-D warnings`. It does not modify parent HOME or default Cargo/Rust settings.
 
 For the legacy one-object operations, send one JSON object on stdin, then close stdin. The continuous `login_session` operation below instead keeps stdin open for control messages. Launch with only PATH, LANG and TMPDIR. CoreFoundation adds `__CF_USER_TEXT_ENCODING` before main; that one system value is accepted only with bounded hexadecimal fields and the current UID. Every other externally added variable is rejected before authentication work. For the authenticated fixture operation only, the supervisor constructs CODEX_REFRESH_TOKEN_URL_OVERRIDE from its validated loopback issuer; that worker requires the exact value. It cannot accept a missing or alternate refresh URL. Other workers retain the original whitelist. The helper must be code-signed before Keychain verification. The tracked wrapper has now executed the constructed-identity suite; see the assessment for exact evidence.
 
@@ -66,7 +66,7 @@ Two optional QA windows, `fixture_pause_before_promotion_ms` and `fixture_pause_
 
 ## Network and storage boundaries
 
-Official ServerOptions use `lumax-fixture-client`, `open_browser=false`, strict `Keyring` and `Direct`. NetworkPolicyController publishes a managed policy narrowed to three exact URLs at the supplied loopback issuer:
+Official ServerOptions use `translatex-fixture-client`, `open_browser=false`, strict `Keyring` and `Direct`. NetworkPolicyController publishes a managed policy narrowed to three exact URLs at the supplied loopback issuer:
 
 1. `/api/accounts/deviceauth/usercode`
 2. `/api/accounts/deviceauth/token`
@@ -82,7 +82,7 @@ The official service is `Codex Auth`; its Direct account is `cli|` plus the firs
 
 `authenticated_translate` is another one-object operation, protected by the same target-home lock. It requires `text` (nonblank, at most 8192 UTF-8 bytes) and accepts `fixture_policy_case`, `fixture_policy_workspace`, `fixture_refresh`, and `fixture_replacement_home`. The last path must be a different canonical sibling created and registered by this test run. These are QA hooks; no arbitrary external provider, policy file or existing account is accepted.
 
-`auth_policy.rs` feeds in-memory system/MDM/cloud fixtures through the pinned official requirements loader. Its custom read-only filesystem rejects unregistered reads and all mutations, and both MDM overrides are explicit so the host's real preferences are never consulted. Official AuthConfig validation and load enforce login methods and allowed workspaces. An unavailable/malformed or unsupported policy stops the operation. Official cloud requirements deliberately cannot replace the local authentication constraints; this is an upstream rule, not a Lumax override.
+`auth_policy.rs` feeds in-memory system/MDM/cloud fixtures through the pinned official requirements loader. Its custom read-only filesystem rejects unregistered reads and all mutations, and both MDM overrides are explicit so the host's real preferences are never consulted. Official AuthConfig validation and load enforce login methods and allowed workspaces. An unavailable/malformed or unsupported policy stops the operation. Official cloud requirements deliberately cannot replace the local authentication constraints; this is an upstream rule, not a TranslateX override.
 
 Before a model call, `account_request.rs` anchors the original official adapter, checks persisted versus parsed ID-token account fields, and decides whether a refresh is due. It follows this pinned source's five-minute JWT expiry window and eight-day opaque-token fallback; the fallback's timestamp must come from the same strict-Keyring token snapshot. Required or fixture-forced refresh invokes the public official Result-returning refresh method once. Failure, stale refreshed access token or conflicting identity stops before model transport. This consistency check does not verify JWT signatures.
 

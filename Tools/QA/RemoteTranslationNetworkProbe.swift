@@ -109,7 +109,7 @@ struct RemoteTranslationNetworkProbe {
         _ base: URL,
         fixture: String,
         kind: TranslationServiceKind = .openAICompatible,
-        apiKey: String? = "lumax-network-fixture-key",
+        apiKey: String? = "translatex-network-fixture-key",
         onPartial: @escaping @MainActor @Sendable (String) -> Void = { _ in }
     ) -> any TranslationProvider {
         let endpoint = kind.requiresModel && kind != .tencentTranslation ? base.appendingPathComponent(fixture).appendingPathComponent("v1")

@@ -101,7 +101,7 @@ mod tests {
     struct Scratch(PathBuf);
     impl Scratch {
         fn new() -> Self {
-            let path = std::env::temp_dir().canonicalize().unwrap().join(format!("lumax-host-test-{}", Uuid::new_v4()));
+            let path = std::env::temp_dir().canonicalize().unwrap().join(format!("translatex-host-test-{}", Uuid::new_v4()));
             std::fs::DirBuilder::new().mode(0o700).create(&path).unwrap(); Self(path)
         }
     }

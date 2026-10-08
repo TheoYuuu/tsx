@@ -1,4 +1,4 @@
-//! Lumax-owned account and single-request runtime over pinned official Codex libraries.
+//! TranslateX-owned account and single-request runtime over pinned official Codex libraries.
 //! No agent loop, global subscriber, user Codex home, or implicit API-key fallback.
 //! The native supervisor owns process cancellation and identity-generation leases.
 pub mod account_request;

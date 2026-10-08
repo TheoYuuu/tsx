@@ -18,7 +18,7 @@ enum GenerationError: Error {
 
 let scriptDirectory = URL(fileURLWithPath: #filePath).standardizedFileURL.deletingLastPathComponent()
 let root = scriptDirectory.deletingLastPathComponent().deletingLastPathComponent()
-let catalog = root.appending(path: "LumaxTranslate/Resources/Assets.xcassets")
+let catalog = root.appending(path: "TranslateX/Resources/Assets.xcassets")
 let iconSet = catalog.appending(path: "AppIcon.appiconset")
 let brandSet = catalog.appending(path: "AppBrand.imageset")
 let source = scriptDirectory.appending(path: "AppIcon.png")

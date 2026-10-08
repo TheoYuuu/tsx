@@ -144,13 +144,13 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
         app.run()
         withExtendedLifetime(delegate) {}
     }
-    let defaults = UserDefaults(suiteName: "Lumax.VisualCatalog.Ephemeral")!
+    let defaults = UserDefaults(suiteName: "TranslateX.VisualCatalog.Ephemeral")!
     lazy var preferences = AppPreferences(defaults: defaults)
     private let credentials = VisualCredentialStore()
     private let defaultCodexFixture = VisualCodexAccount()
     lazy var services = TranslationServiceStore(defaults: defaults, credentials: credentials,
         codex: CodexAccountController(sessionFactory: { [defaultCodexFixture] request in defaultCodexFixture.session(request) }))
-    private let codexDefaults = UserDefaults(suiteName: "Lumax.VisualCatalog.Codex.Ephemeral")!
+    private let codexDefaults = UserDefaults(suiteName: "TranslateX.VisualCatalog.Codex.Ephemeral")!
     private var codexFixture: VisualCodexAccount?
     private var codexEditor: TranslationServiceEditor?
     private var codexWindow: NSWindow?
@@ -173,7 +173,7 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
             TranslationServiceVisualReview.start()
             return
         }
-        defaults.removePersistentDomain(forName: "Lumax.VisualCatalog.Ephemeral")
+        defaults.removePersistentDomain(forName: "TranslateX.VisualCatalog.Ephemeral")
         preferences.appearance = .light
         windows.applyAppearance()
         let bar = NSMenu()
@@ -216,7 +216,7 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
         case "深色外观": preferences.appearance = .dark; windows.applyAppearance()
         case "浅色外观": preferences.appearance = .light; windows.applyAppearance()
         case "屏幕底部下拉核查":
-            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.identifier?.rawValue == "lumax.settings" }),
+            guard let window = NSApp.windows.first(where: { $0.isVisible && $0.identifier?.rawValue == "translatex.settings" }),
                   let screen = window.screen else { return }
             // Put the language row just above the bottom edge, and its trailing
             // button near the right edge. This only moves the isolated QA window.
@@ -249,13 +249,13 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
         codexWindow?.close()
         codexWindow = nil
         backdrop?.level = .normal
-        for window in NSApp.windows where window.identifier?.rawValue.hasPrefix("lumax.") == true {
+        for window in NSApp.windows where window.identifier?.rawValue.hasPrefix("translatex.") == true {
             window.level = window is NSPanel ? .floating : .normal
         }
         scene = name
         backdrop?.orderFrontRegardless()
         for window in NSApp.windows where window !== backdrop { window.orderOut(nil) }
-        NotificationCenter.default.post(name: .lumaxTranslationSettingsClosed, object: nil)
+        NotificationCenter.default.post(name: .translateXTranslationSettingsClosed, object: nil)
         windows.closeQuick(restoreFocus: false)
         try? services.select(nil)
         windows.inputModel.clear()
@@ -264,12 +264,12 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
         case "主窗口", "最小主窗口":
             await completed(windows.inputModel, text: original, output: translated)
             windows.showMain()
-            NSApp.windows.first { $0.identifier?.rawValue == "lumax.main" }?.setFrame(NSRect(x: 220, y: 170, width: name == "最小主窗口" ? 660 : 980, height: name == "最小主窗口" ? 440 : 598), display: true)
+            NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" }?.setFrame(NSRect(x: 220, y: 170, width: name == "最小主窗口" ? 660 : 980, height: name == "最小主窗口" ? 440 : 598), display: true)
         case "空白输入": windows.showMain()
         case "取词结果", "长文本", "最小浮窗":
             await completed(windows.quickModel, text: name == "长文本" ? String(repeating: original + "\n", count: 10) : original.components(separatedBy: "\n\n")[0], output: name == "长文本" ? String(repeating: translated + "\n", count: 10) : translated.components(separatedBy: "\n\n")[0])
             windows.showQuick(source: nil)
-            if name == "最小浮窗" { NSApp.windows.first { $0.identifier?.rawValue == "lumax.quick" }?.setFrame(NSRect(x: 520, y: 250, width: 600, height: 340), display: true) }
+            if name == "最小浮窗" { NSApp.windows.first { $0.identifier?.rawValue == "translatex.quick" }?.setFrame(NSRect(x: 520, y: 250, width: 600, height: 340), display: true) }
         case "设置": windows.showSettings(shortcuts: shortcuts)
         case "Codex · 未登录", "Codex · 设备码", "Codex · 正在完成", "Codex · 账号模型", "Codex · 固定错误":
             await showCodex(name)
@@ -312,7 +312,7 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
         default: break
         }
         if let backdrop, let front = NSApp.windows.first(where: {
-            $0.isVisible && ($0.identifier?.rawValue.hasPrefix("lumax.") == true || $0.identifier?.rawValue == "qa.capture")
+            $0.isVisible && ($0.identifier?.rawValue.hasPrefix("translatex.") == true || $0.identifier?.rawValue == "qa.capture")
         }) {
             let origin = NSPoint(x: backdrop.frame.midX - front.frame.width / 2,
                                  y: backdrop.frame.midY - front.frame.height / 2)
@@ -334,7 +334,7 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
         case "Codex · 固定错误": .failure
         default: .signedOut
         }
-        codexDefaults.removePersistentDomain(forName: "Lumax.VisualCatalog.Codex.Ephemeral")
+        codexDefaults.removePersistentDomain(forName: "TranslateX.VisualCatalog.Codex.Ephemeral")
         let fixture = VisualCodexAccount(scene)
         codexFixture = fixture
         let controller = CodexAccountController(sessionFactory: { fixture.session($0) })
@@ -346,10 +346,10 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
         if scene == .deviceCode || scene == .committing { editor.signInCodex() }
         let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 620, height: 620),
             styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
-        LumaxWindowChrome.configure(window)
+        TranslateXWindowChrome.configure(window)
         window.minSize = NSSize(width: 620, height: 540)
         window.title = "Codex 构造界面核查"
-        window.identifier = NSUserInterfaceItemIdentifier("lumax.codex-visual")
+        window.identifier = NSUserInterfaceItemIdentifier("translatex.codex-visual")
         window.isReleasedWhenClosed = false
         window.delegate = self
         window.contentView = WindowSurface(preferences: preferences, content:
@@ -406,7 +406,7 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // Optical and focus checks require the independent desktop backdrop below.
     func presentMaterialComparison() {
         guard comparisonWindow == nil,
-              let window = NSApp.windows.first(where: { $0.isVisible && $0.identifier?.rawValue.hasPrefix("lumax.") == true }),
+              let window = NSApp.windows.first(where: { $0.isVisible && $0.identifier?.rawValue.hasPrefix("translatex.") == true }),
               let surface = window.contentView else { return }
         comparisonWindow = window
         comparisonContent = surface
@@ -428,7 +428,7 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
     // can show the independent background window, even while another app is active.
     func presentDesktopComparison() {
         guard let backdrop, let screen = backdrop.screen,
-              let front = NSApp.windows.first(where: { $0.isVisible && $0.identifier?.rawValue.hasPrefix("lumax.") == true }) else { return }
+              let front = NSApp.windows.first(where: { $0.isVisible && $0.identifier?.rawValue.hasPrefix("translatex.") == true }) else { return }
         restoreComparison()
         backdrop.setFrame(screen.frame, display: true)
         backdrop.level = .floating
@@ -455,8 +455,8 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
         await show("主窗口")
         windows.showSettings(shortcuts: shortcuts)
         guard let backdrop, let screen = backdrop.screen,
-              let main = NSApp.windows.first(where: { $0.identifier?.rawValue == "lumax.main" }),
-              let settings = NSApp.windows.first(where: { $0.identifier?.rawValue == "lumax.settings" }) else { return }
+              let main = NSApp.windows.first(where: { $0.identifier?.rawValue == "translatex.main" }),
+              let settings = NSApp.windows.first(where: { $0.identifier?.rawValue == "translatex.settings" }) else { return }
         backdrop.setFrame(screen.frame, display: true)
         backdrop.level = .floating
         backdrop.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -478,8 +478,8 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
         codexFixture?.cancelAll()
         defaultCodexFixture.cancelAll()
         windows.shutdown()
-        defaults.removePersistentDomain(forName: "Lumax.VisualCatalog.Ephemeral")
-        codexDefaults.removePersistentDomain(forName: "Lumax.VisualCatalog.Codex.Ephemeral")
+        defaults.removePersistentDomain(forName: "TranslateX.VisualCatalog.Ephemeral")
+        codexDefaults.removePersistentDomain(forName: "TranslateX.VisualCatalog.Codex.Ephemeral")
     }
 }
 

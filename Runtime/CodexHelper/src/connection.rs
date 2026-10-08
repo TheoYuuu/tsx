@@ -1,4 +1,4 @@
-//! One leased, already-registered Lumax identity connected to official account
+//! One leased, already-registered TranslateX identity connected to official account
 //! metadata and a single text response. The native owner supplies a clean
 //! environment and owns worker cancellation/reaping. Only QA suppresses Keychain UI.
 //! No user Codex configuration, catalog fallback, or text persistence is used.

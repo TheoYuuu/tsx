@@ -40,7 +40,7 @@ unsafe extern "C" {
 }
 const STORE: AuthCredentialsStoreMode = AuthCredentialsStoreMode::Keyring;
 const BACKEND: AuthKeyringBackendKind = AuthKeyringBackendKind::Direct;
-const CLIENT_ID: &str = "lumax-fixture-client";
+const CLIENT_ID: &str = "translatex-fixture-client";
 
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -536,7 +536,7 @@ fn lock(home: &Path) -> Result<File, ()> {
         .create(true)
         .mode(0o600)
         .custom_flags(libc::O_NOFOLLOW | libc::O_NONBLOCK)
-        .open(home.join(".lumax-auth-probe.lock"))
+        .open(home.join(".translatex-auth-probe.lock"))
         .map_err(|_| ())?;
     if !file.metadata().map_err(|_| ())?.is_file() {
         return Err(())

@@ -85,7 +85,7 @@ def main():
         subprocess.run([str(cargo), "fetch", "--locked", "--manifest-path", str(stage / "Cargo.toml")],
                        cwd=stage, env=env, check=True)
     subprocess.run([sys.executable, str(HERE / "package.py"), "--configuration", "All"], cwd=ROOT, check=True)
-    print("Runtime prepared. Open LumaxTranslate.xcodeproj or run Scripts/verify.sh")
+    print("Runtime prepared. Open TranslateX.xcodeproj or run Scripts/verify.sh")
 
 
 if __name__ == "__main__":

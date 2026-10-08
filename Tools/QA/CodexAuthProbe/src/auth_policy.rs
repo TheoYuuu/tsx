@@ -247,7 +247,7 @@ mod tests {
     use super::*;
     use url::Url;
 
-    fn home() -> PathBuf { PathBuf::from("/lumax-in-memory-policy-fixture") }
+    fn home() -> PathBuf { PathBuf::from("/translatex-in-memory-policy-fixture") }
     fn auth(snapshot: &PolicySnapshot) -> AuthConfig {
         let factory = codex_http_client::HttpClientFactory::new(codex_http_client::OutboundProxyPolicy::ReqwestDefault);
         snapshot.auth_config(home(), None, AuthRouteConfig::from_http_client_factory(factory))

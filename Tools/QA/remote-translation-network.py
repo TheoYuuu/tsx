@@ -26,7 +26,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OUTPUT = ROOT / ".build" / "QA" / "RemoteTranslationNetwork"
 SAMPLE = "A clear sentence is easy to understand."
 TRANSLATION = "清晰的句子很容易理解。 🌍"
-FAKE_KEY = "Bearer lumax-network-fixture-key"
+FAKE_KEY = "Bearer translatex-network-fixture-key"
 FIXTURES = {
     "chat-sse", "responses-sse", "chat-json", "responses-json",
     "redirect-same", "redirect-other", "chat-truncated", "responses-truncated",
@@ -168,14 +168,14 @@ class FixtureHandler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self.send_header("Content-Length", str(len(data)))
-                self.send_header("Set-Cookie", "lumax_fixture_cookie=synthetic; Path=/")
+                self.send_header("Set-Cookie", "translatex_fixture_cookie=synthetic; Path=/")
                 self.end_headers()
                 self.wfile.write(data)
                 return
             self.send_response(200)
             self.send_header("Content-Type", "application/json" if fixture.startswith("dedicated-cancel") else "text/event-stream; charset=utf-8")
             self.send_header("Transfer-Encoding", "chunked")
-            self.send_header("Set-Cookie", "lumax_fixture_cookie=synthetic; Path=/")
+            self.send_header("Set-Cookie", "translatex_fixture_cookie=synthetic; Path=/")
             self.end_headers()
             if fixture.endswith("cancel-during-body"):
                 if fixture.startswith("claude-"):
@@ -215,7 +215,7 @@ class FixtureHandler(BaseHTTPRequestHandler):
         if self.headers.get("Cookie") is not None:
             self.state.fail("A production request sent cookies.")
         if fixture.startswith("claude-"):
-            if self.headers.get("x-api-key") != "lumax-network-fixture-key" or self.headers.get("anthropic-version") != "2023-06-01" or self.headers.get("Authorization") is not None:
+            if self.headers.get("x-api-key") != "translatex-network-fixture-key" or self.headers.get("anthropic-version") != "2023-06-01" or self.headers.get("Authorization") is not None:
                 self.state.fail("Incorrect Claude authentication headers.")
             if not self.path.endswith("/v1/messages") or body.get("model") != "fixture-model" or body.get("max_tokens") != 8192 or body.get("stream") is not True:
                 self.state.fail("Incorrect native Claude request.")
@@ -225,7 +225,7 @@ class FixtureHandler(BaseHTTPRequestHandler):
                 self.state.fail("Unexpected Claude sampling or thinking setting.")
             return
         if fixture == "google-json" or fixture.startswith("dedicated-cancel-"):
-            if self.headers.get("x-goog-api-key") != "lumax-network-fixture-key" or self.headers.get("Authorization") is not None:
+            if self.headers.get("x-goog-api-key") != "translatex-network-fixture-key" or self.headers.get("Authorization") is not None:
                 self.state.fail("Incorrect Google authentication headers.")
             if self.path != "/" + fixture or body.get("q") not in [SAMPLE, [SAMPLE]] or body.get("target") != "zh-CN" or body.get("format") != "text" or body.get("model") != "nmt" or "source" in body:
                 self.state.fail("Incorrect Basic v2 URL or single text request.")
@@ -243,7 +243,7 @@ class FixtureHandler(BaseHTTPRequestHandler):
                 self.state.fail("Incorrect Tencent translation request or unexpected instructions.")
             return
         if fixture == "deepl-json":
-            if self.headers.get("Authorization") != "DeepL-Auth-Key lumax-network-fixture-key":
+            if self.headers.get("Authorization") != "DeepL-Auth-Key translatex-network-fixture-key":
                 self.state.fail("Incorrect dedicated authentication.")
             if not self.path.endswith("/v2/translate") or body != {
                 "text": [SAMPLE], "target_lang": "ZH-HANS", "preserve_formatting": True
@@ -252,7 +252,7 @@ class FixtureHandler(BaseHTTPRequestHandler):
             return
         if fixture == "azure-json":
             url = urlsplit(self.path)
-            if self.headers.get("Authorization") is not None or self.headers.get("Ocp-Apim-Subscription-Key") != "lumax-network-fixture-key":
+            if self.headers.get("Authorization") is not None or self.headers.get("Ocp-Apim-Subscription-Key") != "translatex-network-fixture-key":
                 self.state.fail("Incorrect dedicated authentication.")
             query = parse_qs(url.query)
             if not url.path.endswith("/translate") or query != {"api-version": ["3.0"], "to": ["zh-Hans"], "textType": ["plain"]} or body != [{"Text": SAMPLE}]:
@@ -306,26 +306,29 @@ def main():
     OUTPUT.mkdir(parents=True, exist_ok=True)
     sources = [
         "Tools/QA/RemoteTranslationNetworkProbe.swift",
-        "LumaxTranslate/Support/L10n.swift",
-        "LumaxTranslate/Translation/LanguageCatalog.swift",
-        "LumaxTranslate/Translation/TranslationProvider.swift",
-        "LumaxTranslate/Translation/Services/TranslationServiceConfiguration.swift",
-        "LumaxTranslate/Translation/Services/RemoteTranslationProvider.swift",
-        "LumaxTranslate/Translation/Services/RemoteTranslationError.swift",
-        "LumaxTranslate/Translation/Services/RemoteTranslationResponseParser.swift",
-        "LumaxTranslate/Translation/Services/TranslationHTTPPolicy.swift",
-        "LumaxTranslate/Translation/Services/DedicatedTranslationLanguages.swift",
-        "LumaxTranslate/Translation/Services/DedicatedTranslationProvider.swift",
-        "LumaxTranslate/Translation/Services/BoundedTranslationHTTPTransport.swift",
-        "LumaxTranslate/Translation/Services/TranslationProviderFactory.swift",
-        "LumaxTranslate/Translation/Services/ClaudeTranslationProvider.swift",
-        "LumaxTranslate/Translation/Services/ClaudeTranslationResponseParser.swift",
-        "LumaxTranslate/Translation/Services/GoogleCloudTranslationProvider.swift",
-        "LumaxTranslate/Translation/Services/TencentTranslationProvider.swift",
-        "LumaxTranslate/Translation/Services/TencentTranslationLanguages.swift",
-        "LumaxTranslate/Translation/Services/GoogleTranslationLanguages.swift",
-        "LumaxTranslate/Translation/Services/QwenMTTranslationProvider.swift",
-        "LumaxTranslate/Translation/Services/QwenMTTranslationLanguages.swift",
+        "TranslateX/Support/L10n.swift",
+        "TranslateX/Translation/LanguageCatalog.swift",
+        "TranslateX/Translation/TranslationProvider.swift",
+        "TranslateX/Translation/Services/TranslationServiceConfiguration.swift",
+        "TranslateX/Translation/Services/RemoteTranslationProvider.swift",
+        "TranslateX/Translation/Services/RemoteTranslationError.swift",
+        "TranslateX/Translation/Services/RemoteTranslationResponseParser.swift",
+        "TranslateX/Translation/Services/TranslationHTTPPolicy.swift",
+        "TranslateX/Translation/Services/DedicatedTranslationLanguages.swift",
+        "TranslateX/Translation/Services/DedicatedTranslationProvider.swift",
+        "TranslateX/Translation/Services/BoundedTranslationHTTPTransport.swift",
+        "TranslateX/Translation/Services/TranslationProviderFactory.swift",
+        "TranslateX/Translation/Services/Codex/CodexAccountController.swift",
+        "TranslateX/Translation/Services/Codex/CodexRuntimeSession.swift",
+        "TranslateX/Translation/Services/Codex/CodexTranslationProvider.swift",
+        "TranslateX/Translation/Services/ClaudeTranslationProvider.swift",
+        "TranslateX/Translation/Services/ClaudeTranslationResponseParser.swift",
+        "TranslateX/Translation/Services/GoogleCloudTranslationProvider.swift",
+        "TranslateX/Translation/Services/TencentTranslationProvider.swift",
+        "TranslateX/Translation/Services/TencentTranslationLanguages.swift",
+        "TranslateX/Translation/Services/GoogleTranslationLanguages.swift",
+        "TranslateX/Translation/Services/QwenMTTranslationProvider.swift",
+        "TranslateX/Translation/Services/QwenMTTranslationLanguages.swift",
     ]
     executable = OUTPUT / "network-probe"
     subprocess.run([

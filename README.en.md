@@ -50,6 +50,8 @@ Official TSX releases will remain free of charge, with no paid features or subsc
 
 ## Development
 
+The product name is **TSX**. Its Xcode project, scheme, Swift module, and source directory use `TranslateX`; tests use `TranslateXTests`. Stable application identities and legacy storage identifiers are documented in the [distribution notes](Docs/Distribution.md#应用身份与存储兼容).
+
 TSX uses Swift 6, AppKit, and SwiftUI, with a Rust component for optional account-based services. Read the [build notes](Docs/BUILDING.md#english), [development conventions](AGENTS.md), [public repository rules](Docs/PUBLIC_REPOSITORY.md), and [third-party notices](THIRD_PARTY_NOTICES.md). The deployment target is macOS 15; Intel and minimum-OS hardware coverage remains limited. See the [validation record](Docs/Validation.md).
 
 ## Source and contributions

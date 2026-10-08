@@ -60,6 +60,8 @@ class Audit:
 
     def allowed_path(self, name):
         p = PurePosixPath(name)
+        if any(term.casefold() in name.casefold() for term in self.policy.get("retired_path_terms", [])):
+            return False
         if p.is_absolute() or ".." in p.parts or any(ord(c) < 32 for c in name):
             return False
         if any(part in FORBIDDEN_PARTS or Path(part).suffix.lower() in FORBIDDEN_SUFFIXES for part in p.parts):
@@ -75,16 +77,16 @@ class Audit:
         if p.parts[0] == ".github":
             return ((len(p.parts) == 3 and p.parts[1] == "ISSUE_TEMPLATE" and p.suffix in {".yml", ".yaml", ".md"})
                     or name == ".github/workflows/repository-safety.yml")
-        if p.parts[0] == "LumaxTranslate.xcodeproj":
+        if p.parts[0] == "TranslateX.xcodeproj":
             return name in {
-                "LumaxTranslate.xcodeproj/project.pbxproj",
-                "LumaxTranslate.xcodeproj/project.xcworkspace/contents.xcworkspacedata",
-                "LumaxTranslate.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
-                "LumaxTranslate.xcodeproj/xcshareddata/xcschemes/LumaxTranslate.xcscheme",
+                "TranslateX.xcodeproj/project.pbxproj",
+                "TranslateX.xcodeproj/project.xcworkspace/contents.xcworkspacedata",
+                "TranslateX.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
+                "TranslateX.xcodeproj/xcshareddata/xcschemes/TranslateX.xcscheme",
             }
         if p.suffix.lower() == ".png":
             return (name in self.policy["png_paths"] or
-                    (len(p.parts) == 5 and p.parts[:3] == ("LumaxTranslate", "Resources", "Assets.xcassets")
+                    (len(p.parts) == 5 and p.parts[:3] == ("TranslateX", "Resources", "Assets.xcassets")
                      and p.parts[3] in self.policy["png_asset_sets"]))
         return (p.parts[0] in self.policy["source_roots"]
                 and str(p.parent) in self.policy["source_directories"]
@@ -99,12 +101,18 @@ class Audit:
         if PRIVATE_KEY.search(text):
             self.issue(name, "private-key material")
 
-    def entry(self, mode, oid, name):
-        key = (mode, oid, name)
+    def entry(self, mode, oid, name, historical=False):
+        # A naming migration must not exempt old content from privacy checks.
+        # Only explicitly reviewed immutable commits may use retired paths.
+        reviewed_name = name
+        if historical:
+            for old, new in self.policy.get("historical_path_replacements", []):
+                reviewed_name = reviewed_name.replace(old, new)
+        key = (mode, oid, name, historical)
         if key in self.checked:
             return
         self.checked.add(key)
-        if not self.allowed_path(name):
+        if not self.allowed_path(reviewed_name):
             self.issue(name, "path or file type is outside the public allowlist")
             return
         if mode not in {"100644", "100755"}:
@@ -117,7 +125,7 @@ class Audit:
         if name.lower().endswith(".png"):
             if not data.startswith(b"\x89PNG\r\n\x1a\n"):
                 self.issue(name, "approved image path does not contain PNG data")
-            elif hashlib.sha256(data).hexdigest() not in self.images.get(name, []):
+            elif hashlib.sha256(data).hexdigest() not in self.images.get(reviewed_name, []):
                 self.issue(name, "image content requires visual review and an exact reviewed-images.json entry")
             return
         try:
@@ -130,16 +138,17 @@ class Audit:
         self.check_text(name, text)
         self.scan_files[(oid, name)] = data
 
-    def tree(self, ref):
+    def tree(self, ref, historical=False):
         tree = self.git("rev-parse", "--verify", "--end-of-options", f"{ref}^{{tree}}").decode().strip()
-        if tree in self.trees:
+        key = (tree, historical)
+        if key in self.trees:
             return
-        self.trees.add(tree)
+        self.trees.add(key)
         for record in self.git("ls-tree", "-rz", "--full-tree", tree).split(b"\0"):
             if record:
                 header, name = record.split(b"\t", 1)
                 mode, kind, oid = header.decode().split()
-                self.entry(mode, oid, name.decode("utf-8"))
+                self.entry(mode, oid, name.decode("utf-8"), historical=historical)
 
     def policy_digest(self):
         entries = []
@@ -204,7 +213,7 @@ class Audit:
             if commit not in self.commits:
                 self.commits.add(commit)
                 self.commit_metadata(commit)
-                self.tree(commit)
+                self.tree(commit, historical=commit in self.policy.get("historical_path_commits", []))
 
     def pre_push_policy(self):
         required = {".gitignore", ".gitleaks.toml", ".githooks/pre-commit", ".githooks/pre-push",

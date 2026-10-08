@@ -16,20 +16,20 @@ enum SelectionFixtureMode: String, CaseIterable {
     }
     var expected: String {
         switch self {
-        case .direct: "Lumax 原文应为 AX 开头的句子；复制次数 0，标记保持。"
-        case .copy: "Lumax 原文应为 COPY 开头的句子；复制次数 1，标记恢复。"
-        case .empty: "Lumax 应提示未选中文字；复制次数 0，标记保持。"
-        case .secure: "Lumax 应提示受保护字段；复制次数 0，标记保持。"
-        case .timeout: "Lumax 应提示无法取词；复制次数 1，标记保持，不能翻译旧标记。"
-        case .interference: "应保留 NEW 标记，不被旧备份覆盖；若检测到竞争，Lumax 提示内容变化。"
+        case .direct: "TranslateX 原文应为 AX 开头的句子；复制次数 0，标记保持。"
+        case .copy: "TranslateX 原文应为 COPY 开头的句子；复制次数 1，标记恢复。"
+        case .empty: "TranslateX 应提示未选中文字；复制次数 0，标记保持。"
+        case .secure: "TranslateX 应提示受保护字段；复制次数 0，标记保持。"
+        case .timeout: "TranslateX 应提示无法取词；复制次数 1，标记保持，不能翻译旧标记。"
+        case .interference: "应保留 NEW 标记，不被旧备份覆盖；若检测到竞争，TranslateX 提示内容变化。"
         }
     }
 }
 
 @MainActor
 final class SelectionFixtureView: NSView {
-    static let base = "LUMAX-QA-BASE-20260923"
-    static let newer = "LUMAX-QA-NEW-20260923"
+    static let base = "TRANSLATEX-QA-BASE-20260923"
+    static let newer = "TRANSLATEX-QA-NEW-20260923"
     static let directText = "AX: A quiet window helps you focus."
     static let copyText = "COPY: A bright window helps you focus."
     var mode = SelectionFixtureMode.direct
@@ -42,7 +42,7 @@ final class SelectionFixtureView: NSView {
     override func accessibilitySubrole() -> NSAccessibility.Subrole? {
         mode == .secure ? .secureTextField : nil
     }
-    override func accessibilityLabel() -> String? { "Lumax 构造选区" }
+    override func accessibilityLabel() -> String? { "TranslateX 构造选区" }
     override func isAccessibilityFocused() -> Bool { window?.firstResponder === self }
     override func accessibilitySelectedText() -> String? {
         switch mode {
@@ -114,11 +114,11 @@ final class SelectionFixtureApp: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 730, height: 430),
                           styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
-        window.title = "Lumax 取词验证 · 构造样例"
+        window.title = "TranslateX 取词验证 · 构造样例"
         let title = NSTextField(labelWithString: "取词路径与剪贴板检查")
         title.font = .systemFont(ofSize: 22, weight: .semibold)
         let instructions = NSTextField(wrappingLabelWithString:
-            "选择场景 → 准备样例 → 在本窗口按 Lumax 取词快捷键 → 核对结果。\n准备按钮会把测试标记复制到剪贴板；请在完成日常复制工作后再测试。")
+            "选择场景 → 准备样例 → 在本窗口按 TranslateX 取词快捷键 → 核对结果。\n准备按钮会把测试标记复制到剪贴板；请在完成日常复制工作后再测试。")
         picker.addItems(withTitles: SelectionFixtureMode.allCases.map(\.title))
         let prepare = NSButton(title: "准备样例（复制测试标记）", target: self, action: #selector(prepareSample))
         let check = NSButton(title: "检查一次结果", target: self, action: #selector(checkResult))
@@ -139,7 +139,7 @@ final class SelectionFixtureApp: NSObject, NSApplicationDelegate {
         ])
         expected.stringValue = SelectionFixtureMode.direct.expected
         status.setAccessibilityIdentifier("fixture.result")
-        view.didCopy = { [weak self] in self?.status.stringValue = "收到复制命令；等待 Lumax 收尾后点击检查。" }
+        view.didCopy = { [weak self] in self?.status.stringValue = "收到复制命令；等待 TranslateX 收尾后点击检查。" }
         let menu = NSMenu()
         let appItem = NSMenuItem()
         menu.addItem(appItem)
@@ -176,7 +176,7 @@ final class SelectionFixtureApp: NSObject, NSApplicationDelegate {
         // frontmost process. Use the same system identity check as SelectionService.
         let isSystemFrontmost = NSWorkspace.shared.frontmostApplication?.processIdentifier
             == ProcessInfo.processInfo.processIdentifier
-        status.stringValue = "复制次数：\(view.copies)；\(state)。\n系统前台应用：\(isSystemFrontmost ? "本样例" : "其他应用")。请同时核对 Lumax 原文/提示。"
+        status.stringValue = "复制次数：\(view.copies)；\(state)。\n系统前台应用：\(isSystemFrontmost ? "本样例" : "其他应用")。请同时核对 TranslateX 原文/提示。"
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationWillTerminate(_ notification: Notification) { statusTask?.cancel() }
@@ -188,7 +188,7 @@ struct SelectionFixtureMain {
         let app = NSApplication.shared
         if CommandLine.arguments.contains("--self-test") {
             let view = SelectionFixtureView(frame: .zero)
-            let board = NSPasteboard(name: .init("LumaxFixtureSelfTest-\(UUID().uuidString)"))
+            let board = NSPasteboard(name: .init("TranslateXFixtureSelfTest-\(UUID().uuidString)"))
             defer { board.releaseGlobally() }
             view.board = board
             var passed = 0

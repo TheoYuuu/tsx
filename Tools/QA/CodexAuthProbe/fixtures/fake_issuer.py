@@ -18,7 +18,7 @@ import time
 import uuid
 from urllib.parse import parse_qs, urlsplit
 
-CLIENT_ID = "lumax-fixture-client"
+CLIENT_ID = "translatex-fixture-client"
 OFFICIAL_CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 USERCODE = "/api/accounts/deviceauth/usercode"
 POLL = "/api/accounts/deviceauth/token"
@@ -64,7 +64,7 @@ class FakeIssuer:
         self._redirect_target = redirect_target
         self.hold_seconds = hold_seconds
         nonce = uuid.uuid4().hex
-        self._marker = "LUMAX_PRIVATE_FIXTURE_" + nonce
+        self._marker = "TRANSLATEX_PRIVATE_FIXTURE_" + nonce
         self._device_id = "fixture-device-" + nonce
         self._user_code = "FIXTURE-" + nonce
         self._authorization_code = "fixture-authorization-" + nonce

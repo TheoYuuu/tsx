@@ -33,7 +33,7 @@ class HarnessTests(unittest.TestCase):
         self.resources = ExitStack()
         self.addCleanup(self.resources.close)
         self.root = Path(self.resources.enter_context(
-            tempfile.TemporaryDirectory(prefix="lumax-auth-harness-test-"))).resolve()
+            tempfile.TemporaryDirectory(prefix="translatex-auth-harness-test-"))).resolve()
         # Fail immediately if a regression tries to leave this Python-only test.
         self.resources.enter_context(patch.object(auth_probe.subprocess, "Popen",
             side_effect=AssertionError("process execution is forbidden in this test")))

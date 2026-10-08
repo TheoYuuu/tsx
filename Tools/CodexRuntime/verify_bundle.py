@@ -38,7 +38,7 @@ def main():
          "--configuration", args.configuration, "--verify-only"])
     package = ROOT / ".build/CodexRuntime/package" / args.configuration
     manifest = json.loads((package / "package-manifest.json").read_text())
-    helper = args.app / "Contents/Helpers/lumax-codex-runtime"
+    helper = args.app / "Contents/Helpers/translatex-codex-runtime"
     if helper.is_symlink() or not helper.is_file():
         raise RuntimeError("Embedded helper must be a real executable file.")
     notices = args.app / "Contents/Resources/CodexThirdPartyNotices.txt"
@@ -63,7 +63,7 @@ def main():
     # ad-hoc signature before removing it; never alter the verified application.
     with tempfile.TemporaryDirectory(prefix="bundle-verify-", dir=ROOT / ".build/CodexRuntime") as temporary:
         hashes = []
-        for index, source in enumerate((package / "lumax-codex-runtime", helper)):
+        for index, source in enumerate((package / "translatex-codex-runtime", helper)):
             copied = Path(temporary) / str(index)
             shutil.copyfile(source, copied)
             run(["/usr/bin/codesign", "--force", "--sign", "-", "--identifier", IDENTIFIER,

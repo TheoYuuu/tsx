@@ -13,7 +13,7 @@ guard arguments.isEmpty || (arguments.count == 2 && arguments[0] == "--output-di
     fatalError("Usage: GenerateMenuIcon.swift [--output-directory PATH]")
 }
 let output = arguments.isEmpty
-    ? root.appending(path: "LumaxTranslate/Resources/Assets.xcassets/MenuBarIcon.imageset")
+    ? root.appending(path: "TranslateX/Resources/Assets.xcassets/MenuBarIcon.imageset")
     : URL(fileURLWithPath: arguments[1], isDirectory: true)
 try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 guard let artwork = NSImage(contentsOf: directory.appending(path: "MenuBarIcon.svg")) else {

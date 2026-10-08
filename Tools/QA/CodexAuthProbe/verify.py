@@ -28,7 +28,7 @@ SHARED_INPUTS = {
     "src/translation.rs": HERE.parent / "CodexTranslationProbe/src/translation.rs",
     "src/account_request.rs": REPO / "Runtime/CodexHelper/src/account_request.rs",
 }
-IDENTIFIER = "com.theoyuuu.LumaxTranslate.QA.CodexAuth"
+IDENTIFIER = "com.theoyuuu.TranslateX.QA.CodexAuth"
 
 # Share the source archive audit rather than maintaining two subtly different
 # extractors. Import has no build, network, login, or filesystem side effects.
@@ -252,9 +252,9 @@ def main():
         with tarfile.open(archive_path, "r:gz") as archive:
             common.check_source(archive, common.audited_members(archive), source_parent)
 
-        built = WORK / "target/debug/lumax-codex-auth-prototype"
+        built = WORK / "target/debug/translatex-codex-auth-prototype"
         common.regular_file(built, 256 * 1024 * 1024)
-        binary = evidence / "lumax-codex-auth-prototype"
+        binary = evidence / "translatex-codex-auth-prototype"
         binary.write_bytes(built.read_bytes())
         binary.chmod(0o700)
         common.run(["/usr/bin/codesign", "--force", "--options", "runtime", "--timestamp=none",

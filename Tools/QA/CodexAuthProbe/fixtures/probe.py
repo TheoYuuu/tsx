@@ -570,7 +570,7 @@ class Probe:
 
     def environment_case(self):
         home = self.home("environment")
-        sentinel = "LUMAX_ENV_FIXTURE_" + uuid.uuid4().hex
+        sentinel = "TRANSLATEX_ENV_FIXTURE_" + uuid.uuid4().hex
         names = ("CODEX_API_KEY", "CODEX_ACCESS_TOKEN", "OPENAI_API_KEY", "CODEX_APP_SERVER_LOGIN_CLIENT_ID",
                  "CODEX_REFRESH_TOKEN_URL_OVERRIDE", "CODEX_REVOKE_TOKEN_URL_OVERRIDE")
         with FakeIssuer() as issuer:

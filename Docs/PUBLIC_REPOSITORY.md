@@ -30,6 +30,8 @@
 
 可公开的目录、文档和文件类型由 `Tools/Repository/policy.json` 明确列出。PNG 还必须匹配 `Tools/Repository/reviewed-images.json` 中的精确路径与 SHA-256；新增或替换图片先查看像素和元数据，再更新清单并审核策略差异，不能仅为消除报错而自动添加摘要。
 
+当前工程路径使用 `TranslateX`；策略中的 `retired_path_terms` 阻止新增旧 `Lumax` 路径。`historical_path_commits` 只对两个固定、已公开的提交允许旧路径映射，以保留真实历史；这些提交仍接受完整秘密、隐私及图片摘要检查。该例外不能授权新提交恢复旧路径，也不免除历史内容审核。运行时保留的兼容标识见[分发说明](Distribution.md#应用身份与存储兼容)。
+
 ## 哪些签名信息可以公开
 
 Bundle ID、Team ID、证书公钥/指纹、Sparkle 更新公钥和发布文件的校验值可以用于识别及验签；它们不提供签名能力。真正需要保密的是私钥、含私钥的导出容器、Apple 公证凭据和服务令牌。

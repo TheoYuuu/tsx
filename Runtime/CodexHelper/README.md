@@ -4,6 +4,8 @@
 
 固定上游为 `openai/codex@36650394c5b38c2990ccf2a3457165ca3e9d9726`（rust-v0.157.1），不修改上游源码。下载、摘要、冻结构建和许可流程见[打包契约](../../Tools/CodexRuntime/PACKAGING.md)；运行产物和私有复核材料不入 Git。
 
+内部 crate 和正式可执行文件名为 `translatex-codex-runtime`。签名标识继续使用 `com.theoyuuu.LumaxTranslate.CodexRuntime`，账号目录与 Keychain 身份保持兼容；内部名称变更不迁移或重新创建已有账号。
+
 ## 职责
 
 | 文件 | 能力 |

@@ -1,6 +1,6 @@
 # Codex helper 本地打包
 
-本流程用于当前官网渠道。只构建 Lumax 原创主管/worker 与固定官方 Rust 库组成的 `lumax-codex-runtime`，不包含 Codex CLI、app-server、QA binary 或 `qa-fixtures`。它不会创建登录、查询真实账号、访问账号 Keychain、读取管理策略或请求模型。构建、开发签名和本地嵌入不代表公开发布或公证。
+本流程用于当前官网渠道。只构建 TranslateX 原创主管/worker 与固定官方 Rust 库组成的 `translatex-codex-runtime`，不包含 Codex CLI、app-server、QA binary 或 `qa-fixtures`。它不会创建登录、查询真实账号、访问账号 Keychain、读取管理策略或请求模型。构建、开发签名和本地嵌入不代表公开发布或公证。
 
 ## 构建入口
 
@@ -19,7 +19,7 @@ python3 Tools/CodexRuntime/test_package.py
 
 可用 `--cargo` / `--cargo-home` 指定本仓库 `.build` 内的真实路径。不会使用默认 `~/.cargo`、现有 Codex 配置或环境中的认证、代理设置。父 `HOME` 保留其原义，Cargo/Rustup/target/tmp 均使用任务专用路径；拒绝祖先目录与指定 Cargo home 中的配置/凭据文件。
 
-脚本复核已有官方工具链组件档案及实际安装文件。需要 Intel 标准库时，从固定 Rust 1.95.0 官方 manifest 验证 URL/摘要，下载校验后只复制库文件到私有工具链，不执行档案内安装脚本。Cargo 构建始终 `--locked --offline --no-default-features --bin lumax-codex-runtime`。首次许可收集可能只读下载发布时固定 Git commit 的上游许可文件；Xcode 嵌入阶段不会触发这些下载。
+脚本复核已有官方工具链组件档案及实际安装文件。需要 Intel 标准库时，从固定 Rust 1.95.0 官方 manifest 验证 URL/摘要，下载校验后只复制库文件到私有工具链，不执行档案内安装脚本。Cargo 构建始终 `--locked --offline --no-default-features --bin translatex-codex-runtime`。首次许可收集可能只读下载发布时固定 Git commit 的上游许可文件；Xcode 嵌入阶段不会触发这些下载。
 
 ## 产物与嵌入契约
 
@@ -30,13 +30,15 @@ python3 Tools/CodexRuntime/test_package.py
 
 两个目录均包含：
 
-- `lumax-codex-runtime`
+- `translatex-codex-runtime`
 - `THIRD-PARTY-NOTICES.txt`
 - `package-manifest.json`
 
 每个 Mach-O slice 的最低系统固定为 macOS 15.0；最终可执行文件裁剪符号，使用标识 `com.theoyuuu.LumaxTranslate.CodexRuntime` 并保留 Hardened Runtime。仅接受系统动态库引用。编译期不裁剪 proc-macro 库：本机已复现系统 loader 对裁剪后插件库报 `mis-aligned LINKEDIT string pool`，因此 `[profile.release] strip = "none"`，只对最终 helper 执行裁剪。
 
-Xcode 通过 `Scripts/embed-codex-runtime.sh` 执行只读校验后，把 helper 复制到 `Contents/Helpers/lumax-codex-runtime`，把 notice 复制到 `Contents/Resources/CodexThirdPartyNotices.txt`，再用当前 App 的签名身份签嵌入副本。App 通过自身 Bundle 定位该 helper。没有预生成产物或源码已经变化时，构建阶段明确失败并提示先运行打包命令，不静默下载或使用旧包。
+可执行文件名采用 TranslateX 内部命名；上述签名标识及既有账号存储身份属于兼容契约，保持不变。名称或源码变化后须重新生成 Debug/Release 包和摘要清单，不能把旧缓存文件改名后作为新包使用。
+
+Xcode 通过 `Scripts/embed-codex-runtime.sh` 执行只读校验后，把 helper 复制到 `Contents/Helpers/translatex-codex-runtime`，把 notice 复制到 `Contents/Resources/CodexThirdPartyNotices.txt`，再用当前 App 的签名身份签嵌入副本。App 通过自身 Bundle 定位该 helper。没有预生成产物或源码已经变化时，构建阶段明确失败并提示先运行打包命令，不静默下载或使用旧包。
 
 `--verify-only` 只检查当前源码与工具哈希、二进制和 notice 哈希、固定官方来源、配置/架构、禁用 QA 特征与签名；不构建、下载、签名或执行账号功能。源文件、锁文件或任一打包工具修改后必须重新打包。
 
@@ -59,7 +61,7 @@ Xcode 通过 `Scripts/embed-codex-runtime.sh` 执行只读校验后，把 helper
 
 清单覆盖 Cargo metadata 的保守依赖集合，包含构建期依赖，不宣称每个包的代码都会进入最终机器码。保留实际包内 LICENSE/NOTICE、固定 Git 来源中的共享许可和完整源码许可头；另外收录静态链接的 Rust 标准库版权与许可说明。MPL 等依赖同时列出对应版本的公开未修改源码档案位置。
 
-少数发布 crate 仅在 Cargo metadata 声明许可，发布内容和固定源码树没有单独许可文件。`licenses.py` 对明确的 Apache/MIT 声明附标准许可正文，并保留其发布作者及源码版权行；不会补造版权年份或持有人，也不冒称这些补全文本是上游原件。`standardTextSupplements` 单独列出它们，供公开分发准备时核对。没有可确定许可文本的依赖会使打包失败。此清单不为 Lumax 本身新设许可证，也不代替分发前的许可审阅。
+少数发布 crate 仅在 Cargo metadata 声明许可，发布内容和固定源码树没有单独许可文件。`licenses.py` 对明确的 Apache/MIT 声明附标准许可正文，并保留其发布作者及源码版权行；不会补造版权年份或持有人，也不冒称这些补全文本是上游原件。`standardTextSupplements` 单独列出它们，供公开分发准备时核对。没有可确定许可文本的依赖会使打包失败。此清单不为 TranslateX 本身新设许可证，也不代替分发前的许可审阅。
 
 ## 本轮实际验证
 

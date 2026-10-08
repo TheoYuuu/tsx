@@ -106,7 +106,7 @@ private final class FixtureDelegate: NSObject, NSApplicationDelegate, NSWindowDe
         guard let window = fixtureWindow, let screen = window.screen else { return }
         let target = window.convertToScreen(canvas.convert(FixtureCanvas.targetRect, to: nil))
         let scale = String(format: "%.1f", screen.backingScaleFactor)
-        window.title = "Lumax Screen Fixture — \(screen.localizedName) — \(scale)×"
+        window.title = "TranslateX Screen Fixture — \(screen.localizedName) — \(scale)×"
         canvas.screenLabel.stringValue = "Display: \(screen.localizedName)  |  Scale: \(scale)×  |  Frame: \(format(screen.frame))"
         canvas.geometryLabel.stringValue = "Target AppKit global (bottom-left origin): \(format(target))"
         let multipleScreens = NSScreen.screens.count > 1

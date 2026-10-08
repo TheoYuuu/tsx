@@ -31,7 +31,7 @@ python3 Tools/CodexRuntime/package.py --configuration All --verify-only
 Scripts/verify.sh
 ```
 
-完整检查包含工程与双语资源、API 类型检查、隔离宿主 XCTest、官网 Debug／Release 构建，以及主 App／运行组件签名、Hardened Runtime 和权限检查。也可打开 `LumaxTranslate.xcodeproj`，选择 `LumaxTranslate` scheme；内置签名团队仅代表维护者的发布身份，不提供证书或私钥。
+完整检查包含工程与双语资源、API 类型检查、隔离宿主 XCTest、官网 Debug／Release 构建，以及主 App／运行组件签名、Hardened Runtime 和权限检查。也可打开 `TranslateX.xcodeproj`，选择 `TranslateX` scheme；内置签名团队仅代表维护者的发布身份，不提供证书或私钥。
 
 验证产物位于 `.build/DerivedData/Build/Products/Debug/TSX.app` 和对应的 `Release` 目录。校验脚本使用 ad-hoc 签名，不能作为已公证的正式安装包。正式发行按 [RELEASING.md](RELEASING.md) 完成 Developer ID 签名、公证、打包与安装升级验证。
 
@@ -48,6 +48,6 @@ The source includes Swift/AppKit/SwiftUI application code and an optional Rust a
 
 On an Apple Silicon build host, run `python3 Tools/CodexRuntime/bootstrap.py` and `python3 Tools/Release/setup_sparkle.py` from the repository root. These prepare hash-verified, pinned compiler/source/dependency inputs inside ignored `.build` directories without installing global Rust. Network access and several GiB of disk space may be required. The bootstrap currently supports Apple Silicon build hosts; Release output includes both arm64 and x86_64. Validation with existing caches does not establish a clean-Mac setup.
 
-Then run `Scripts/verify.sh`, or open the committed `LumaxTranslate.xcodeproj` and choose the `LumaxTranslate` scheme. The verification script builds Debug/Release, checks signing and permissions, and runs tests in an isolated host. Its ad-hoc signed outputs are not notarized releases. See [the release workflow](RELEASING.md) for distribution signing, notarization and installation checks.
+Then run `Scripts/verify.sh`, or open the committed `TranslateX.xcodeproj` and choose the `TranslateX` scheme. The verification script builds Debug/Release, checks signing and permissions, and runs tests in an isolated host. Its ad-hoc signed outputs are not notarized releases. See [the release workflow](RELEASING.md) for distribution signing, notarization and installation checks.
 
 Follow the [public repository rules](PUBLIC_REPOSITORY.md). Keep credentials, signing keys, personal text/screenshots and build artifacts out of Git. Third-party dependencies retain their own licenses. Compilation and automated tests do not establish real Intel/macOS 15, account-service, translation or permission coverage.

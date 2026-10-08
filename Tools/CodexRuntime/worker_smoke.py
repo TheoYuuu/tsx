@@ -22,7 +22,7 @@ import uuid
 ROOT = Path(__file__).resolve().parents[2]
 WORK = ROOT / ".build" / "CodexRuntime" / "worker-smoke"
 CERTIFICATE = "F500F2108BFF053E42453451D07BB3272A1C1DE4"
-IDENTIFIER = "com.theoyuuu.LumaxTranslate.QA.CodexWorkerSmoke"
+IDENTIFIER = "com.theoyuuu.TranslateX.QA.CodexWorkerSmoke"
 CHECKS = {
     "status_constructed_signed_in": "signed_in",
     "status_strict_absence": "signed_out",
@@ -204,7 +204,7 @@ def main():
     private_directory(evidence, create=True)
     temporary = run / "tmp"
     private_directory(temporary, create=True)
-    executable = evidence / "lumax-worker-smoke"
+    executable = evidence / "translatex-worker-smoke"
     shutil.copyfile(binary, executable)
     executable.chmod(0o755)
     environment = {"PATH": "/usr/bin:/bin", "LANG": "en_US.UTF-8", "TMPDIR": str(temporary)}

@@ -14,7 +14,7 @@ python3 Tools/CodexRuntime/package.py --configuration "$task_configuration" --ve
 
 task_app="${TARGET_BUILD_DIR:?}/${CONTENTS_FOLDER_PATH:?}"
 mkdir -p "$task_app/Helpers" "$task_app/Resources"
-install -m 755 "$task_package/lumax-codex-runtime" "$task_app/Helpers/lumax-codex-runtime"
+install -m 755 "$task_package/translatex-codex-runtime" "$task_app/Helpers/translatex-codex-runtime"
 install -m 644 "$task_package/THIRD-PARTY-NOTICES.txt" "$task_app/Resources/CodexThirdPartyNotices.txt"
 install -m 644 "$SRCROOT/LICENSE" "$task_app/Resources/TSX-LICENSE.txt"
 install -m 644 "$SRCROOT/THIRD_PARTY_NOTICES.md" "$task_app/Resources/TSX-ThirdPartyNotices.md"
@@ -29,5 +29,5 @@ if [[ "${EXPANDED_CODE_SIGN_IDENTITY_NAME:-}" == "Developer ID Application:"* ]]
 fi
 /usr/bin/codesign --force --sign "$task_identity" \
     --identifier com.theoyuuu.LumaxTranslate.CodexRuntime \
-    --options runtime "$task_timestamp" "$task_app/Helpers/lumax-codex-runtime"
-/usr/bin/codesign --verify --strict --all-architectures "$task_app/Helpers/lumax-codex-runtime"
+    --options runtime "$task_timestamp" "$task_app/Helpers/translatex-codex-runtime"
+/usr/bin/codesign --verify --strict --all-architectures "$task_app/Helpers/translatex-codex-runtime"

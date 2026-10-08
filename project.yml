@@ -1,4 +1,4 @@
-name: LumaxTranslate
+name: TranslateX
 options:
   minimumXcodeGenVersion: 2.46.0
   deploymentTarget:
@@ -21,12 +21,12 @@ settings:
     GCC_TREAT_WARNINGS_AS_ERRORS: YES
     SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
 targets:
-  LumaxTranslate:
+  TranslateX:
     type: application
     platform: macOS
     productName: TSX
     sources:
-      - path: LumaxTranslate
+      - path: TranslateX
     dependencies:
       - package: Sparkle
     postBuildScripts:
@@ -39,54 +39,54 @@ targets:
           - $(SRCROOT)/THIRD_PARTY_NOTICES.md
           - $(SRCROOT)/Config/Licenses/Sparkle-LICENSE.txt
         outputFiles:
-          - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/lumax-codex-runtime
+          - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Helpers/translatex-codex-runtime
           - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/CodexThirdPartyNotices.txt
           - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/TSX-LICENSE.txt
           - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/TSX-ThirdPartyNotices.md
           - $(TARGET_BUILD_DIR)/$(CONTENTS_FOLDER_PATH)/Resources/Sparkle-LICENSE.txt
     settings:
       base:
-        LUMAX_APP_BUNDLE_IDENTIFIER: com.lumax.tsx
-        PRODUCT_BUNDLE_IDENTIFIER: $(LUMAX_APP_BUNDLE_IDENTIFIER)
+        TRANSLATEX_APP_BUNDLE_IDENTIFIER: com.lumax.tsx
+        PRODUCT_BUNDLE_IDENTIFIER: $(TRANSLATEX_APP_BUNDLE_IDENTIFIER)
         DEVELOPMENT_TEAM: 97K37J92QD
         MARKETING_VERSION: 1.0.0
         CURRENT_PROJECT_VERSION: 1
-        PRODUCT_MODULE_NAME: LumaxTranslate
+        PRODUCT_MODULE_NAME: TranslateX
         PRODUCT_NAME: TSX
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_DEBUG_DYLIB: NO
-        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) LUMAX_DIRECT
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) TRANSLATEX_DIRECT
         OTHER_CODE_SIGN_FLAGS: $(inherited) --options runtime
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_FILE: Config/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: TSX
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
-        CODE_SIGN_ENTITLEMENTS: Config/LumaxTranslate.entitlements
+        CODE_SIGN_ENTITLEMENTS: Config/TranslateX.entitlements
       configs:
         Release:
           CODE_SIGN_INJECT_BASE_ENTITLEMENTS: NO
-  LumaxTranslateTests:
+  TranslateXTests:
     type: bundle.unit-test
     platform: macOS
     sources:
-      - path: LumaxTranslateTests
+      - path: TranslateXTests
     dependencies:
-      - target: LumaxTranslate
+      - target: TranslateX
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.lumax.tsx.Tests
         GENERATE_INFOPLIST_FILE: YES
 schemes:
-  LumaxTranslate:
+  TranslateX:
     build:
       targets:
-        LumaxTranslate: all
+        TranslateX: all
     run:
       config: Debug
     test:
       config: Debug
       targets:
-        - LumaxTranslateTests
+        - TranslateXTests
       gatherCoverageData: false
     archive:
       config: Release

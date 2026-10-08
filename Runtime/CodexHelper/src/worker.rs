@@ -241,7 +241,7 @@ mod tests {
     }
     #[test]
     fn worker_requires_exact_pending_or_active_identity_and_operation() {
-        let root = std::env::temp_dir().canonicalize().unwrap().join(format!("lumax-worker-test-{}", Uuid::new_v4()));
+        let root = std::env::temp_dir().canonicalize().unwrap().join(format!("translatex-worker-test-{}", Uuid::new_v4()));
         std::fs::DirBuilder::new().mode(0o700).create(&root).unwrap();
         let mut storage = AccountStorage::lock(&root).unwrap();
         let request = crate::protocol::Request { protocol_version: 1, request_id: Uuid::new_v4().to_string(), operation: Operation::Login,

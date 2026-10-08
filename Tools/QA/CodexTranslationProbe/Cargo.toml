@@ -1,5 +1,5 @@
 [package]
-name = "lumax-codex-translation-prototype"
+name = "translatex-codex-translation-prototype"
 version = "0.0.0"
 edition = "2024"
 publish = false

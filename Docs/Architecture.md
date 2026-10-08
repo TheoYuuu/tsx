@@ -8,13 +8,13 @@ TSX 使用 Swift 6、AppKit、SwiftUI、Apple Translation、Vision 与 ScreenCap
 
 | 目录 | 职责 |
 | --- | --- |
-| `LumaxTranslate/App` | 生命周期、菜单栏、服务装配及截图意图协调 |
-| `LumaxTranslate/Windows` | 主窗口、浮窗、区域选择、定位、焦点及退出事件 |
-| `LumaxTranslate/Translation` | 请求身份、语言、结果、取消、Apple 会话桥接 |
-| `LumaxTranslate/Translation/Services` | 用户配置、Keychain、HTTP、流解析、账号会话和用量 |
-| `LumaxTranslate/System` | 权限、取词、快捷键、截图、OCR 与更新 |
-| `LumaxTranslate/Settings` | 偏好、快捷键和旧偏好域兼容导入 |
-| `LumaxTranslate/UI` | 共用编辑、结果、设置和状态内容 |
+| `TranslateX/App` | 生命周期、菜单栏、服务装配及截图意图协调 |
+| `TranslateX/Windows` | 主窗口、浮窗、区域选择、定位、焦点及退出事件 |
+| `TranslateX/Translation` | 请求身份、语言、结果、取消、Apple 会话桥接 |
+| `TranslateX/Translation/Services` | 用户配置、Keychain、HTTP、流解析、账号会话和用量 |
+| `TranslateX/System` | 权限、取词、快捷键、截图、OCR 与更新 |
+| `TranslateX/Settings` | 偏好、快捷键和旧偏好域兼容导入 |
+| `TranslateX/UI` | 共用编辑、结果、设置和状态内容 |
 | `Runtime/CodexHelper` | 独立账号主管与短生命周期 worker |
 
 AppKit 集中管理窗口，SwiftUI 负责内容。系统服务只在实际能力边界注入，不放入 View；渠道选择集中于应用装配入口。Debug/Release 是构建模式，不代表分发渠道。

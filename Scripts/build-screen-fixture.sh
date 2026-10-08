@@ -19,8 +19,8 @@ cat > "$qa_output/Contents/Info.plist" <<'PLIST'
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleIdentifier</key><string>com.theoyuuu.LumaxTranslate.ScreenFixture</string>
-    <key>CFBundleName</key><string>Lumax Screen Fixture</string>
+    <key>CFBundleIdentifier</key><string>com.theoyuuu.TranslateX.ScreenFixture</string>
+    <key>CFBundleName</key><string>TranslateX Screen Fixture</string>
     <key>CFBundleExecutable</key><string>ScreenFixture</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>NSPrincipalClass</key><string>NSApplication</string>

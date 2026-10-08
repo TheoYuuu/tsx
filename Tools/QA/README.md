@@ -20,7 +20,7 @@
 
 ## 屏幕裁剪构造样本
 
-`ScreenFixture.swift` 是独立的原生测试窗口，供 Lumax 的真实区域选择、ScreenCaptureKit 与 OCR 交互验证使用。它不嵌入产品，也不申请辅助功能或屏幕访问、不读取屏幕、用户文件或网络。
+`ScreenFixture.swift` 是独立的原生测试窗口，供 TranslateX 的真实区域选择、ScreenCaptureKit 与 OCR 交互验证使用。它不嵌入产品，也不申请辅助功能或屏幕访问、不读取屏幕、用户文件或网络。
 
 ### 构建与检查
 
@@ -30,7 +30,7 @@ Scripts/build-screen-fixture.sh
 
 构建产物为忽略目录下的 `.build/QA/ScreenFixture.app`。脚本使用本机 SDK、macOS 15 最低部署目标、Swift 6 严格检查及 ad-hoc Hardened Runtime 签名，不启动应用、不创建证书或公开分发。先退出旧测试窗口再重新构建。
 
-1. 打开测试窗口，在 Lumax 中主动开始截图。框选中央矩形内的 `A quiet window helps you focus.`。
+1. 打开测试窗口，在 TranslateX 中主动开始截图。框选中央矩形内的 `A quiet window helps you focus.`。
 2. 核对 OCR 原文恰好等于目标句，没有框外的 `EXCLUDE THIS LINE`，并检查真实译文。
 3. 框选目标框内部文字上方的白色留白，检查无文字提示和重试入口。
 4. 取消选区、重试、将完成结果转入主窗口，分别记录实际观察。
@@ -39,13 +39,13 @@ Scripts/build-screen-fixture.sh
 
 目标矩形为内容坐标 `(100, 260, 600, 100)` pt。底部标签实时显示其 AppKit 全局矩形、当前屏幕坐标和缩放比例，帮助核对取景位置；具体屏幕以当前标签为准。标题栏拖动被锁定，只通过明确的换屏按钮重新定位。窗口不会改变系统分辨率、排列或缩放。
 
-窗口置于普通浮窗层并可跨 Space 显示，使构造内容不会被普通来源窗口遮住。Lumax 选区覆盖层仍在其上方。这只能证明固定样本的裁剪/OCR 路径，不能充当前台应用焦点、实际 Chrome 取词、物理全局热键、像素级缩放或所有显示器兼容性的证据。浮窗何时被自动化工具重新激活、关闭也必须与用户真实交互区分。
+窗口置于普通浮窗层并可跨 Space 显示，使构造内容不会被普通来源窗口遮住。TranslateX 选区覆盖层仍在其上方。这只能证明固定样本的裁剪/OCR 路径，不能充当前台应用焦点、实际 Chrome 取词、物理全局热键、像素级缩放或所有显示器兼容性的证据。浮窗何时被自动化工具重新激活、关闭也必须与用户真实交互区分。
 
 结果只适用于实际执行的构造样例；其他系统、显示器和来源应用需分别检查。
 
 ## 取词与剪贴板来源样例
 
-`Scripts/build-selection-fixture.sh` 构建 `.build/QA/SelectionFixture.app` 并自动执行六种样例契约检查。测试只使用命名剪贴板；不会启动交互窗口、请求权限、生成外部键盘事件或读其他 App。交互窗口通过原生 AppKit 的选区属性与 `copy:` 响应提供可控来源，默认没有后台剪贴板监控；准备后只延迟检查一次，也可按按钮检查。它在真实复制回调中写入构造内容，不尝试选择/激活 Lumax。
+`Scripts/build-selection-fixture.sh` 构建 `.build/QA/SelectionFixture.app` 并自动执行六种样例契约检查。测试只使用命名剪贴板；不会启动交互窗口、请求权限、生成外部键盘事件或读其他 App。交互窗口通过原生 AppKit 的选区属性与 `copy:` 响应提供可控来源，默认没有后台剪贴板监控；准备后只延迟检查一次，也可按按钮检查。它在真实复制回调中写入构造内容，不尝试选择/激活 TranslateX。
 
 场景涵盖直接 AX、复制兜底、空选区、受保护角色、复制不产生新内容，以及连续两次复制写入。直接路径和复制路径的原文分别带 AX/COPY 前缀，窗口记录收到的 Copy 次数（包括拒绝的 Copy），只显示剪贴板与构造标记的比对状态，不展示任意剪贴板正文。准备按钮等同一次用户明确复制构造标记；不备份、保存或自动恢复此前的用户剪贴板。
 
@@ -66,7 +66,7 @@ Scripts/build-screen-fixture.sh
 
 ## 双材质原生视觉目录
 
-`Scripts/prepare-visual-catalog.sh` 构建 `.build/NativeVisualReview/Lumax Visual Review.app`，不启动或安装。构建前先退出旧视觉目录实例。它直接编译正式 UI、窗口控制器与偏好实现，仅替换 Apple translation host，并用固定原创句子构造状态，不能作为真实翻译通过证据。
+`Scripts/prepare-visual-catalog.sh` 构建 `.build/NativeVisualReview/TranslateX Visual Review.app`，不启动或安装。构建前先退出旧视觉目录实例。它直接编译正式 UI、窗口控制器与偏好实现，仅替换 Apple translation host，并用固定原创句子构造状态，不能作为真实翻译通过证据。
 
 启动后通过“场景”菜单检查主窗、空白、长文、浮窗、三页设置、两种权限说明、语言准备/识别/错误/取消/同语言/无文字、截图覆盖层、关于和最小尺寸；同一菜单切换材质与明暗。设置使用独立临时域，退出清理，不写用户的产品偏好。屏幕背景和选区均为构造内容；目录中的截图提示不调用屏幕捕获。
 
@@ -81,7 +81,7 @@ Scripts/build-screen-fixture.sh
 
 运行 `Scripts/verify.sh` 时暂停界面自动化；浮窗测试保留正式的外部点击关闭机制，其他程序的点击会干扰可见性断言。
 
-该脚本给 XCTest 专用宿主使用 `com.lumax.tsx.TestHost`，测试 bundle 仍为 `.Tests`，以免系统激活正在运行的产品 App。官网 Debug/Release 身份不变且仍按实际产物严格核对。单独运行窗口 XCTest 时也要传入 `LUMAX_APP_BUNDLE_IDENTIFIER=com.lumax.tsx.TestHost`；不通过关闭用户 App 或伪造 key window 规避碰撞。
+该脚本给 XCTest 专用宿主使用 `com.lumax.tsx.TestHost`，测试 bundle 仍为 `.Tests`，以免系统激活正在运行的产品 App。官网 Debug/Release 身份不变且仍按实际产物严格核对。单独运行窗口 XCTest 时也要传入 `TRANSLATEX_APP_BUNDLE_IDENTIFIER=com.lumax.tsx.TestHost`；不通过关闭用户 App 或伪造 key window 规避碰撞。
 
 视觉目录只包含构造翻译状态，不作为真实翻译证据。
 

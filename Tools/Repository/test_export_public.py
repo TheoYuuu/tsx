@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[2]
 EXPORT = ROOT / "Tools/Repository/export_public.py"
 SCANNER = os.environ.get("TSX_TEST_GITLEAKS", str(ROOT / ".build/RepositoryTools/gitleaks"))
 STATE = "Tools/Repository/export-state.json"
-CODE = "LumaxTranslate/App/Sample.swift"
+CODE = "TranslateX/App/Sample.swift"
 # Copy reviewed policy/tool inputs only. Runtime export ownership belongs to the
 # real public checkout and must never become a fixture's starting state.
 FIXTURE_FILES = (
@@ -97,7 +97,7 @@ class PublicExportTests(unittest.TestCase):
             path = template / name
             path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(ROOT / name, path)
-        production_only = "LumaxTranslate/App/ProductionOnly.swift"
+        production_only = "TranslateX/App/ProductionOnly.swift"
         state_bytes = json.dumps({"version": 1, "files": {
             production_only: {"mode": "100644", "sha256": "0" * 64}
         }}).encode()
@@ -135,7 +135,7 @@ class PublicExportTests(unittest.TestCase):
         self.put(self.source, CODE, "let fixture = 2\n")
         self.commit(self.source, "Committed public change", CODE)
         self.put(self.source, CODE, "uncommitted private content\n")
-        self.put(self.source, "LumaxTranslate/App/Untracked.swift", "private draft\n")
+        self.put(self.source, "TranslateX/App/Untracked.swift", "private draft\n")
         before_refs = self.git(self.target, "rev-list", "--all")
         plan = self.apply()
         self.assertTrue(plan["applied"])
@@ -143,7 +143,7 @@ class PublicExportTests(unittest.TestCase):
         self.assertEqual((self.target / "README.md").read_text(), "Public product description\n")
         self.assertFalse((self.target / "Private").exists())
         self.assertFalse((self.target / "Design").exists())
-        self.assertFalse((self.target / "LumaxTranslate/App/Untracked.swift").exists())
+        self.assertFalse((self.target / "TranslateX/App/Untracked.swift").exists())
         self.assertEqual(self.git(self.target, "rev-list", "--all"), before_refs)
         source_hash = self.git(self.source, "rev-parse", "HEAD")
         found = subprocess.run(["git", "-C", str(self.target), "cat-file", "-e", source_hash], capture_output=True)
@@ -151,7 +151,7 @@ class PublicExportTests(unittest.TestCase):
         self.assertNotIn(source_hash, (self.target / STATE).read_text())
 
     def test_only_previously_managed_deleted_files_are_removed(self):
-        extra = "LumaxTranslate/App/PublicOnly.swift"
+        extra = "TranslateX/App/PublicOnly.swift"
         self.put(self.target, extra, "let publicOnly = true\n")
         self.commit(self.target, "Public-only source fixture", extra)
         self.establish_state()
@@ -201,7 +201,7 @@ class PublicExportTests(unittest.TestCase):
         self.assert_blocked("Symlinks")
 
     def test_ignored_target_collision_is_not_overwritten(self):
-        name = "LumaxTranslate/App/New.swift"
+        name = "TranslateX/App/New.swift"
         self.put(self.target, ".gitignore", (self.target / ".gitignore").read_text() + "\n" + name + "\n")
         self.commit(self.target, "Ignore local fixture", ".gitignore")
         self.put(self.target, name, "local-only content\n")
@@ -211,7 +211,7 @@ class PublicExportTests(unittest.TestCase):
         self.assertEqual((self.target / name).read_text(), "local-only content\n")
 
     def test_ignored_symlink_parent_cannot_escape_target(self):
-        parent = "LumaxTranslate/Translation"
+        parent = "TranslateX/Translation"
         self.put(self.target, ".gitignore", (self.target / ".gitignore").read_text() + "\n" + parent + "\n")
         self.commit(self.target, "Ignore local symlink fixture", ".gitignore")
         outside = self.base / "outside"
@@ -248,7 +248,7 @@ class PublicExportTests(unittest.TestCase):
         self.assert_blocked("Git LFS pointers")
 
     def test_ignored_nested_repository_is_not_modified(self):
-        parent = "LumaxTranslate/Translation"
+        parent = "TranslateX/Translation"
         self.put(self.target, ".gitignore", (self.target / ".gitignore").read_text() + "\n" + parent + "\n")
         self.commit(self.target, "Ignore nested checkout fixture", ".gitignore")
         nested = self.target / parent

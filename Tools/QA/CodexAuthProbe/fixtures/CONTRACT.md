@@ -4,7 +4,7 @@
 
 `fake_issuer.py` 独立按官方 `login/src/device_code_auth.rs`、`server.rs`、`auth/revoke.rs` 校验请求：
 
-- 申请：JSON `POST /api/accounts/deviceauth/usercode`，client ID 为构造值 `lumax-fixture-client`。
+- 申请：JSON `POST /api/accounts/deviceauth/usercode`，client ID 为构造值 `translatex-fixture-client`。
 - 轮询：JSON `POST /api/accounts/deviceauth/token`，必须匹配本次内存中的 device ID 和 user code。403/404 表示继续等待；拒绝和过期测试返回 400，不能把 403 误称已拒绝。
 - 兑换：form `POST /oauth/token`，精确核对 grant type、client ID、授权码、PKCE verifier 和设备码 callback URL。
 - 返回 JWT 使用官方测试中的未签名构造方式，具有专门的假账号/user/邮箱和未来过期时间。不是有效的 OpenAI 凭据。

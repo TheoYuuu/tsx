@@ -1,4 +1,4 @@
-//! Filesystem transactions for Lumax's private Codex account namespace.
+//! Filesystem transactions for TranslateX's private Codex account namespace.
 //!
 //! This module never reads, copies, or deletes credentials. The caller supplies
 //! its fixed, owned canonical root and performs the Keychain action requested by
@@ -102,7 +102,7 @@ pub struct AccountStorage {
 }
 
 impl AccountStorage {
-    /// The caller must choose a fixed Lumax root, never a requested CODEX_HOME.
+    /// The caller must choose a fixed TranslateX root, never a requested CODEX_HOME.
     /// This validates ownership and permissions but does not select that root.
     pub fn lock(owned_canonical_root: &Path) -> Result<Self> {
         if !owned_canonical_root.is_absolute()
@@ -467,7 +467,7 @@ mod tests {
     impl Fixture {
         fn new() -> Self {
             let root = std::env::temp_dir().canonicalize().unwrap()
-                .join(format!("lumax-account-storage-test-{}", Uuid::new_v4()));
+                .join(format!("translatex-account-storage-test-{}", Uuid::new_v4()));
             fs::DirBuilder::new().mode(0o700).create(&root).unwrap();
             Self(root)
         }
@@ -683,7 +683,7 @@ mod tests {
 
     #[test]
     fn worker_lease_process() {
-        let Ok(value) = std::env::var("LUMAX_STORAGE_TEST_LEASE_FD") else { return };
+        let Ok(value) = std::env::var("TRANSLATEX_STORAGE_TEST_LEASE_FD") else { return };
         let fd: RawFd = value.parse().unwrap();
         let lease = unsafe { File::from_raw_fd(fd) };
         check_regular(&lease).unwrap();
@@ -704,7 +704,7 @@ mod tests {
         assert_ne!(unsafe { libc::fcntl(fd, libc::F_GETFD) } & libc::FD_CLOEXEC, 0);
         let mut command = Command::new(std::env::current_exe().unwrap());
         command.args(["--exact", "account_storage::tests::worker_lease_process", "--nocapture"])
-            .env_clear().env("LUMAX_STORAGE_TEST_LEASE_FD", fd.to_string())
+            .env_clear().env("TRANSLATEX_STORAGE_TEST_LEASE_FD", fd.to_string())
             .stdin(Stdio::piped()).stdout(Stdio::null()).stderr(Stdio::null());
         unsafe {
             command.pre_exec(move || {

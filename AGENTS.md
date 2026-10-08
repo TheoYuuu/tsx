@@ -5,12 +5,14 @@
 ## 开发前阅读
 
 - 先阅读本文件、[架构](Docs/Architecture.md)、[分发边界](Docs/Distribution.md)和[公开仓库规范](Docs/PUBLIC_REPOSITORY.md)。相关文档在同一任务中未改变时不必重复读取。
+- 私有开发工作区的新对话还须读取 `Private/RepositoryWorkflow.md`，确认本地目录、固定远端身份与公开同步方式；公开源码不包含该私有文件，不依赖聊天记忆识别工作区。
 - 构建入口见 [BUILDING.md](Docs/BUILDING.md)，已测范围与未解决问题见 [Validation.md](Docs/Validation.md)。发布按 [RELEASING.md](Docs/RELEASING.md) 执行。
 - 开发授权不代表账号登录、上传、公证、推送、创建 Tag 或 Release、网站部署等发布授权。已有明确授权按其范围执行，不反复确认。
 
 ## 产品与架构
 
 - TSX 是免费、MIT 开源的 macOS 原生应用。Apple 本地翻译默认；外部 API、兼容接口、本地模型和实验性账号服务由用户主动配置。
+- 名称固定为：产品 **TSX**，工程／Scheme／Swift 模块／源码目录 `TranslateX`，测试 `TranslateXTests`，GitHub 仓库 `tsx`／`tsx-private`。后续不随意改名；已发布 Bundle ID、旧偏好域、Keychain、账号目录和 helper 签名身份按分发文档保留，不用全局替换消除兼容标识。
 - 不引入应用自有账号、后台内容采集、订阅、付费解锁或云同步。
 - Swift 6、AppKit 与 SwiftUI 共用一套业务和界面。AppKit 集中管理窗口，SwiftUI 负责内容；系统服务不放入 View。
 - 当前仅实现官网直接分发，保留 Hardened Runtime、不启用 App Sandbox。未来商店渠道需独立授权、沙盒实现与验证，不预建空实现，不复制整套代码或维护长期渠道分支。

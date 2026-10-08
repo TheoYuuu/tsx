@@ -20,7 +20,7 @@ xcrun swiftc -parse-as-library -swift-version 6 -strict-concurrency=complete \
     Tools/QA/ValidateProject.swift -o "$task_project_check"
 "$task_project_check" "$PWD"
 
-plutil -lint Config/LumaxTranslate.entitlements
+plutil -lint Config/TranslateX.entitlements
 plutil -lint Config/Info.plist
 xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
     -warnings-as-errors -sdk "$task_sdk" -target "${task_arch}-apple-macos15.0" \
@@ -31,10 +31,10 @@ xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete \
 # Use a distinct bundle identity too: AppKit activation must target this host,
 # not an already-running user trial app with the deliverable's bundle ID.
 # No relaxed signing option is used for either application build below.
-xcodebuild -project LumaxTranslate.xcodeproj -scheme LumaxTranslate \
+xcodebuild -project TranslateX.xcodeproj -scheme TranslateX \
     -configuration Debug -destination "platform=macOS,arch=${task_arch}" \
     -derivedDataPath .build/TestDerivedData -parallel-testing-enabled NO \
-    LUMAX_APP_BUNDLE_IDENTIFIER=com.lumax.tsx.TestHost \
+    TRANSLATEX_APP_BUNDLE_IDENTIFIER=com.lumax.tsx.TestHost \
     CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES \
     ENABLE_HARDENED_RUNTIME=NO OTHER_CODE_SIGN_FLAGS= \
     -quiet test
@@ -47,7 +47,7 @@ if [[ "$task_test_identity" != com.lumax.tsx.TestHost ]]; then
 fi
 
 for task_configuration in Debug Release; do
-    xcodebuild -project LumaxTranslate.xcodeproj -scheme LumaxTranslate \
+    xcodebuild -project TranslateX.xcodeproj -scheme TranslateX \
         -configuration "$task_configuration" -destination "platform=macOS,arch=${task_arch}" \
         -derivedDataPath .build/DerivedData \
         CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=YES \

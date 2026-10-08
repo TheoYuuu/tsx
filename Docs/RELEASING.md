@@ -14,7 +14,7 @@ TSX 通过 GitHub Releases 分发，官网提供下载入口与 Sparkle 签名�
 
 ## Xcode Organizer（默认）
 
-1. 打开 `LumaxTranslate.xcodeproj`，选择 **LumaxTranslate** Scheme 和 **My Mac**，执行 **Product → Archive**。共享 Scheme 的 Release 归档名称为 TSX；Organizer 产品分组仍可显示内部 Scheme 名。
+1. 打开 `TranslateX.xcodeproj`，选择 **TranslateX** Scheme 和 **My Mac**，执行 **Product → Archive**。共享 Scheme 的 Release 归档名称为 TSX；Organizer 产品分组仍可显示内部 Scheme 名。
 2. 在 **Window → Organizer → Archives** 选择相应归档，执行 **Distribute App → Direct Distribution**；部分 Xcode 版本显示 **Custom → Developer ID → Upload**。核对发布团队、`com.lumax.tsx`、版本及双架构。
 3. 使用 Xcode **Settings → Accounts** 中的发布账号完成向导。上传后在同一归档查看状态和日志，等待 **Ready to distribute**，再使用 **Export Notarized App** 或成功界面的导出入口。
 4. 核对导出 App 及全部嵌入代码的签名身份、安全时间戳、Hardened Runtime、架构、许可、entitlement、公证票据与 Gatekeeper。不要重新签名已通过公证的导出 App。
@@ -69,6 +69,6 @@ python3 Tools/Release/release.py finish \
 5. 在获得网站推送授权后同步页面和下载链接，通过网站既有部署流程上线。
 6. 获取线上清单验证签名、版本、大小和下载地址，再检查实际应用更新行为。
 
-已发布安装包不得仅因文档整理而替换或重新签名。若必须修正历史或版本来源记录，应明确区分原始构建证据与整理后的源码，不能捏造产物来源。
+已发布安装包不得仅因文档整理或工程改名而替换、重新构建或重新签名。旧 Tag、归档名称和构建证据中的旧工程路径保留其真实含义；当前工程改名不修改既有版本来源记录。若必须修正历史或版本来源记录，应明确区分原始构建证据与整理后的源码，不能捏造产物来源。
 
 参考：[Apple 公证流程](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow)、[Sparkle 发布流程](https://sparkle-project.org/documentation/publishing/)。

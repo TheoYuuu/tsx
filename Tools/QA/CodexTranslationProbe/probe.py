@@ -3,7 +3,7 @@
 import copy,hashlib,http.server,json,os,socket,subprocess,threading,time,uuid
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent
-BIN=ROOT/'target/debug/lumax-codex-translation-prototype'
+BIN=ROOT/'target/debug/translatex-codex-translation-prototype'
 
 
 def sandbox(run,port):
@@ -44,7 +44,7 @@ def cases():
 
 def response_frames(name,original,answer):
  message={'id':'msg_fixture','type':'message','role':'assistant','content':[{'type':'output_text','text':answer}]}
- tool={'id':'tool_fixture','call_id':'call_fixture','type':'function_call','name':'exec_command','arguments':json.dumps({'cmd':'touch LUMAX_MUST_NOT_EXECUTE'})}
+ tool={'id':'tool_fixture','call_id':'call_fixture','type':'function_call','name':'exec_command','arguments':json.dumps({'cmd':'touch TRANSLATEX_MUST_NOT_EXECUTE'})}
  item=copy.deepcopy(message)
  if name=='tool':item=copy.deepcopy(tool)
  if name=='unknown_item':item={'type':'future_tool','payload':original}
@@ -109,8 +109,8 @@ def scenario(name,round_dir):
  run=round_dir/'runtime'/name
  for directory in ['identity','workspace','tmp']:(run/directory).mkdir(parents=True,exist_ok=False)
  token=uuid.uuid4().hex
- original='LUMAX_INPUT_'+token+'\n  A clear morning.  '
- answer='  清朗的早晨。\nLUMAX_OUTPUT_'+token+'  '
+ original='TRANSLATEX_INPUT_'+token+'\n  A clear morning.  '
+ answer='  清朗的早晨。\nTRANSLATEX_OUTPUT_'+token+'  '
  wire=[];closed=threading.Event();finished=threading.Event();handlers_failed=[]
  class Handler(http.server.BaseHTTPRequestHandler):
   protocol_version='HTTP/1.1'
@@ -196,7 +196,7 @@ def scenario(name,round_dir):
  if name.startswith('cancel_'):expected='cancelled'
  if good:expected='ok'
  if expected is None and name!='default_long_stream':expected='invalid_or_incomplete_response'
- checks={'harness_completed':failure is None and not handlers_failed,'process_exit_zero':returncode==0,'one_wire_post':len(wire)==1,'one_transport_attempt':result.get('transport_attempts')==1,'request_shape':all(x['shape_valid'] and not x['auth_present'] for x in wire),'correct_outcome':result.get('status')==expected if expected else result.get('status') in ['timeout','cancelled','invalid_or_incomplete_response'],'exact_translation':result.get('text')==answer if good else 'text' not in result,'safe_stderr':not err,'runtime_content_absent':not leaks,'no_tool_marker':not (run/'workspace/LUMAX_MUST_NOT_EXECUTE').exists(),'process_reaped':proc is not None and proc.poll() is not None}
+ checks={'harness_completed':failure is None and not handlers_failed,'process_exit_zero':returncode==0,'one_wire_post':len(wire)==1,'one_transport_attempt':result.get('transport_attempts')==1,'request_shape':all(x['shape_valid'] and not x['auth_present'] for x in wire),'correct_outcome':result.get('status')==expected if expected else result.get('status') in ['timeout','cancelled','invalid_or_incomplete_response'],'exact_translation':result.get('text')==answer if good else 'text' not in result,'safe_stderr':not err,'runtime_content_absent':not leaks,'no_tool_marker':not (run/'workspace/TRANSLATEX_MUST_NOT_EXECUTE').exists(),'process_reaped':proc is not None and proc.poll() is not None}
  if name.startswith('cancel_'):checks['socket_closed_before_deadline']=closed.is_set();checks['cancel_bounded']=elapsed<2000
  if name=='default_long_stream':checks['socket_closed_by_default_deadline']=closed.is_set();checks['default_deadline_bounded']=4000<elapsed<6800
  if name=='cumulative_body_limit':checks['socket_closed_at_cumulative_limit']=closed.is_set()

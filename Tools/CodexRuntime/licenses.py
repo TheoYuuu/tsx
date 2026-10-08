@@ -98,7 +98,7 @@ def fixed_repository_licenses(package, root):
 
 def package_licenses(package, upstream, toolchain):
     root = Path(package["manifest_path"]).parent
-    if package["name"] == "lumax-codex-runtime":
+    if package["name"] == "translatex-codex-runtime":
         return []
     paths = sorted(path for path in root.rglob("*") if path.is_file()
                    and re.match(r"(?i)^(licen[sc]e|copying|notice|copyright|unlicense)([._-].*)?$", path.name))
@@ -159,9 +159,9 @@ def generate(metadata, output, upstream, toolchain):
     if CACHE.resolve() != CACHE or CACHE.is_symlink():
         raise RuntimeError("License cache path is unsafe.")
     packages = sorted(metadata["packages"], key=lambda package: (package["name"], package["version"]))
-    sections = ["Lumax Translate — Codex runtime third-party notices\n\n"
+    sections = ["TSX — Codex runtime third-party notices\n\n"
                 "This inventory includes the pinned runtime's dependency graph, including build-time packages.\n"
-                "No license is assigned here to Lumax's own source. Upstream files are reproduced below;\n"
+                "No license is assigned here to TranslateX's own source. Upstream files are reproduced below;\n"
                 "where a published crate omits them, standard-text supplements are explicitly identified.\n"
                 "Dependency source archives are available at the listed crates.io/version URLs; upstream Codex\n"
                 "and repository-only licenses link to immutable revisions. No upstream source was modified.\n"]
@@ -170,7 +170,7 @@ def generate(metadata, output, upstream, toolchain):
     supplements = []
     texts = {}
     for package in packages:
-        if package["name"] == "lumax-codex-runtime":
+        if package["name"] == "translatex-codex-runtime":
             continue
         values = package_licenses(package, upstream, toolchain)
         item = {"name": package["name"], "version": package["version"], "license": package.get("license"),

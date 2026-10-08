@@ -64,7 +64,7 @@ def main():
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         frozen = inputs()
         native_inputs = {path: path.read_bytes() for path in (
-            ROOT / "LumaxTranslate/Translation/Services/Codex/CodexRuntimeSession.swift",
+            ROOT / "TranslateX/Translation/Services/Codex/CodexRuntimeSession.swift",
             ROOT / "Tools/CodexRuntime/native_smoke.swift")}
         evidence = Path(tempfile.mkdtemp(prefix="build-", dir=common.directory(WORK / "builds")))
         print(f"Runtime evidence: {evidence}", flush=True)
@@ -106,10 +106,10 @@ def main():
         # per process; dedicated child-process tests still assert contention.
         command = [str(cargo), "test", "--locked", "--offline", "--manifest-path", str(staged / "Cargo.toml"), "--", "--test-threads=1"]
         common.run(command, staged, env, evidence / "tests.log", 900)
-        common.run([str(cargo), "build", "--locked", "--offline", "--bin", "lumax-codex-runtime",
+        common.run([str(cargo), "build", "--locked", "--offline", "--bin", "translatex-codex-runtime",
                     "--manifest-path", str(staged / "Cargo.toml")], staged, env, evidence / "executable-build.log", 900)
-        executable = evidence / "lumax-codex-runtime"
-        shutil.copyfile(Path(env["CARGO_TARGET_DIR"]) / "debug/lumax-codex-runtime", executable)
+        executable = evidence / "translatex-codex-runtime"
+        shutil.copyfile(Path(env["CARGO_TARGET_DIR"]) / "debug/translatex-codex-runtime", executable)
         executable.chmod(0o700)
         # These requests must fail before account_root() or runtime creation.
         # They exercise the real executable without touching a host identity.

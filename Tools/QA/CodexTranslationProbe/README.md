@@ -45,7 +45,7 @@ python3 Tools/QA/CodexTranslationProbe/verify.py \
 | `probe.py` | 最终跟踪探针的生成副本，由入口复制后运行；以该目录为 ROOT |
 | 探针创建的独立证据／身份目录 | 每次回环检查结果及隔离目录；准确位置以 `probe.log` 为准 |
 
-二进制沿用 `target/debug/lumax-codex-translation-prototype`。此入口不触碰正式 App、用户配置、账号文件或系统安全设置，不删除旧证据。当前上游源码及依赖许可保留在源码／缓存中；该原型入口不构成分发许可审查或产品打包决定。
+二进制沿用 `target/debug/translatex-codex-translation-prototype`。此入口不触碰正式 App、用户配置、账号文件或系统安全设置，不删除旧证据。当前上游源码及依赖许可保留在源码／缓存中；该原型入口不构成分发许可审查或产品打包决定。
 
 ## 环境与停止条件
 

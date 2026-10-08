@@ -1,6 +1,6 @@
 # 应用图标与品牌资源
 
-本目录保存正式应用资源的源文件和离线导出工具。生成后的资源位于 `LumaxTranslate/Resources/Assets.xcassets`，已纳入源码；普通构建无需重新生成。
+本目录保存正式应用资源的源文件和离线导出工具。生成后的资源位于 `TranslateX/Resources/Assets.xcassets`，已纳入源码；普通构建无需重新生成。
 
 ## 应用图标
 

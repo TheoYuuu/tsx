@@ -1,6 +1,6 @@
 # Codex 认证、独立 Keychain 与单次翻译探针
 
-这是开发验收工具，不是 Lumax 产品中的登录入口。它编译官方公开认证、策略和模型客户端，向本机假认证服务发请求，并只读写本轮新建随机身份对应的精确 Keychain 项。不使用真实账号、默认 Codex home、现有用户登录或线上模型。
+这是开发验收工具，不是 TSX 产品中的登录入口。它编译官方公开认证、策略和模型客户端，向本机假认证服务发请求，并只读写本轮新建随机身份对应的精确 Keychain 项。不使用真实账号、默认 Codex home、现有用户登录或线上模型。
 
 官方源固定到 `36650394c5b38c2990ccf2a3457165ca3e9d9726`；归档摘要和完整文件校验复用相邻 [单次模型探针](../CodexTranslationProbe/README.md) 的构建入口。没有修改官方源码，也没有通过浏览器登录、复制 token 或反向代理替代官方认证库。
 
@@ -16,7 +16,7 @@ python3 -I Tools/QA/CodexAuthProbe/verify.py \
 
 可选 `--without-native` 只运行认证/模型套，省略 Swift 构建与四个原生会话场景，证据会记录该范围；默认完整入口包含原生宿主。它不能代替原生交互验收。
 
-入口不会安装工具链、创建证书、运行真实登录或修改系统 Keychain 设置。QA helper 仅对自身禁用 Keychain 授权弹窗；这不代表产品应静默忽略正常授权流程。签名标识固定为 `com.theoyuuu.LumaxTranslate.QA.CodexAuth`，与交付 App 分离。
+入口不会安装工具链、创建证书、运行真实登录或修改系统 Keychain 设置。QA helper 仅对自身禁用 Keychain 授权弹窗；这不代表产品应静默忽略正常授权流程。签名标识固定为 `com.theoyuuu.TranslateX.QA.CodexAuth`，与交付 App 分离。
 
 宿主强制超时的独立检查可运行 `python3 -I -B Tools/QA/CodexAuthProbe/test_watchdog.py`。它只启动本次的休眠进程，验证另起会话的 helper 与其 worker 都被停止，不访问认证或 Keychain。
 

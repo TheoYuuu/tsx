@@ -16,10 +16,10 @@ enum ValidateProject {
             var localizedInfo: [String: [String: String]] = [:]
             for language in ["en", "zh-Hans"] {
                 localized[language] = try stringTable(at: root.appendingPathComponent(
-                    "LumaxTranslate/Resources/\(language).lproj/Localizable.strings"
+                    "TranslateX/Resources/\(language).lproj/Localizable.strings"
                 ))
                 localizedInfo[language] = try stringTable(at: root.appendingPathComponent(
-                    "LumaxTranslate/Resources/\(language).lproj/InfoPlist.strings"
+                    "TranslateX/Resources/\(language).lproj/InfoPlist.strings"
                 ))
             }
             let english = localized["en"]!
@@ -117,7 +117,7 @@ enum ValidateProject {
     }
 
     private static func checkSourceLists(root: URL) throws {
-        let projectURL = root.appendingPathComponent("LumaxTranslate.xcodeproj/project.pbxproj")
+        let projectURL = root.appendingPathComponent("TranslateX.xcodeproj/project.pbxproj")
         let value = try PropertyListSerialization.propertyList(from: Data(contentsOf: projectURL), options: [], format: nil)
         guard let project = value as? [String: Any],
               let objects = project["objects"] as? [String: [String: Any]],
@@ -141,7 +141,7 @@ enum ValidateProject {
         }
         try visit(mainGroup, parent: root)
 
-        for name in ["LumaxTranslate", "LumaxTranslateTests"] {
+        for name in ["TranslateX", "TranslateXTests"] {
             let matches = objects.values.filter { $0["isa"] as? String == "PBXNativeTarget" && $0["name"] as? String == name }
             guard matches.count == 1, let phases = matches[0]["buildPhases"] as? [String] else {
                 throw CheckFailure("Missing or ambiguous Xcode target: \(name)")

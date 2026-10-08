@@ -2792,21 +2792,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lumax-codex-translation-prototype"
-version = "0.0.0"
-dependencies = [
- "codex-api",
- "codex-client",
- "codex-http-client",
- "codex-protocol",
- "futures",
- "http",
- "reqwest",
- "serde_json",
- "tokio",
-]
-
-[[package]]
 name = "maplit"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5255,6 +5240,21 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "translatex-codex-translation-prototype"
+version = "0.0.0"
+dependencies = [
+ "codex-api",
+ "codex-client",
+ "codex-http-client",
+ "codex-protocol",
+ "futures",
+ "http",
+ "reqwest",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

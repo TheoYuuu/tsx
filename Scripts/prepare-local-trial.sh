@@ -105,9 +105,9 @@ task_app="$task_staging/TSX.app"
 ditto '.build/DerivedData/Build/Products/Release/TSX.app' "$task_app"
 codesign --force --sign "$task_identity" --options runtime --timestamp=none \
     --identifier com.theoyuuu.LumaxTranslate.CodexRuntime \
-    "$task_app/Contents/Helpers/lumax-codex-runtime"
+    "$task_app/Contents/Helpers/translatex-codex-runtime"
 codesign --force --sign "$task_identity" --options runtime --timestamp=none \
-    --entitlements Config/LumaxTranslate.entitlements "$task_app"
+    --entitlements Config/TranslateX.entitlements "$task_app"
 codesign --verify --deep --strict "$task_app"
 python3 Tools/CodexRuntime/verify_bundle.py "$task_app" --configuration Release
 

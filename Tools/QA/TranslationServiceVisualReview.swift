@@ -112,7 +112,7 @@ final class TranslationServiceVisualReview: NSObject {
     /// Real window lifecycle with constructed pixels/results, for leaving the
     /// app, dismissing the panel and reopening it through the shipping entry.
     private func presentResumeFixture() async {
-        let domain = "Lumax.TranslationServiceVisualReview.Resume.Ephemeral"
+        let domain = "TranslateX.TranslationServiceVisualReview.Resume.Ephemeral"
         let defaults = UserDefaults(suiteName: domain)!
         defaults.removePersistentDomain(forName: domain)
         self.defaults = defaults
@@ -134,7 +134,7 @@ final class TranslationServiceVisualReview: NSObject {
     }
 
     private func run() async {
-        let output = URL(fileURLWithPath: argument("--review-output", fallback: "/tmp/LumaxTranslationServiceReview"))
+        let output = URL(fileURLWithPath: argument("--review-output", fallback: "/tmp/TranslateXTranslationServiceReview"))
         try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         if CommandLine.arguments.contains("--review-resume") {
             await presentResumeFixture()
@@ -272,7 +272,7 @@ final class TranslationServiceVisualReview: NSObject {
         fixture?.cancelAll()
         window?.close()
         frames = [:]
-        let domain = "Lumax.TranslationServiceVisualReview.Ephemeral"
+        let domain = "TranslateX.TranslationServiceVisualReview.Ephemeral"
         let defaults = UserDefaults(suiteName: domain)!
         defaults.removePersistentDomain(forName: domain)
         self.defaults = defaults
@@ -352,14 +352,14 @@ final class TranslationServiceVisualReview: NSObject {
         let rect = NSRect(origin: .zero, size: size)
         let window = NSWindow(contentRect: rect,
             styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        LumaxWindowChrome.configure(window)
+        TranslateXWindowChrome.configure(window)
         window.setFrame(rect, display: false)
         window.appearance = NSAppearance(named: theme.hasPrefix("dark") ? .darkAqua : .aqua)
         window.title = "翻译服务 · 原生视觉核查（构造数据）"
         // Keep the owned synthetic capture surface above unrelated desktop
         // windows. This affects only the review fixture, never shipping windows.
         window.level = .floating
-        window.identifier = NSUserInterfaceItemIdentifier("lumax.service.visual-review")
+        window.identifier = NSUserInterfaceItemIdentifier("translatex.service.visual-review")
         window.isReleasedWhenClosed = false
         if isQuick || isMain {
             let reviewSource = "Good design makes complex things feel effortless.\nKeep useful tools close to the text.\nSmall adjustments can bring noticeable improvements."

@@ -50,6 +50,8 @@ TSX 官方版本永久免费，不设置付费功能或订阅。你主动配置�
 
 ## 参与开发
 
+产品名称为 **TSX**；Xcode 工程、Scheme、Swift 模块和源码目录统一使用 `TranslateX`，测试使用 `TranslateXTests`。稳定应用身份与旧存储兼容标识见[分发说明](Docs/Distribution.md#应用身份与存储兼容)。
+
 项目使用 Swift 6、AppKit 与 SwiftUI，并包含可选账号服务所需的 Rust 组件。请先阅读[源码构建说明](Docs/BUILDING.md)、[开发约定](AGENTS.md)、[公开仓库规范](Docs/PUBLIC_REPOSITORY.md)和[第三方声明](THIRD_PARTY_NOTICES.md)。最低部署目标为 macOS 15；Intel 与最低系统真机覆盖仍有限，完整范围见[验证记录](Docs/Validation.md)。
 
 ## 源码与协作

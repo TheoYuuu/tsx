@@ -29,12 +29,14 @@ TSX 是免费、MIT 开源的 macOS 应用。源码与安装包位于 [GitHub](h
 | 应用/产物名称 | TSX / `TSX.app` |
 | 主应用 Bundle ID | `com.lumax.tsx` |
 | 测试宿主 / 测试 Bundle | `com.lumax.tsx.TestHost` / `com.lumax.tsx.Tests` |
-| Xcode 工程、Scheme、Swift 模块 | `LumaxTranslate` |
+| Xcode 工程、Scheme、Swift 模块与源码目录 | `TranslateX` |
+| 测试目标与源码目录 | `TranslateXTests` |
 | API Keychain service | `com.theoyuuu.LumaxTranslate.translation-api` |
 | 账号 helper 标识 | `com.theoyuuu.LumaxTranslate.CodexRuntime` |
 | 账号数据目录 | 用户 Application Support 下的 `com.theoyuuu.LumaxTranslate/CodexAccount` |
+| 窗口位置 autosave key | `LumaxMainWindow` |
 
-旧命名的 Keychain、账号目录和 helper 标识是兼容契约，不因显示名改变而机械重命名。正式入口通过 `LegacyPreferencesMigration` 向尚未配置的新偏好域导入旧域的已知键；新域已有设置时优先保留，旧域不删除。测试宿主不访问真实迁移域，迁移不读取秘密数据。
+产品名固定为 TSX，工程内部名称固定为 TranslateX；GitHub 仓库路径 `tsx`／`tsx-private` 不随工程名改变。以上 `com.lumax.tsx` 和 `com.theoyuuu.LumaxTranslate` 系列标识经兼容审查保留，覆盖已发布应用身份、旧偏好域、Keychain、账号目录和 helper 签名标识；`LumaxMainWindow` 保留既有窗口位置。这些不是待清除的命名残留，不因工程名改变而机械重命名。正式入口通过 `LegacyPreferencesMigration` 向尚未配置的新偏好域导入旧域的已知键；新域已有设置时优先保留，旧域不删除。测试宿主不访问真实迁移域，迁移不读取秘密数据。
 
 辅助功能、屏幕录制和 Keychain 访问由 macOS 决定是否重新授权。开发签名、正式签名和不同应用身份不能保证共享权限，也不能通过修改系统数据库迁移授权。未来双渠道并装需先明确身份、快捷键、设置、Keychain 和沙盒容器迁移，不随意新增 Bundle ID。
 

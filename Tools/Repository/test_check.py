@@ -61,7 +61,7 @@ class RepositoryChecks(unittest.TestCase):
 
     def test_ignore_rule_only_excludes_root_design_archive(self):
         archive = subprocess.run(["git", "-C", str(self.repo), "check-ignore", "--no-index", "Design/proposal.png"], capture_output=True)
-        source = subprocess.run(["git", "-C", str(self.repo), "check-ignore", "--no-index", "LumaxTranslate/UI/Design/NewView.swift"], capture_output=True)
+        source = subprocess.run(["git", "-C", str(self.repo), "check-ignore", "--no-index", "TranslateX/UI/Design/NewView.swift"], capture_output=True)
         self.assertEqual(archive.returncode, 0)
         self.assertEqual(source.returncode, 1)
 
@@ -78,6 +78,43 @@ class RepositoryChecks(unittest.TestCase):
         result = self.run_check("staged")
         self.assert_blocks(result, "Tools/PrivateNotes/internal.md")
         self.assert_blocks(result, "Tools/QA/internal.md")
+
+    def test_retired_names_cannot_be_reintroduced_in_current_paths(self):
+        self.put("TranslateX/App/LumaxLegacy.swift", "// Constructed old-name fixture\n")
+        self.git("add", "TranslateX/App/LumaxLegacy.swift")
+        self.assert_blocks(self.run_check("staged"), "outside the public allowlist")
+
+    def allow_historical_commit(self, oid):
+        path = self.repo / "Tools/Repository/policy.json"
+        policy = json.loads(path.read_text())
+        policy["historical_path_commits"] = [oid]
+        path.write_text(json.dumps(policy).replace("/Us" + "ers/constructed", r"\u002fUsers\u002fconstructed") + "\n")
+        self.git("add", "Tools/Repository/policy.json")
+        self.git("commit", "-qm", "Review immutable historical naming fixture")
+
+    def test_reviewed_history_keeps_privacy_checks_and_rejects_new_old_paths(self):
+        old_path = "LumaxTranslate/App/Fixture.swift"
+        self.put(old_path, "// Public historical fixture\n")
+        self.git("add", old_path)
+        self.git("commit", "-qm", "Historical naming fixture")
+        old_commit = self.git("rev-parse", "HEAD")
+        self.git("rm", "-q", old_path)
+        self.allow_historical_commit(old_commit)
+        self.assert_passes(self.run_check("history"))
+        self.put(old_path, "// Public historical fixture\n")
+        self.git("add", old_path)
+        self.git("commit", "-qm", "Reintroduce retired directory fixture")
+        self.assert_blocks(self.run_check("history"), "outside the public allowlist")
+
+    def test_reviewed_historical_path_still_scans_private_content(self):
+        old_path = "LumaxTranslate/App/Fixture.swift"
+        self.put(old_path, "/Us" + "ers/private-person/notes\n")
+        self.git("add", old_path)
+        self.git("commit", "-qm", "Historical private content fixture")
+        old_commit = self.git("rev-parse", "HEAD")
+        self.git("rm", "-q", old_path)
+        self.allow_historical_commit(old_commit)
+        self.assert_blocks(self.run_check("history"), "personal absolute home path")
 
     def test_staged_secret_is_blocked_despite_clean_worktree(self):
         sample = "-----BEGIN " + "PRIVATE KEY-----\nfixture-only\n-----END PRIVATE KEY-----\n"
@@ -121,10 +158,10 @@ class RepositoryChecks(unittest.TestCase):
 
     def test_deleted_secret_is_still_blocked_in_history(self):
         sample = "gh" + "p_" + "a8Qx4P2n7Z5v9R3t6W1y8C4k2B7m5L9s3D6f"
-        self.put("LumaxTranslateTests/Fixture.swift", 'let token = "' + sample + '"\n')
-        self.git("add", "LumaxTranslateTests/Fixture.swift")
+        self.put("TranslateXTests/Fixture.swift", 'let token = "' + sample + '"\n')
+        self.git("add", "TranslateXTests/Fixture.swift")
         self.git("commit", "-qm", "Historical secret fixture")
-        self.git("rm", "-q", "LumaxTranslateTests/Fixture.swift")
+        self.git("rm", "-q", "TranslateXTests/Fixture.swift")
         self.git("commit", "-qm", "Remove current fixture")
         self.assert_passes(self.run_check("tree"))
         self.assert_blocks(self.run_check("history"), "Gitleaks:")
@@ -148,9 +185,9 @@ class RepositoryChecks(unittest.TestCase):
     def test_public_key_team_and_test_fixtures_pass(self):
         # RFC 8032 public test vector: public verification data, no private key.
         self.put("Config/sample.txt", '<key>SUPublicEDKey</key>\n<string>' + '1YBfmJ/YKywwUTgbDVbjpUVPG19CVUJje3JhshWVdvk=' + '</string>\nDEVELOPMENT_TEAM = ABCDE12345\n')
-        self.put("LumaxTranslateTests/Fixture.swift", 'let apiKey = "fixture-key"\nlet email = "sample@example.invalid"\n')
+        self.put("TranslateXTests/Fixture.swift", 'let apiKey = "fixture-key"\nlet email = "sample@example.invalid"\n')
         self.put("Runtime/CodexHelper/src/connection.rs", 'let path = "/Us' + 'ers/constructed/.codex/config.toml";\n')
-        self.git("add", "Config/sample.txt", "LumaxTranslateTests/Fixture.swift", "Runtime/CodexHelper/src/connection.rs")
+        self.git("add", "Config/sample.txt", "TranslateXTests/Fixture.swift", "Runtime/CodexHelper/src/connection.rs")
         self.assert_passes(self.run_check("staged"))
 
     def test_only_exact_cargo_false_positive_is_allowed(self):
