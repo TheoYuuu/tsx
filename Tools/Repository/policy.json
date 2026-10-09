@@ -30,6 +30,8 @@
   "text_extensions": [
     ".md",
     ".swift",
+    ".c",
+    ".h",
     ".py",
     ".sh",
     ".cjs",
@@ -88,6 +90,7 @@
     "TranslateX/System/Capture",
     "TranslateX/System/OCR",
     "TranslateX/System/Selection",
+    "TranslateX/System/Security",
     "TranslateX/System/Shortcuts",
     "TranslateX/System/Updates",
     "TranslateX/Translation",
