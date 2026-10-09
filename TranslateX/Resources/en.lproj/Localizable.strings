@@ -775,3 +775,275 @@
 "Automatically check for updates" = "Automatically check for updates";
 "Download updates and install when quitting" = "Download updates and install when quitting";
 "Updates connect to lumaxspace.com and GitHub. Copy any text you want to keep before installing and restarting." = "Updates connect to lumaxspace.com and GitHub. Copy any text you want to keep before installing and restarting.";
+
+// Settings and per-service statistics
+"All request metrics and historical totals will be deleted. This cannot be undone. Service configurations stay unchanged." = "All request metrics and historical totals will be deleted. This cannot be undone. Service configurations stay unchanged.";
+"Clear all statistics" = "Clear all statistics";
+"Clear all statistics?" = "Clear all statistics?";
+"Control statistics for each service." = "Control statistics for each service.";
+"Done" = "Done";
+"Keys stay in Keychain. External services receive translation text." = "Keys stay in Keychain. External services receive translation text.";
+"Keys stay in Keychain. Only requests sent through TSX are counted; translation text, screenshots and full responses are never saved. Recent request metrics are automatically summarized by day, preserving historical totals. Pausing statistics keeps existing data and does not affect translation or balance queries. Switching services does not send existing text. Connection tests send a short sample and may incur provider charges." = "Keys stay in Keychain. Only requests sent through TSX are counted; translation text, screenshots and full responses are never saved. Recent request metrics are automatically summarized by day, preserving historical totals. Pausing statistics keeps existing data and does not affect translation or balance queries. Switching services does not send existing text. Connection tests send a short sample and may incur provider charges.";
+"No account needed · Local translation" = "No account needed · Local translation";
+"Send a short sample to check the service. Your provider may charge for it." = "Send a short sample to check the service. Your provider may charge for it.";
+"Service and data details" = "Service and data details";
+"Start test" = "Start test";
+"Test connection?" = "Test connection?";
+"Test connection" = "Test connection";
+"Track this service" = "Track this service";
+"Usage statistics" = "Usage statistics";
+"%@ usage statistics" = "%@ usage statistics";
+"All request metrics and historical totals for this service will be deleted. This cannot be undone. Your service configuration stays unchanged." = "All request metrics and historical totals for this service will be deleted. This cannot be undone. Your service configuration stays unchanged.";
+"All time" = "All time";
+"Clear statistics" = "Clear statistics";
+"Clear this service’s statistics" = "Clear this service’s statistics";
+"Clear this service’s statistics?" = "Clear this service’s statistics?";
+"Historical totals are kept automatically." = "Historical totals are kept automatically.";
+"Only requests sent through TSX are counted. Translation content is not saved." = "Only requests sent through TSX are counted. Translation content is not saved.";
+"Recent request metrics" = "Recent request metrics";
+"Recent request metrics are kept for up to 30 days and summarized earlier if the local detail budget is reached. Daily totals remain until you clear statistics. No translation content is saved." = "Recent request metrics are kept for up to 30 days and summarized earlier if the local detail budget is reached. Daily totals remain until you clear statistics. No translation content is saved.";
+"Current version %@" = "Current version %@";
+"Language" = "Language";
+"Retry update check" = "Retry update check";
+"Update to %@" = "Update to %@";
+"Window and appearance" = "Window and appearance";
+"Stopping" = "Stopping";
+"Querying" = "Querying";
+"Query failed" = "Query failed";
+"Statistics enabled" = "Statistics enabled";
+"Statistics paused" = "Statistics paused";
+"Check again" = "Check again";
+"Check for updates" = "Check for updates";
+"TSX" = "TSX";
+
+"Preferences" = "Preferences";
+"Settings categories" = "Settings categories";
+"Permissions" = "Permissions";
+"About" = "About";
+"Solid color" = "Solid color";
+"Restore defaults" = "Restore defaults";
+"Function" = "Function";
+"Combination" = "Combination";
+"Manage" = "Manage";
+"Authorize" = "Authorize";
+"Authorized" = "Authorized";
+"Not authorized" = "Not authorized";
+"Enable the permissions needed for selection and screenshot translation." = "Enable the permissions needed for selection and screenshot translation.";
+"Read selected text when you start a translation." = "Read selected text when you start a translation.";
+"Recognize text only in the screen area you select." = "Recognize text only in the screen area you select.";
+"Permissions are used only for actions you start. Translation text and screenshots are not saved." = "Permissions are used only for actions you start. Translation text and screenshots are not saved.";
+"Some shortcuts could not be restored. Check the affected shortcuts and try again." = "Some shortcuts could not be restored. Check the affected shortcuts and try again.";
+"Automatic updates" = "Automatic updates";
+"At launch, check, download and install updates, then restart." = "At launch, check, download and install updates, then restart.";
+"Check at launch. You choose when to install." = "Check at launch. You choose when to install.";
+"Free and open source · MIT License" = "Free and open source · MIT License";
+"Official website" = "Official website";
+"Release notes" = "Release notes";
+"Recent updates" = "Recent updates";
+"If TSX has helped you, please give it a Star on GitHub. It means a lot to us." = "If TSX has helped you, please give it a Star on GitHub. It means a lot to us.";
+"Star on GitHub" = "Star on GitHub";
+"Dismiss support message" = "Dismiss support message";
+"Checking for updates" = "Checking for updates";
+"Update to v%@" = "Update to v%@";
+"Could not check for updates. Please try again." = "Could not check for updates. Please try again.";
+"New version v%@ is available" = "New version v%@ is available";
+"What's new" = "What's new";
+"Release notes are not available here yet. You can view them on GitHub." = "Release notes are not available here yet. You can view them on GitHub.";
+"Retry" = "Retry";
+"Got it" = "Got it";
+"Later" = "Later";
+"View details" = "View details";
+"Update and restart" = "Update and restart";
+"You're up to date" = "You're up to date";
+"Update could not be completed" = "Update could not be completed";
+"This update requires a separate download. View its details to continue." = "This update requires a separate download. View its details to continue.";
+"TSX will restart after the update. Copy any text you want to keep before continuing." = "TSX will restart after the update. Copy any text you want to keep before continuing.";
+"Connecting to the update server" = "Connecting to the update server";
+"Downloading the update. It will be installed and TSX will restart." = "Downloading the update. It will be installed and TSX will restart.";
+"Verifying and preparing the update" = "Verifying and preparing the update";
+"Installing the update. TSX will restart shortly." = "Installing the update. TSX will restart shortly.";
+"Please try again later. Your current version is unchanged." = "Please try again later. Your current version is unchanged.";
+"The latest available version is already installed." = "The latest available version is already installed.";
+"Updated to v%@" = "Updated to v%@";
+"Release notes for published versions" = "Release notes for published versions";
+"TSX has restarted. Here is what changed." = "TSX has restarted. Here is what changed.";
+"Could not refresh release notes. Showing saved notes." = "Could not refresh release notes. Showing saved notes.";
+"Loading release notes" = "Loading release notes";
+"Current version" = "Current version";
+"Details" = "Details";
+"View all versions" = "View all versions";
+"View full release notes" = "View full release notes";
+"Configure usage query" = "Configure usage query";
+"Configure usage query for %@" = "Configure usage query for %@";
+"Usage query configuration saved" = "Usage query configuration saved";
+"Enable usage query" = "Enable usage query";
+"Show account allowance in the service list" = "Show account allowance in the service list";
+"Account queries are hidden from the service list" = "Account queries are hidden from the service list";
+"Applies only to" = "Applies only to";
+"Save configuration" = "Save configuration";
+"Automatic query interval" = "Automatic query interval";
+"Request timeout" = "Request timeout";
+"Minutes" = "Minutes";
+"Seconds" = "Seconds";
+"Set to 0 for manual refresh only" = "Set to 0 for manual refresh only";
+"End this query when the timeout is reached" = "End this query when the timeout is reached";
+"Query now" = "Query now";
+"Record local translation usage" = "Record local translation usage";
+"New records are paused. Existing statistics are kept." = "New records are paused. Existing statistics are kept.";
+"Record request counts and duration without translation content." = "Record request counts and duration without translation content.";
+"Record requests, tokens, costs and duration without translation content." = "Record requests, tokens, costs and duration without translation content.";
+"Apple Translation needs no balance query" = "Apple Translation needs no balance query";
+"Translate on this Mac without an account." = "Translate on this Mac without an account.";
+"Account query is unavailable for this service" = "Account query is unavailable for this service";
+"Local request statistics remain available. Check account allowance on the provider’s website." = "Local request statistics remain available. Check account allowance on the provider’s website.";
+"Querying account allowance" = "Querying account allowance";
+"Account allowance has not been queried" = "Account allowance has not been queried";
+"Use 0–1440 minutes for the interval and 1–120 seconds for the timeout." = "Use 0–1440 minutes for the interval and 1–120 seconds for the timeout.";
+"Unsaved query preferences will be discarded. Existing statistics stay unchanged." = "Unsaved query preferences will be discarded. Existing statistics stay unchanged.";
+"Historical usage statistics will be kept." = "Historical usage statistics will be kept.";
+"Switch" = "Switch";
+"Send a short sample to check availability. A small charge may apply." = "Send a short sample to check availability. A small charge may apply.";
+"Start connection test" = "Start connection test";
+"Keys stay in Keychain. Only requests sent through TSX are counted. Translation text, screenshots and full responses are not saved. Pausing statistics keeps existing data. Switching services does not send existing text. Connection tests may incur provider charges." = "Keys stay in Keychain. Only requests sent through TSX are counted. Translation text, screenshots and full responses are not saved. Pausing statistics keeps existing data. Switching services does not send existing text. Connection tests may incur provider charges.";
+"%@ / page" = "%@ / page";
+"%d local · %d API requests" = "%d local · %d API requests";
+"%d records" = "%d records";
+"%dd" = "%dd";
+"%d–%d of %d" = "%d–%d of %d";
+"API Token" = "API Token";
+"API-reported tokens only. Apple Translation does not provide token counts. * indicates a known subtotal." = "API-reported tokens only. Apple Translation does not provide token counts. * indicates a known subtotal.";
+"API-reported tokens · Apple Translation is not applicable" = "API-reported tokens · Apple Translation is not applicable";
+"All services" = "All services";
+"Apply" = "Apply";
+"Cache read" = "Cache read";
+"Cache write" = "Cache write";
+"Clear all usage statistics? This cannot be undone." = "Clear all usage statistics? This cannot be undone.";
+"Clear all statistics for this service? This cannot be undone." = "Clear all statistics for this service? This cannot be undone.";
+"Completed successfully divided by all requests, including failed and cancelled requests." = "Completed successfully divided by all requests, including failed and cancelled requests.";
+"Currency" = "Currency";
+"Earlier requests remain in totals and charts as daily summaries; individual records are unavailable." = "Earlier requests remain in totals and charts as daily summaries; individual records are unavailable.";
+"End" = "End";
+"Estimated fees" = "Estimated fees";
+"Update official text-model reference prices from models.dev. Reseller duplicates and non-text models are excluded. No account information is sent." = "Update official text-model reference prices from models.dev. Reseller duplicates and non-text models are excluded. No account information is sent.";
+"Fetching prices" = "Fetching prices";
+"Update model prices" = "Update model prices";
+"Free" = "Free";
+"HTTP status" = "HTTP status";
+"Heatmap" = "Heatmap";
+"Includes translations and connection tests" = "Includes translations and connection tests";
+"Input / output Token" = "Input / output Token";
+"Last %d days" = "Last %d days";
+"Less" = "Less";
+"Local" = "Local";
+"Metric" = "Metric";
+"Missing prices or usage are not counted as zero. This estimate is not the provider's billed amount." = "Missing prices or usage are not counted as zero. This estimate is not the provider's billed amount.";
+"More" = "More";
+"Next page" = "Next page";
+"No request records in this range" = "No request records in this range";
+"Not reported" = "Not reported";
+"Only %@-priced API requests · reference estimate" = "Only %@-priced API requests · reference estimate";
+"Previous page" = "Previous page";
+"Prices could not be refreshed. Existing reference rates are unchanged." = "Prices could not be refreshed. Existing reference rates are unchanged.";
+"Pricing" = "Pricing";
+"Reference estimates in the original currency, not an invoice. Missing rates or usage are excluded, never counted as zero." = "Reference estimates in the original currency, not an invoice. Missing rates or usage are excluded, never counted as zero.";
+"Removed service" = "Removed service";
+"Request records" = "Request records";
+"Requests on %@" = "Requests on %@";
+"Rows per page" = "Rows per page";
+"Select a day to filter request records" = "Select a day to filter request records";
+"Service / model" = "Service / model";
+"Show all dates" = "Show all dates";
+"Success rate" = "Success rate";
+"Test" = "Test";
+"Time" = "Time";
+"Trend" = "Trend";
+"models.dev public reference · per 1M Token in the original currency. Automatic estimates currently match official OpenAI, Anthropic and DeepSeek endpoints only. Refreshing never changes historical fees." = "models.dev public reference · per 1M Token in the original currency. Automatic estimates currently match official OpenAI, Anthropic and DeepSeek endpoints only. Refreshing never changes historical fees.";
+"— means not applicable or not reported. Fees use the rate saved with each request; no translation text is stored." = "— means not applicable or not reported. Fees use the rate saved with each request; no translation text is stored.";
+"Apple Translation does not provide token counts." = "Apple Translation does not provide token counts.";
+"Token counts reported by the API. A dash means the service did not report a value." = "Token counts reported by the API. A dash means the service did not report a value.";
+"Local translation does not use HTTP." = "Local translation does not use HTTP.";
+"No HTTP response code was recorded." = "No HTTP response code was recorded.";
+"HTTP response code returned by the service." = "HTTP response code returned by the service.";
+"Local translation is free and has no token pricing." = "Local translation is free and has no token pricing.";
+"Fetch reference prices to populate this catalog" = "Fetch reference prices to populate this catalog";
+"Known subtotals only; unreported values are excluded." = "Known subtotals only; unreported values are excluded.";
+"Enable" = "Enable";
+"Version information and software updates" = "Version information and software updates";
+"Status" = "Status";
+
+"Start date" = "Start date";
+
+"End date" = "End date";
+
+"settings.navigation.services" = "Services";
+"settings.navigation.usage" = "Usage";
+
+"Translation guidelines" = "Translation guidelines";
+
+"Optional: keep technical terms in English and use a concise tone." = "Optional: keep technical terms in English and use a concise tone.";
+
+"Adds preferences to this service’s translation tasks; built-in translation rules stay in place." = "Adds preferences to this service’s translation tasks; built-in translation rules stay in place.";
+
+"Translation guidelines optional" = "Translation guidelines optional";
+
+
+
+"Release notes are not available in this language yet." = "Release notes are not available in this language yet.";
+
+"Date year" = "Year";
+
+"Date month" = "Month";
+
+"Date day" = "Day";
+
+"Previous month" = "Previous month";
+
+"Next month" = "Next month";
+
+"Choose the start date" = "Choose the start date";
+
+"Choose the end date" = "Choose the end date";
+
+"Today" = "Today";
+
+"Choose a valid query interval and request timeout." = "Choose a valid query interval and request timeout.";
+
+"No automatic queries" = "No automatic queries";
+
+"%d seconds" = "%d seconds";
+
+"Refresh manually from the service list" = "Refresh manually from the service list";
+
+"Automatic queries run while TSX is open." = "Automatic queries run while TSX is open.";
+
+"Unpriced" = "Unpriced";
+
+"Total cost" = "Total cost";
+
+"Total requests" = "Total requests";
+
+"Consumed Tokens" = "Consumed Tokens";
+
+"Estimated in dollars, not a bill. Missing rates or usage are excluded; * marks a known subtotal." = "Estimated in dollars, not a bill. Missing rates or usage are excluded; * marks a known subtotal.";
+
+"Dollar estimates · not the provider bill" = "Dollar estimates · not the provider bill";
+
+"Note: a dash means not applicable or not reported. Dollar estimates are for reference; no translation text is stored." = "Note: a dash means not applicable or not reported. Dollar estimates are for reference; no translation text is stored.";
+
+"models.dev reference · $ per 1M Tokens. Matches official OpenAI, Anthropic and DeepSeek services. Missing recent costs use current reference rates; existing costs stay unchanged." = "models.dev reference · $ per 1M Tokens. Matches official OpenAI, Anthropic and DeepSeek services. Missing recent costs use current reference rates; existing costs stay unchanged.";
+
+"Recalculated estimate" = "Recalculated estimate";
+
+"Statistics data" = "Statistics data";
+
+"Clear all local statistics, keeping service settings." = "Clear all local statistics, keeping service settings.";
+
+"Clear this service's statistics, keeping its settings." = "Clear this service's statistics, keeping its settings.";
+
+"Estimated using the current service and reference rate, not a historical bill." = "Estimated using the current service and reference rate, not a historical bill.";
+
+"Estimated using the rate saved with this request." = "Estimated using the rate saved with this request.";
+
+"Bar chart" = "Bar chart";
+
+"Estimated cost" = "Estimated cost";

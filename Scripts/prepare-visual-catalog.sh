@@ -21,10 +21,13 @@ if not sparkle.is_dir():
 excluded = {'TranslateXApp.swift', 'AppDelegate.swift', 'AppleTranslationHost.swift', 'RemoteTranslationProvider.swift', 'DedicatedTranslationProvider.swift', 'ClaudeTranslationProvider.swift', 'QwenMTTranslationProvider.swift', 'GoogleCloudTranslationProvider.swift', 'TencentTranslationProvider.swift', 'TranslationServiceModelCatalog.swift', 'TranslationAccountUsageLoader.swift'}
 sources = sorted(str(p) for p in Path('TranslateX').rglob('*.swift') if p.name not in excluded)
 arch = subprocess.check_output(['uname', '-m'], text=True).strip()
+keychain_bridge = Path('.build/NativeVisualReview/KeychainInteraction.o')
+subprocess.run(['xcrun', 'clang', '-c', '-Werror', '-target', f'{arch}-apple-macos15.0',
+                'TranslateX/System/Security/KeychainInteraction.c', '-o', str(keychain_bridge)], check=True)
 subprocess.run(['xcrun', 'swiftc', '-parse-as-library', '-swift-version', '6',
                 '-strict-concurrency=complete', '-warnings-as-errors', '-D', 'TRANSLATEX_DIRECT', '-D', 'TRANSLATEX_VISUAL_QA',
                 '-F', str(sparkle.parent), '-framework', 'Sparkle', '-Xlinker', '-rpath', '-Xlinker', '@executable_path/../Frameworks',
-                '-target', f'{arch}-apple-macos15.0', *sources, 'Tools/QA/VisualCatalog.swift', 'Tools/QA/TranslationServiceVisualReview.swift', 'Tools/QA/ScreenshotReviewFixture.swift',
+                '-target', f'{arch}-apple-macos15.0', '-import-objc-header', 'TranslateX/System/Security/KeychainInteraction.h', str(keychain_bridge), *sources, 'Tools/QA/VisualCatalog.swift', 'Tools/QA/TranslationServiceVisualReview.swift', 'Tools/QA/ScreenshotReviewFixture.swift',
                 '-o', str(root / 'MacOS/TranslateX Visual Review')], check=True)
 (root / 'Frameworks').mkdir(exist_ok=True)
 if (root / 'Frameworks/Sparkle.framework').exists():
@@ -40,6 +43,7 @@ for lang in ['en', 'zh-Hans']:
     dest = root / 'Resources' / f'{lang}.lproj'
     dest.mkdir(parents=True, exist_ok=True)
     (dest / 'Localizable.strings').write_bytes(Path(f'TranslateX/Resources/{lang}.lproj/Localizable.strings').read_bytes())
+shutil.copy2('TranslateX/Resources/PublishedReleaseNotes.json', root / 'Resources/PublishedReleaseNotes.json')
 subprocess.run(['xcrun', 'actool', '--compile', str(root / 'Resources'), '--platform', 'macosx',
                 '--minimum-deployment-target', '15.0', '--target-device', 'mac',
                 'TranslateX/Resources/Assets.xcassets'], check=True)

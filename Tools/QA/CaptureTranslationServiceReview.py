@@ -10,7 +10,8 @@ For service rows, secondary usage pages and account fixture states, use
   --review-service-usage --review-interface-language en
 and repeat with zh-Hans. All account refresh actions use the isolated loader.
 Use --review-service-usage-charts for a targeted rerun of the three chart states.
-Use --review-service-editor for the editor scrollbar gutter at both settings sizes.
+Use --review-service-editor for page scrolling at both settings sizes.
+Use --review-settings-refinement for dropdowns, service rows and statistics pages.
 No permissions are requested or changed. Existing capture access is required.
 """
 import json
@@ -56,7 +57,7 @@ def check_language_settings_layout(metrics, captured_scenes):
     require(captured_scenes == expected, "batch", "Capture must contain both settings sizes in all three themes")
     measured = {}
     card_key = "settings.interfaceLanguage"
-    option_keys = [f"{card_key}.option.{language}" for language in ("system", "zh-Hans", "en")]
+    option_keys = [f"{card_key}.control"]
     for scene in sorted(expected):
         values = metrics.get(scene, {})
         card = frame(values, card_key, scene)
@@ -66,11 +67,15 @@ def check_language_settings_layout(metrics, captured_scenes):
         width, height = (620, 540) if scene.startswith("general-minimum-") else (700, 610)
         require(contains((0, 0, width, height), card), scene, "Language card must be visible without scrolling")
         for key, option in zip(option_keys, options):
-            require(contains(card, option), scene, f"Language option must remain inside the card: {key}")
+            require(contains(card, option), scene, f"Language dropdown must remain inside the card: {key}")
         for left, right in zip(options, options[1:]):
             require(left[0] + left[2] <= right[0] + tolerance, scene, "Language options must keep their order without overlap")
             require(abs(left[1] - right[1]) <= tolerance and abs(left[3] - right[3]) <= tolerance,
                     scene, "Language options must align in one row")
+        require(abs(options[0][3] - 30) <= tolerance, scene, "Dropdown height must be 30px")
+        require(abs(options[0][2] - 176) <= tolerance, scene, "Settings dropdowns must retain the shared 176px control width")
+        require(abs(card[0] + card[2] - options[0][0] - options[0][2] - 17) <= tolerance,
+                scene, "Dropdown must align to the card's trailing content edge")
         measured[scene] = dict(zip([card_key, *option_keys], [card, *options]))
 
     for size in ("general", "general-minimum"):
@@ -101,7 +106,7 @@ def check_language_settings_layout(metrics, captured_scenes):
     return checks, failures
 
 
-def check_service_usage_layout(metrics, captured_scenes, chart_only=False):
+def check_service_usage_layout(metrics, captured_scenes, chart_only=False, requested_scenes=None):
     """Check shipping service rows and secondary pages, including hover/gutters."""
     scenes = (
         "usage-card", "usage-card-hover-minimum", "usage-7", "usage-30-minimum", "usage-day-minimum",
@@ -110,6 +115,8 @@ def check_service_usage_layout(metrics, captured_scenes, chart_only=False):
     )
     if chart_only:
         scenes = ("usage-7", "usage-30-minimum", "usage-samples-minimum")
+    if requested_scenes is not None:
+        scenes = requested_scenes
     expected = {f"{scene}-{theme}" for scene in scenes for theme in ("light", "dark", "glass")}
     failures, checks = [], 0
     tolerance = 1
@@ -144,24 +151,59 @@ def check_service_usage_layout(metrics, captured_scenes, chart_only=False):
         values = metrics.get(scene, {})
         width, height = (620, 540) if "minimum" in scene else (700, 610)
         window = (0, 0, width, height)
+        if "manager" in scene:
+            panel = frame(values, "usage.manager", scene)
+            back = frame(values, "usage.manager.back", scene)
+            viewport = frame(values, "usage.manager.scroll", scene)
+            if panel and back and viewport:
+                require(contains(window, panel) and contains(panel, back), scene, "Statistics management must be an inline settings page")
+                require(abs(panel[0]) <= tolerance and abs(panel[2] - width) <= tolerance,
+                        scene, "Statistics management must fill the settings page width")
+                require(abs(viewport[0] + viewport[2] - width) <= tolerance,
+                        scene, "Statistics management scrollbar must sit at the window edge")
+            for provider in ("apple", "deepSeek", "openAI"):
+                row = frame(values, f"usage.manager.row.{provider}", scene)
+                toggle = frame(values, f"usage.manager.switch.{provider}", scene)
+                if panel and row and toggle:
+                    require(contains(panel, row) and contains(row, toggle), scene, "Independent switch must stay inside its service row")
+                    require(abs(toggle[0] + toggle[2] - row[0] - row[2]) <= tolerance,
+                            scene, "Statistics switches must align to the trailing edge")
+            continue
         is_list = "card" in scene or "account" in scene
+        if not is_list:
+            panel = frame(values, "usage.panel", scene)
+            back = frame(values, "usage.back", scene)
+            if panel is None:
+                continue
+            require(contains(window, panel) and panel[1] >= 100, scene,
+                    "Usage must remain below settings navigation inside the original window")
+            require(abs(panel[0]) <= tolerance and abs(panel[2] - width) <= tolerance,
+                    scene, "Usage must fill the settings page instead of a modal panel")
+            if back:
+                require(contains(panel, back), scene, "Usage must offer in-page back navigation")
+            window = panel
         viewport = frame(values, "list.scroll" if is_list else "usage.scroll", scene)
         if viewport is None:
             continue
-        require(contains(window, viewport), scene, "Scroll viewport must stay inside the settings window")
+        require(contains(window, viewport), scene, "Scroll viewport must stay inside its settings window")
+        require(abs(viewport[0] + viewport[2] - window[0] - window[2]) <= tolerance,
+                scene, "Page scrollbar must sit at the outer trailing edge")
         if is_list:
             require("usage.panel" not in values, scene, "A service list must not embed an inline usage panel")
             provider = "deepL" if "deepl" in scene else "deepSeek"
             card = frame(values, f"list.{provider}", scene)
-            names = ("icon", "name", "balance", "actions", "current", "edit", "copy", "check", "usage", "delete")
+            selected_action = "current" if f"list.{provider}.current" in values else "use"
+            names = ("icon", "name", "balance", "actions", selected_action, "edit", "copy", "check", "usage", "delete")
             controls = {name: frame(values, f"list.{provider}.{name}", scene) for name in names}
             if card is None or any(rect is None for rect in controls.values()):
                 continue
             for name, rect in controls.items():
                 require(contains(card, rect), scene, f"Service control must stay inside its row: {name}")
             for left, right in (("icon", "name"), ("name", "balance"), ("balance", "actions")):
-                require(controls[left][0] + controls[left][2] <= controls[right][0] + tolerance,
-                        scene, f"Fixed service columns must not overlap: {left}/{right}")
+                a, b = controls[left], controls[right]
+                require(a[0] + a[2] <= b[0] + tolerance or a[1] + a[3] <= b[1] + tolerance
+                        or b[1] + b[3] <= a[1] + tolerance,
+                        scene, f"Responsive service fields must not overlap: {left}/{right}")
             for name in ("edit", "copy", "check", "usage", "delete"):
                 rect = controls[name]
                 require(abs(rect[2] - 28) <= tolerance and abs(rect[3] - 28) <= tolerance,
@@ -169,8 +211,17 @@ def check_service_usage_layout(metrics, captured_scenes, chart_only=False):
             for left, right in zip(("edit", "copy", "check", "usage"), ("copy", "check", "usage", "delete")):
                 require(controls[left][0] + controls[left][2] <= controls[right][0] + tolerance,
                         scene, "Icon actions must not overlap")
-            require(card[0] + card[2] <= viewport[0] + viewport[2] - 12 + tolerance,
-                    scene, "Service rows must leave a scrollbar gutter")
+            refresh = frame(values, f"list.{provider}.refresh", scene)
+            if refresh:
+                require(abs(refresh[2] - 22) <= tolerance and abs(refresh[3] - 24) <= tolerance,
+                        scene, "Balance refresh must remain a compact target")
+                require(contains(controls["balance"], refresh), scene, "Refresh must remain in the balance line")
+            start = controls[selected_action]
+            require(abs(start[1] + start[3] / 2 - controls["edit"][1] - controls["edit"][3] / 2) <= tolerance,
+                    scene, "Start and secondary actions must share one line")
+            apple = frame(values, "list.apple.balance", scene)
+            if apple:
+                require(apple[3] <= 16, scene, "Apple account and local translation labels must share one line")
             continue
 
         header = frame(values, "usage.header", scene)
@@ -189,16 +240,25 @@ def check_service_usage_layout(metrics, captured_scenes, chart_only=False):
             if empty is not None:
                 require(contains(viewport, empty), scene, "Empty state must be visible")
             continue
-        chart = frame(values, "usage.chart", scene)
-        table = frame(values, "usage.requests", scene)
-        picker = frame(values, "usage.metric", scene)
+        summary = frame(values, "usage.summary", scene)
+        for key in ("usage.period", "usage.purpose", "usage.metrics"):
+            rect = frame(values, key, scene)
+            if summary and rect:
+                require(contains(summary, rect), scene, "Summary controls must stay within the page content")
+        if "summary" in scene:
+            require("usage.chart" not in values and "usage.requests" not in values,
+                    scene, "Statistics opens with optional detail sections collapsed")
+            continue
+        chart = frame(values, "usage.chart", scene) if "usage.chart" in values else None
+        table = frame(values, "usage.requests", scene) if "usage.requests" in values else None
+        picker = frame(values, "usage.metric", scene) if "usage.metric" in values else None
         if chart is not None and table is not None:
             require(chart[1] + chart[3] <= table[1] + tolerance, scene,
                     "Individual requests must follow the curve without overlap")
             for rect in (chart, table):
                 require(contains(viewport, rect, vertical=False), scene, "Usage content must stay within page width")
-                require(rect[0] + rect[2] <= viewport[0] + viewport[2] - 12 + tolerance,
-                        scene, "Usage content must leave a scrollbar gutter")
+                require(rect[0] + rect[2] <= viewport[0] + viewport[2] - 36 + tolerance,
+                        scene, "Usage content must retain its standard page inset")
         if chart is not None and picker is not None:
             require(contains(chart, picker), scene, "Metric menu must remain inside the trend section")
         if "day" in scene:
@@ -210,8 +270,7 @@ def check_service_usage_layout(metrics, captured_scenes, chart_only=False):
                 require(inner[1] - details[1] >= 12 - tolerance, scene, "Expansion needs top whitespace")
                 require(details[1] + details[3] - inner[1] - inner[3] >= 12 - tolerance,
                         scene, "Expansion needs bottom whitespace")
-        elif chart is not None:
-            require(contains(viewport, chart), scene, "Curve must be fully visible on page entry")
+
     if not chart_only:
         for theme in ("light", "dark", "glass"):
             idle = metrics.get(f"usage-account-deepseek-minimum-{theme}", {}).get("list.deepSeek.balance")
@@ -233,8 +292,8 @@ def check_service_editor_gutters(metrics, captured_scenes):
         for key in ("identity.group", "connection.group", "field.name", "field.website", "field.endpoint", "field.key", "field.model"):
             rect = values.get(key)
             checks += 1
-            if not viewport or not rect or rect["x"] + rect["width"] > viewport["x"] + viewport["width"] - 12 + 1:
-                failures.append({"scene": scene, "error": f"Editor content must leave a scrollbar gutter: {key}"})
+            if not viewport or not rect or rect["x"] + rect["width"] > viewport["x"] + viewport["width"] - 36 + 1:
+                failures.append({"scene": scene, "error": f"Editor content must retain its standard page inset: {key}"})
     return checks, failures
 
 
@@ -258,6 +317,8 @@ while time.monotonic() < deadline:
         job = json.loads(job_path.read_text())
         scene = job["scene"]
         if scene not in seen:
+            if scene.startswith("usage-") and job.get("sheetCount") != 0:
+                failures.append({"scene": scene, "error": "Usage must open in the settings page, never as a sheet"})
             destination = Path(job["output"])
             if destination.parent != output or destination.suffix != ".png":
                 raise SystemExit("Unexpected review capture destination")
@@ -281,6 +342,23 @@ else:
     raise SystemExit("Native review timed out; partial evidence preserved.")
 layout_checks = 0
 layout_failures = []
+if "--review-settings-refinement" in sys.argv[2:]:
+    metrics = json.loads((output / "metrics.json").read_text())
+    language_scenes = {scene for scene in seen if scene.startswith("general") and "controls" not in scene}
+    layout_checks, layout_failures = check_language_settings_layout(metrics, language_scenes)
+    usage_scenes = {scene for scene in seen if scene.startswith("usage-")}
+    count, errors = check_service_usage_layout(metrics, usage_scenes, requested_scenes=(
+        "usage-card", "usage-card-hover-minimum", "usage-summary-minimum", "usage-manager-minimum", "usage-empty-minimum"))
+    layout_checks += count
+    layout_failures += errors
+    for scene in sorted(s for s in seen if "general-controls" in s):
+        values = metrics[scene]
+        width, height = (620, 540) if "minimum" in scene else (700, 610)
+        for key in ("settings.updates", "settings.updates.action", "settings.updates.version"):
+            rect = values.get(key)
+            layout_checks += 1
+            if not rect or rect["x"] < 0 or rect["y"] < 0 or rect["x"] + rect["width"] > width or rect["y"] + rect["height"] > height:
+                layout_failures.append({"scene": scene, "error": f"Update controls must stay visible after scrolling: {key}"})
 if "--review-language-settings" in sys.argv[2:]:
     metrics_path = output / "metrics.json"
     if metrics_path.exists():

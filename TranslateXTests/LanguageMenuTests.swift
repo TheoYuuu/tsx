@@ -95,7 +95,7 @@ final class LanguageMenuTests: XCTestCase {
         for identifier in ["auto", "fr", "qaa"] {
             control.selection = identifier
             control.refreshTitle()
-            let expected = identifier == "auto" ? L10n.string("Detect language") : LanguageCatalog.displayName(for: identifier)
+            let expected = control.languages.first(where: { $0.id == identifier })?.name ?? (identifier == "auto" ? L10n.string("Detect language") : LanguageCatalog.displayName(for: identifier))
             XCTAssertEqual(control.accessibilityValue() as? String, expected)
             XCTAssertEqual(control.accessibilityLabel(), "Source language")
             XCTAssertEqual(control.accessibilityRole(), .popUpButton)
@@ -122,7 +122,7 @@ final class LanguageMenuTests: XCTestCase {
             let selected = try item(identifier, in: menu)
             menu.performActionForItem(at: menu.index(of: selected))
             XCTAssertEqual(control.selection, identifier)
-            let displayName = identifier == "auto" ? L10n.string("Detect language") : LanguageCatalog.displayName(for: identifier)
+            let displayName = control.languages.first(where: { $0.id == identifier })?.name ?? (identifier == "auto" ? L10n.string("Detect language") : LanguageCatalog.displayName(for: identifier))
             XCTAssertTrue(control.attributedTitle.string.hasPrefix(displayName))
             XCTAssertEqual(control.attributedTitle.attribute(.font, at: 0, effectiveRange: nil) as? NSFont, control.labelFont)
             XCTAssertEqual(control.accessibilityValue() as? String, displayName)

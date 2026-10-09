@@ -143,7 +143,7 @@ final class ShortcutRecorderControl: NSButton {
         let highlighted = recording || focused
         let alpha: CGFloat = isEnabled ? 1 : 0.52
         let fill = error ? warning.withAlphaComponent(0.07)
-            : recording ? accent.withAlphaComponent(0.06) : NSColor(theme.control)
+            : recording ? accent.withAlphaComponent(0.06) : NSColor(theme.card)
         fill.withAlphaComponent(fill.alphaComponent * alpha).setFill()
         let border = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.75, dy: 0.75), xRadius: 9, yRadius: 9)
         border.fill()
@@ -170,8 +170,13 @@ final class ShortcutRecorderControl: NSButton {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font, .foregroundColor: NSColor(theme.ink).withAlphaComponent(alpha)
         ]
-        let widths = keys.map { max(23, ($0 as NSString).size(withAttributes: attributes).width + 10) }
-        let total = widths.reduce(0, +) + CGFloat(max(0, keys.count - 1)) * 5
+        var widths = keys.map { max(23, ($0 as NSString).size(withAttributes: attributes).width + 10) }
+        var gap: CGFloat = 5
+        if widths.reduce(0, +) + CGFloat(max(0, keys.count - 1)) * gap > bounds.width - 10 {
+            widths = keys.map { ($0 as NSString).size(withAttributes: attributes).width + 6 }
+            gap = 3
+        }
+        let total = widths.reduce(0, +) + CGFloat(max(0, keys.count - 1)) * gap
         var x = (bounds.width - total) / 2
         for (key, width) in zip(keys, widths) {
             let rect = NSRect(x: x, y: bounds.midY - 11.5, width: width, height: 23)
@@ -185,7 +190,7 @@ final class ShortcutRecorderControl: NSButton {
             let size = (key as NSString).size(withAttributes: attributes)
             (key as NSString).draw(at: NSPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2),
                                   withAttributes: attributes)
-            x += width + 5
+            x += width + gap
         }
     }
 

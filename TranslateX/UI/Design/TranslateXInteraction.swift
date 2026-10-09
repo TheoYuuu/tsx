@@ -61,3 +61,49 @@ struct TranslateXHoverButtonStyle: ButtonStyle {
             .translateXControlCursor()
     }
 }
+
+/// Fixed geometry from the approved settings design, with native toggle semantics.
+struct TranslateXSwitchStyle: ToggleStyle {
+    @Environment(\.translateXTheme) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var enabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        Button { configuration.isOn.toggle() } label: {
+            Capsule()
+                .fill(configuration.isOn ? theme.accent : theme.muted.opacity(0.30))
+                .overlay(alignment: configuration.isOn ? .trailing : .leading) {
+                    Circle().fill(.white)
+                        .shadow(color: .black.opacity(0.20), radius: 1, y: 1)
+                        .frame(width: 17, height: 17)
+                        .padding(2)
+                }
+                .frame(width: 36, height: 21)
+                .frame(height: 30)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .opacity(enabled ? 1 : 0.45)
+        .translateXControlCursor()
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: configuration.isOn)
+        .accessibilityRepresentation {
+            Toggle(isOn: configuration.$isOn) { configuration.label }.toggleStyle(.switch)
+        }
+    }
+}
+
+/// Text actions keep a transparent surface in every interaction state.
+struct TranslateXTextButtonStyle: ButtonStyle {
+    var destructive = false
+    @Environment(\.translateXTheme) private var theme
+    @Environment(\.isEnabled) private var enabled
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(destructive ? Color.red.opacity(hovered ? 0.75 : 1) : (hovered ? theme.accent.opacity(0.75) : theme.accent))
+            .opacity(enabled ? (configuration.isPressed ? 0.6 : 1) : 0.4)
+            .contentShape(Rectangle())
+            .onHover { hovered = $0 }
+            .translateXControlCursor()
+    }
+}

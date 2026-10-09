@@ -34,11 +34,11 @@ See release notes for changes and known issues. Text selection depends on the so
 
 ## Downloads and updates
 
-Download **TSX-1.0.0-macOS-universal.dmg** from the [latest release](https://github.com/TheoYuuu/tsx/releases/latest), open it, and drag TSX into Applications. Official installers are signed with Developer ID and notarized by Apple.
+Download **TSX-1.1.0-macOS-universal.dmg** from the [latest release](https://github.com/TheoYuuu/tsx/releases/latest), open it, and drag TSX into Applications. Official installers are signed with Developer ID and notarized by Apple.
 
 GitHub's automatic **Source code (zip / tar.gz)** archives contain the project source at that version. They are **not installable TSX applications**; download the installer attached to the release.
 
-Choose Check for Updates in the app menu or settings, or enable automatic checks and downloads as needed. Both automatic options are off by default. Copy any source text and translations you want to keep before quitting to update. You can also choose **Watch → Custom → Releases** on GitHub.
+Choose Check for Updates in the app menu or Settings → About. The app checks at launch without downloading or installing by default. Enabling Automatic updates allows downloading, installation, and restart. Copy any source text and translations you want to keep before quitting to update. You can also choose **Watch → Custom → Releases** on GitHub.
 
 [Product website](https://lumaxspace.com/products/tsx/) · [Release workflow](Docs/RELEASING.md)
 

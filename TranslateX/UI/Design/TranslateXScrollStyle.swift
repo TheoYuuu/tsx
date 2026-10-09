@@ -57,10 +57,20 @@ final class TranslateXScroller: NSScroller {
 
 /// Place in the content of a SwiftUI ScrollView, never above its container.
 struct TranslateXScrollAnchor: NSViewRepresentable {
+    var overlayVerticalIndicator = false
     func makeNSView(context: Context) -> AnchorView { AnchorView() }
-    func updateNSView(_ view: AnchorView, context: Context) { view.configure() }
+    func updateNSView(_ view: AnchorView, context: Context) {
+        view.overlayVerticalIndicator = overlayVerticalIndicator
+        view.configure()
+    }
+    static func dismantleNSView(_ view: AnchorView, coordinator: ()) { view.stopObserving() }
 
     final class AnchorView: NSView {
+        private weak var styledScrollView: NSScrollView?
+        private var observations: [NSKeyValueObservation] = []
+        private var configurationScheduled = false
+        var overlayVerticalIndicator = false
+
         override func hitTest(_ point: NSPoint) -> NSView? { nil }
         override func viewDidMoveToSuperview() { super.viewDidMoveToSuperview(); configure() }
         override func viewDidMoveToWindow() {
@@ -70,13 +80,47 @@ struct TranslateXScrollAnchor: NSViewRepresentable {
         }
         override func layout() { super.layout(); configure() }
         func configure() {
-            if let scrollView = enclosingScrollView { TranslateXScrollStyle.apply(to: scrollView) }
+            guard window != nil, let scrollView = enclosingScrollView else { stopObserving(); return }
+            if styledScrollView !== scrollView {
+                stopObserving()
+                styledScrollView = scrollView
+                // SwiftUI can restore the system's legacy style after mounting
+                // or updating its ScrollView. Keep ownership beyond that first
+                // layout; otherwise a popup's next update appears to fix the gutter.
+                observations = [
+                    scrollView.observe(\.scrollerStyle) { [weak self] _, _ in self?.scheduleConfiguration() },
+                    scrollView.observe(\.verticalScroller) { [weak self] _, _ in self?.scheduleConfiguration() },
+                    scrollView.observe(\.horizontalScroller) { [weak self] _, _ in self?.scheduleConfiguration() },
+                    scrollView.observe(\.hasVerticalScroller) { [weak self] _, _ in self?.scheduleConfiguration() }
+                ]
+            }
+            if overlayVerticalIndicator, !scrollView.hasVerticalScroller { scrollView.hasVerticalScroller = true }
+            TranslateXScrollStyle.apply(to: scrollView)
+        }
+
+        nonisolated private func scheduleConfiguration() {
+            // Native view mutations run on the main thread. Reconcile after the
+            // setter finishes instead of reentering AppKit's tiling operation.
+            DispatchQueue.main.async { [weak self] in
+                guard let self, !self.configurationScheduled else { return }
+                self.configurationScheduled = true
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    self.configurationScheduled = false
+                    self.configure()
+                }
+            }
+        }
+
+        func stopObserving() {
+            observations.removeAll()
+            styledScrollView = nil
         }
     }
 }
 
 extension View {
-    func translateXScrollContent() -> some View {
-        background(TranslateXScrollAnchor().frame(width: 0, height: 0))
+    func translateXScrollContent(overlayVerticalIndicator: Bool = false) -> some View {
+        background(TranslateXScrollAnchor(overlayVerticalIndicator: overlayVerticalIndicator).frame(width: 0, height: 0))
     }
 }

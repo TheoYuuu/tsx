@@ -1,5 +1,12 @@
 import SwiftUI
 
+/// Stable settings navigation shared by menu commands and the settings window.
+@MainActor @Observable
+final class SettingsNavigation {
+    var requestedTab: Int?
+    func showAbout() { requestedTab = 5 }
+}
+
 struct SettingsView: View {
     @Environment(\.translateXTheme) private var theme
     @Bindable var preferences: AppPreferences
@@ -12,326 +19,239 @@ struct SettingsView: View {
     var services: TranslationServiceStore? = nil
     var serviceNavigation = TranslationServiceNavigationCoordinator()
     var updates: AppUpdateController? = nil
+    var accounts: TranslationAccountUsageController? = nil
+    var navigation = SettingsNavigation()
     @State var serviceSession: TranslationServiceDraftSession? = nil
     @State var tab = 0
+    @State private var resetFailed = false
 
-    private var servicePalette: TranslationServicePalette { .init(theme: theme) }
+    private var p: TranslationServicePalette { .init(theme: theme) }
+    private var showsUpdateModal: Bool { tab == 5 && updates?.isPresentingModal == true }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 18) {
-                WindowTrafficLights().frame(width: 58, height: 14)
-                Text("Settings")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(theme.muted)
-                Spacer()
-            }
-            .padding(.horizontal, 22)
-            .frame(height: 64)
-            .serviceDesignMetric("settings.titlebar")
-
-            tabs
-                .disabled(serviceNavigation.isPresentingConfirmation)
-                .accessibilityHidden(serviceNavigation.isPresentingConfirmation)
-                .serviceDesignMetric("settings.tabs")
-                .padding(.bottom, 19)
-
-            if tab == 3, let services {
-                TranslationServicesSettingsView(services: services, navigation: serviceNavigation, serviceSession: serviceSession)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 0) {
-                            switch tab {
-                            case 1: shortcutSettings
-                            case 2: privacy
-                            default: general
-                            }
-                        }
-                        .padding(.horizontal, 36)
-                        .padding(.top, 10)
-                        .padding(.bottom, 24)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .id("settingsContent")
-                        .translateXScrollContent()
-                    }
-                    .onChange(of: tab) { _, _ in proxy.scrollTo("settingsContent", anchor: .top) }
+        ZStack {
+            VStack(spacing: 0) {
+                HStack(spacing: 18) {
+                    WindowTrafficLights().frame(width: 58, height: 14)
+                    Text("Settings").font(.system(size: 13, weight: .semibold)).foregroundStyle(p.muted)
+                    Spacer()
+                }
+                .padding(.horizontal, 22).frame(height: 48)
+                .serviceDesignMetric("settings.titlebar")
+                Rectangle().fill(p.line).frame(height: 1)
+                HStack(spacing: 0) {
+                    sidebar
+                        .disabled(serviceNavigation.isPresentingConfirmation)
+                        .accessibilityHidden(serviceNavigation.isPresentingConfirmation)
+                    Rectangle().fill(p.line).frame(width: 1)
+                    page.frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
+            .disabled(showsUpdateModal).accessibilityHidden(showsUpdateModal)
+            if showsUpdateModal, let updates { SettingsUpdateOverlay(updates: updates) }
         }
-        .foregroundStyle(theme.ink)
-        .background {
-            if tab == 3, !theme.isGlass {
-                (theme.isDark ? servicePalette.color(0x262d39) : .white)
-            }
-        }
-        .frame(minWidth: 620, minHeight: 540)
+        .foregroundStyle(p.ink)
+        .background(theme.isGlass ? Color.clear : theme.isDark ? p.color(0x232833) : Color.white)
+        .frame(minWidth: 900, minHeight: 600)
         .onChange(of: serviceNavigation.servicesRequestID, initial: true) { _, request in
-            if request > 0, tab != 3 { tab = 3 }
+            if request > 0, tab != 3, !showsUpdateModal { tab = 3 }
+        }
+        .onChange(of: navigation.requestedTab, initial: true) { _, request in
+            guard let request else { return }
+            selectTab(request)
+            navigation.requestedTab = nil
         }
         .onChange(of: tab) { old, new in
             shortcuts.endRecording()
-            // An injected opening draft is consumed by this visit. Leaving
-            // closes it; a later visit must open the current saved list.
             if old == 3, new != 3 { serviceSession = nil }
         }
         .onChange(of: preferences.appearance) { _, _ in appearanceChanged() }
         .onChange(of: preferences.material) { _, _ in appearanceChanged() }
         .onChange(of: preferences.interfaceLanguage) { _, _ in interfaceLanguageChanged() }
         .task { permissions.refresh(); await catalog.load() }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            permissions.refresh()
-        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in permissions.refresh() }
         .onDisappear { shortcuts.endRecording() }
     }
 
-    private var tabs: some View {
-        HStack(spacing: 3) {
-            tabButton("General", symbol: "gearshape", index: 0)
-            if services != nil { tabButton("Translation services", symbol: "globe", index: 3) }
-            tabButton("Shortcuts", symbol: "keyboard", index: 1)
-            tabButton("Privacy", symbol: "hand.raised", index: 2)
+    @ViewBuilder private var page: some View {
+        if tab == 3, let services {
+            TranslationServicesSettingsView(services: services, navigation: serviceNavigation,
+                                            serviceSession: serviceSession, sharedAccounts: accounts)
+        } else if tab == 4, let services {
+            UsageDashboardView(store: services)
+        } else if tab == 5, let updates {
+            AboutSettingsView(updates: updates)
+        } else {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        switch tab {
+                        case 1: shortcutSettings
+                        case 2: permissionsPage
+                        default: general
+                        }
+                    }
+                    .padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 24)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .id("settingsContent").translateXScrollContent()
+                }
+                .onChange(of: tab) { _, _ in proxy.scrollTo("settingsContent", anchor: .top) }
+            }
         }
-        .padding(4)
-        .background(theme.control, in: Capsule())
-        .overlay {
-            Capsule().strokeBorder(theme.isGlass ? Color.white.opacity(0.44) : .clear, lineWidth: 1)
-                .allowsHitTesting(false)
-        }
-        .accessibilityElement(children: .contain)
     }
 
-    private func tabButton(_ title: LocalizedStringKey, symbol: String, index: Int) -> some View {
-        Button {
-            if tab == 3, index != tab {
-                serviceNavigation.requestExit { tab = index }
-            } else { tab = index }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: symbol)
-                    .font(.system(size: 14, weight: .regular))
-                    .frame(width: 16, height: 16)
-                ZStack {
-                    Text(title).font(.system(size: 12, weight: .medium)).hidden()
-                    Text(title).font(.system(size: 12, weight: tab == index ? .medium : .regular))
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("Preferences").font(.system(size: 11)).foregroundStyle(p.muted)
+                .padding(.horizontal, 10).padding(.bottom, 9)
+            VStack(spacing: 3) {
+                tabButton("General", symbol: "gearshape", index: 0)
+                if services != nil {
+                    tabButton("Translation services", symbol: "globe", index: 3, compactTitle: "settings.navigation.services")
+                    tabButton("Usage statistics", symbol: "chart.bar.xaxis", index: 4, compactTitle: "settings.navigation.usage", iconSize: 14)
                 }
-            }
-            .foregroundStyle(tab == index ? theme.accent : theme.muted)
-                .padding(.horizontal, services == nil ? 19 : 13)
-            .frame(height: 32)
-            .background {
-                if tab == index {
-                    Capsule()
-                        .fill(theme.card)
-                        .shadow(color: Color.black.opacity(0.07), radius: 3, y: 1)
-                }
-            }
-            .contentShape(Capsule())
+                tabButton("Shortcuts", symbol: "command.square", index: 1)
+                tabButton("Permissions", symbol: "lock.shield", index: 2)
+                if updates != nil { tabButton("About", symbol: "info.square", index: 5) }
+            }.accessibilityElement(children: .contain).accessibilityLabel(Text("Settings categories"))
+            Spacer(minLength: 16)
+            HStack(spacing: 7) {
+                TranslateXBrandMark(size: 18)
+                Text("TSX · v\(updates?.currentVersion ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")")
+                    .font(.system(size: 11)).foregroundStyle(p.muted)
+            }.padding(.horizontal, 9)
         }
-        .buttonStyle(TranslateXHoverButtonStyle(radius: 16))
+        .padding(.horizontal, 10).padding(.top, 18).padding(.bottom, 14)
+        .frame(width: 184)
+        .frame(maxHeight: .infinity)
+        .background(p.color(theme.isDark ? 0x252d39 : 0xfafbfe).opacity(theme.isGlass ? 0.32 : 1))
+        .serviceDesignMetric("settings.tabs")
+    }
+
+    private func selectTab(_ index: Int) {
+        guard !showsUpdateModal || index == tab else { return }
+        if tab == 3, index != tab { serviceNavigation.requestExit { tab = index } }
+        else { tab = index }
+    }
+
+    private func tabButton(_ title: LocalizedStringKey, symbol: String, index: Int, compactTitle: LocalizedStringKey? = nil, iconSize: CGFloat = 16) -> some View {
+        Button { selectTab(index) } label: {
+            HStack(spacing: 9) {
+                Image(systemName: symbol).resizable().scaledToFit()
+                    .frame(width: iconSize, height: iconSize).frame(width: 20, height: 20)
+                Text(compactTitle ?? title).font(.system(size: 13, weight: tab == index ? .medium : .regular))
+                    .lineLimit(1).minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+            }.padding(.horizontal, 10).frame(height: 38)
+        }
+        .buttonStyle(SettingsNavigationButtonStyle(selected: tab == index))
+        .accessibilityLabel(Text(title))
         .accessibilityAddTraits(tab == index ? [.isSelected] : [])
         .accessibilityIdentifier("settings.tab.\(index)")
     }
 
     private var general: some View {
         VStack(alignment: .leading, spacing: 0) {
-            pageHeading("General", description: "Make TSX feel at home.")
-
+            groupCaption("Language")
             group {
-                HStack(spacing: 16) {
-                    Text("Interface language")
-                        .font(.system(size: 13, weight: .medium))
-                    Spacer(minLength: 0)
-                    interfaceLanguagePicker
-                        .fixedSize()
-                }
-                .padding(.top, 14)
-                Text("Choose the language used in TSX. Changes apply immediately.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(theme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 7)
-                    .padding(.bottom, 15)
-            }
-            .serviceDesignMetric("settings.interfaceLanguage")
-            .padding(.bottom, 24)
-
-            groupCaption("Translation preferences")
-            group {
-                HStack(spacing: 12) {
-                    Text("Default target language")
-                    Spacer(minLength: 12)
-                    targetLanguageMenu
-                }
-                .frame(minHeight: 52)
-                .font(.system(size: 13))
-            }
-            Text("Used for new selection and screenshot translations, and when the input workspace is empty.")
-                .font(.system(size: 11))
-                .lineSpacing(3)
-                .foregroundStyle(theme.muted)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, 3)
-                .padding(.top, 9)
+                HStack { Text("Interface language"); Spacer(); interfaceLanguagePicker }.frame(minHeight: 52)
+                separator
+                HStack { Text("Default target language"); Spacer(); targetLanguageMenu }.frame(minHeight: 52)
+            }.font(.system(size: 13)).serviceDesignMetric("settings.interfaceLanguage")
             if !catalog.languages(for: services?.selectedConfiguration).isEmpty,
                !catalog.languages(for: services?.selectedConfiguration).contains(where: { $0.id == preferences.defaultTarget }) {
                 Label(LocalizedStringKey(services?.selectedConfiguration == nil
                       ? "This language is unavailable on this Mac. Choose another target language."
                       : "This language is unavailable for the selected service. Choose another target language."), systemImage: "exclamationmark.circle")
-                    .font(.system(size: 11))
-                    .foregroundStyle(theme.muted)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, 8)
+                    .font(.system(size: 11)).foregroundStyle(p.muted).fixedSize(horizontal: false, vertical: true).padding(.top, 8)
             }
-
-            groupCaption("Interface")
-                .padding(.top, 24)
+            groupCaption("Window and appearance").padding(.top, 16)
             group {
                 HStack(spacing: 20) {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text("Translation window layout")
                         Text("Two equal panes in the main and quick translation windows.")
-                            .font(.system(size: 11))
-                            .foregroundStyle(theme.muted)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .font(.system(size: 11)).foregroundStyle(p.muted).fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 0)
                     segmented("Translation window layout", selection: $preferences.translationLayout,
                               choices: [(.sideBySide, "Side by side"), (.stacked, "Stacked")])
-                        .fixedSize()
-                        .accessibilityIdentifier("settings.translationLayout")
-                }
-                .padding(.vertical, 14)
-                .frame(minHeight: 72)
+                        .fixedSize().accessibilityIdentifier("settings.translationLayout")
+                }.padding(.vertical, 10).frame(minHeight: 62)
                 separator
-                HStack(spacing: 12) {
-                    Text("Material")
-                    Spacer(minLength: 12)
-                    segmented("Material", selection: $preferences.material,
-                              choices: [(.light, "Pure Light"), (.glass, "Liquid Glass")])
-                }
-                .frame(minHeight: 52)
+                HStack {
+                    Text("Material"); Spacer()
+                    segmented("Material", selection: $preferences.material, choices: [(.light, "Solid color"), (.glass, "Liquid Glass")])
+                }.frame(minHeight: 52)
                 separator
-                HStack(spacing: 12) {
-                    Text("Appearance")
-                    Spacer(minLength: 12)
+                HStack {
+                    Text("Appearance"); Spacer()
                     segmented("Appearance", selection: $preferences.appearance,
                               choices: [(.system, "Follow System"), (.light, "Light"), (.dark, "Dark")])
-                }
-                .frame(minHeight: 52)
+                }.frame(minHeight: 52)
                 separator
                 HStack(spacing: 20) {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text("Use pointing cursor")
                         Text("Show a pointing hand when hovering over interactive elements.")
-                            .font(.system(size: 11))
-                            .foregroundStyle(theme.muted)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .font(.system(size: 11)).foregroundStyle(p.muted).fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 0)
                     Toggle("Use pointing cursor", isOn: $preferences.usesPointingCursor)
-                        .toggleStyle(SettingsSwitchStyle())
-                        .accessibilityIdentifier("settings.pointingCursor")
-                }
-                .padding(.vertical, 14)
-                .frame(minHeight: 72)
-            }
-            .font(.system(size: 13))
-            if let updates, updates.isAvailable {
-                groupCaption("Software updates").padding(.top, 24)
-                group {
-                    HStack {
-                        Text("TSX")
-                        Spacer()
-                        Button("Check for Updates…") { updates.checkForUpdates() }
-                            .disabled(!updates.canCheckForUpdates)
-                            .accessibilityIdentifier("settings.updates.check")
-                    }.frame(minHeight: 52)
-                    separator
-                    HStack(spacing: 20) {
-                        Text("Automatically check for updates")
-                        Spacer(minLength: 0)
-                        Toggle("Automatically check for updates", isOn: Binding(
-                            get: { updates.automaticallyChecksForUpdates },
-                            set: { updates.setAutomaticChecks($0) }
-                        )).toggleStyle(SettingsSwitchStyle())
-                            .accessibilityIdentifier("settings.updates.automaticChecks")
-                    }.frame(minHeight: 52)
-                    separator
-                    HStack(spacing: 20) {
-                        Text("Download updates and install when quitting")
-                            .fixedSize(horizontal: false, vertical: true)
-                        Spacer(minLength: 0)
-                        Toggle("Download updates and install when quitting", isOn: Binding(
-                            get: { updates.automaticallyDownloadsUpdates },
-                            set: { updates.setAutomaticDownloads($0) }
-                        )).toggleStyle(SettingsSwitchStyle())
-                            .disabled(!updates.automaticallyChecksForUpdates)
-                            .accessibilityIdentifier("settings.updates.automaticDownloads")
-                    }.frame(minHeight: 52)
-                }.font(.system(size: 13))
-                Text("Updates connect to lumaxspace.com and GitHub. Copy any text you want to keep before installing and restarting.")
-                    .font(.system(size: 11)).foregroundStyle(theme.muted)
-                    .fixedSize(horizontal: false, vertical: true).padding(.top, 9)
-            }
+                        .toggleStyle(TranslateXSwitchStyle()).accessibilityIdentifier("settings.pointingCursor")
+                }.padding(.vertical, 10).frame(minHeight: 62)
+            }.font(.system(size: 13))
         }
     }
 
     private var interfaceLanguagePicker: some View {
-        HStack(spacing: 2) {
-            ForEach(AppInterfaceLanguage.allCases, id: \.self) { language in
-                segment(interfaceLanguageLabel(language), value: language, selection: $preferences.interfaceLanguage)
-                    .accessibilityIdentifier("settings.interfaceLanguage.option.\(language.rawValue)")
-                    .serviceDesignMetric("settings.interfaceLanguage.option.\(language.rawValue)")
-            }
-        }
-        .padding(3)
-        .background(theme.control, in: RoundedRectangle(cornerRadius: 7))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("Interface language"))
-        .accessibilityIdentifier("settings.interfaceLanguage")
-    }
-
-    private func interfaceLanguageLabel(_ language: AppInterfaceLanguage) -> Text {
-        switch language {
-        case .system: Text("Follow System")
-        case .simplifiedChinese: Text(verbatim: "简体中文")
-        case .english: Text(verbatim: "English")
-        }
+        LanguageMenu(label: L10n.string("Interface language"), selection: Binding(
+            get: { preferences.interfaceLanguage.rawValue },
+            set: { if let language = AppInterfaceLanguage(rawValue: $0) { preferences.interfaceLanguage = language } }
+        ), languages: AppInterfaceLanguage.allCases.map { language in
+            TranslationLanguage(id: language.rawValue, name: language == .system ? L10n.string("Follow System") : language == .english ? "English" : "简体中文")
+        }, prominent: false, minimumWidth: 144)
+        .accessibilityIdentifier("settings.interfaceLanguage").serviceDesignMetric("settings.interfaceLanguage.control")
     }
 
     private var targetLanguageMenu: some View {
         LanguageMenu(label: L10n.string("Default target language"), selection: Binding(
-            get: { preferences.defaultTarget },
-            set: { preferences.setDefaultTarget($0); defaultTargetChanged() }
+            get: { preferences.defaultTarget }, set: { preferences.setDefaultTarget($0); defaultTargetChanged() }
         ), languages: catalog.languages(for: services?.selectedConfiguration), prominent: false,
-           enabled: !catalog.languages(for: services?.selectedConfiguration).isEmpty)
-            .fixedSize()
+           enabled: !catalog.languages(for: services?.selectedConfiguration).isEmpty, minimumWidth: 144)
+            .fixedSize().translateXTooltip(L10n.string("Used for new selection and screenshot translations, and when the input workspace is empty."))
     }
 
     private var shortcutSettings: some View {
         VStack(alignment: .leading, spacing: 0) {
-            pageHeading("Shortcuts", description: "Click a combination to change it. Esc cancels.", bottomPadding: 22)
+            HStack(alignment: .center) {
+                pageHeading("Shortcuts", description: "Click a combination to change it. Esc cancels.")
+                Spacer()
+                Button { resetFailed = !shortcuts.resetAll() } label: {
+                    Label("Restore defaults", systemImage: "arrow.counterclockwise")
+                }.buttonStyle(TranslationServiceButtonStyle())
+                    .disabled(!shortcuts.hasCustomizedCombinations)
+                    .accessibilityIdentifier("settings.shortcuts.resetAll")
+            }.padding(.bottom, 16)
+            HStack {
+                Text("Function"); Spacer()
+                Text("Combination").frame(width: 130)
+                Text("Enable").frame(width: 36)
+            }.font(.system(size: 11)).foregroundStyle(p.muted).padding(.horizontal, 17).padding(.bottom, 8)
             group {
                 ForEach(ShortcutAction.allCases, id: \.self) { action in
                     if action != ShortcutAction.allCases.first { separator }
                     shortcutRow(action)
                 }
             }
-            HStack(alignment: .firstTextBaseline, spacing: 7) {
-                Image(systemName: "info.circle").font(.system(size: 12))
-                Text(shortcuts.recordingAction == nil
-                     ? "Turning off a shortcut keeps its combination."
-                     : "Waiting for keys · Esc cancels without changing the shortcut.")
-                    .font(.system(size: 11))
+            if resetFailed {
+                Text("Some shortcuts could not be restored. Check the affected shortcuts and try again.")
+                    .font(.system(size: 11)).foregroundStyle(p.error).padding(.top, 10)
             }
-            .foregroundStyle(theme.muted)
-            .padding(.top, 15)
-            Text("If a combination is unavailable, your previous setting is kept.")
-                .font(.system(size: 10))
-                .foregroundStyle(theme.muted)
-                .padding(.top, 7)
+            Text(shortcuts.recordingAction == nil
+                 ? "Turning off a shortcut keeps its combination."
+                 : "Waiting for keys · Esc cancels without changing the shortcut.")
+                .font(.system(size: 11)).foregroundStyle(p.muted).padding(.top, 12)
         }
     }
 
@@ -339,208 +259,122 @@ struct SettingsView: View {
         let enabled = shortcuts.isEnabled(action)
         let error = shortcuts.error(for: action)
         return VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 12) {
+            HStack(spacing: 11) {
                 Group {
                     switch action {
-                    case .selection: TranslateXActionIcon(symbol: .selection)
-                    case .input: TranslateXActionIcon(symbol: .input)
+                    case .selection: TranslateXActionIcon(symbol: .selection).frame(width: 22, height: 22)
+                    case .input: TranslateXActionIcon(symbol: .input).frame(width: 22, height: 22)
                     case .ocr: Image(systemName: "viewfinder").font(.system(size: 20))
                     }
-                }
-                .foregroundStyle(theme.muted)
-                .frame(width: 24, height: 23)
+                }.foregroundStyle(p.muted).frame(width: 32, height: 32)
+                    .background(p.fill, in: RoundedRectangle(cornerRadius: 8))
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(action.settingsTitle)
-                        .font(.system(size: 13, weight: .medium))
+                    Text(action.settingsTitle).font(.system(size: 13, weight: .medium))
                     Text(enabled ? action.settingsDescription : L10n.string("Disabled · combination kept"))
-                        .font(.system(size: 10))
-                        .foregroundStyle(theme.muted)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                ShortcutRecorder(action: action, settings: shortcuts)
-                    .frame(width: 146, height: 34)
+                        .font(.system(size: 11)).foregroundStyle(p.muted).fixedSize(horizontal: false, vertical: true)
+                }.frame(maxWidth: .infinity, alignment: .leading)
+                ShortcutRecorder(action: action, settings: shortcuts).frame(width: 130, height: 32)
                 Toggle(action.settingsTitle, isOn: Binding(
-                    get: { shortcuts.isEnabled(action) },
-                    set: { _ = shortcuts.setEnabled($0, for: action) }
-                ))
-                .toggleStyle(SettingsSwitchStyle())
-                .labelsHidden()
-                .frame(width: 32)
-                .help("Enable or pause this shortcut")
-                Button { _ = shortcuts.reset(for: action) } label: {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 12))
-                        .frame(width: 26, height: 30)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(TranslateXHoverButtonStyle())
-                .foregroundStyle(theme.muted)
-                .opacity(shortcuts.rememberedShortcut(for: action) == action.defaultShortcut ? 0.27 : 1)
-                .disabled(shortcuts.rememberedShortcut(for: action) == action.defaultShortcut)
-                .help("Restore this shortcut’s default combination")
-                .accessibilityLabel(Text(String(format: L10n.string("Reset %@ shortcut"), action.settingsTitle)))
-            }
-            .frame(minHeight: error == nil ? 82 : 60)
+                    get: { shortcuts.isEnabled(action) }, set: { _ = shortcuts.setEnabled($0, for: action) }
+                )).toggleStyle(TranslateXSwitchStyle()).labelsHidden().padding(.leading, 12)
+                    .translateXTooltip(L10n.string("Enable or pause this shortcut"))
+            }.frame(minHeight: 62)
             if let error {
-                Text(error + (shortcuts.recordingAction == action
-                    ? " " + String(format: L10n.string("Previous shortcut kept: %@."),
-                                   shortcuts.rememberedShortcut(for: action).displayString) : ""))
-                    .font(.system(size: 10))
-                    .foregroundStyle(theme.isDark ? Color.orange : Color(red: 0.58, green: 0.38, blue: 0.14))
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, 36)
-                    .padding(.bottom, 10)
+                Text(error).font(.system(size: 11)).foregroundStyle(p.error)
+                    .fixedSize(horizontal: false, vertical: true).padding(.leading, 43).padding(.bottom, 10)
             }
         }
     }
 
-    private var privacy: some View {
+    private var permissionsPage: some View {
         VStack(alignment: .leading, spacing: 0) {
-            pageHeading("Privacy", description: "Permissions serve only the actions you start.", bottomPadding: 15)
+            pageHeading("Permissions", description: "Enable the permissions needed for selection and screenshot translation.")
+                .padding(.bottom, 16)
             group {
-                permissionRow(.accessibility, title: "Accessibility", symbol: "accessibility")
+                permissionRow(.accessibility, title: "Accessibility", symbol: "accessibility", detail: "Read selected text when you start a translation.")
                 separator
-                permissionRow(.screenCapture, title: "Screen Recording", symbol: "viewfinder")
+                permissionRow(.screenCapture, title: "Screen Recording", symbol: "viewfinder", detail: "Recognize text only in the screen area you select.")
             }
-            HStack(alignment: .top, spacing: 8) {
-                Image(systemName: "lock.shield")
-                    .font(.system(size: 15))
-                    .frame(width: 16, height: 17)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("TSX does not save translation text or screenshots.")
-                    Text("Service keys stay in Keychain. External services receive the text you choose to translate and apply their own data policies.")
+            Label("Permissions are used only for actions you start. Translation text and screenshots are not saved.", systemImage: "lock.shield")
+                .font(.system(size: 11)).foregroundStyle(p.muted).fixedSize(horizontal: false, vertical: true).padding(.top, 14)
+        }
+    }
+
+    private func permissionRow(_ permission: SystemPermission, title: LocalizedStringKey, symbol: String, detail: LocalizedStringKey) -> some View {
+        let granted = permissions.isGranted(permission)
+        return HStack(spacing: 12) {
+            Image(systemName: symbol).font(.system(size: 19)).foregroundStyle(p.muted)
+                .frame(width: 36, height: 36).background(p.fill, in: RoundedRectangle(cornerRadius: 9))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.system(size: 13, weight: .medium))
+                Text(detail).font(.system(size: 11)).foregroundStyle(p.muted).fixedSize(horizontal: false, vertical: true)
+            }.frame(maxWidth: .infinity, alignment: .leading)
+            Label(granted ? "Authorized" : "Not authorized", systemImage: granted ? "checkmark.circle.fill" : "exclamationmark.circle")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(granted ? p.success : p.color(theme.isDark ? 0xf1c987 : 0x956410))
+                .padding(.horizontal, 9).padding(.vertical, 5)
+                .background(granted ? p.successFill : p.color(theme.isDark ? 0x413a2b : 0xfff8e9), in: RoundedRectangle(cornerRadius: 6))
+            Button {
+                if granted { permissions.openSettings(permission) } else { permissions.request(permission) }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(granted ? "Manage" : "Authorize")
+                    Image(systemName: "arrow.up.right").font(.system(size: 10))
                 }
-                .font(.system(size: 11))
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
-            }
-            .foregroundStyle(theme.muted)
-            .padding(.top, 16)
-        }
+            }.buttonStyle(TranslationServiceButtonStyle(kind: granted ? .regular : .primary))
+                .accessibilityLabel(granted ? L10n.string("Open System Settings") : permission.actionTitle)
+        }.padding(.vertical, 12).frame(minHeight: 74)
     }
 
-    private func permissionRow(_ permission: SystemPermission, title: LocalizedStringKey, symbol: String) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 8) {
-                Label {
-                    Text(title).font(.system(size: 13, weight: .medium))
-                } icon: {
-                    Image(systemName: symbol).font(.system(size: 16))
-                }
-                Spacer()
-                permissionBadge(isGranted: permissions.isGranted(permission))
-            }
-            Text(permission.explanation)
-                .font(.system(size: 11))
-                .lineSpacing(4)
-                .foregroundStyle(theme.muted)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 9)
-                .padding(.bottom, 12)
-            if permissions.isGranted(permission) {
-                Button("Open System Settings") { permissions.openSettings(permission) }
-                    .buttonStyle(TranslateXButtonStyle(kind: .secondary))
-            } else {
-                Button(permission.actionTitle) { permissions.request(permission) }
-                    .buttonStyle(TranslateXButtonStyle(kind: .primary))
-            }
+    private func pageHeading(_ title: LocalizedStringKey, description: LocalizedStringKey) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title).font(.system(size: 20, weight: .semibold)).tracking(-0.4)
+                .accessibilityAddTraits(.isHeader).serviceDesignMetric("settings.pageHeading")
+            Text(description).font(.system(size: 12)).foregroundStyle(p.muted).fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.vertical, 16)
-    }
-
-    private func permissionBadge(isGranted: Bool) -> some View {
-        HStack(spacing: 4) {
-            if isGranted {
-                Image(systemName: "checkmark").font(.system(size: 9, weight: .semibold))
-            }
-            Text(LocalizedStringKey(isGranted ? "Enabled" : "Not enabled"))
-                .font(.system(size: 10, weight: .medium))
-        }
-        .foregroundStyle(isGranted ? permissionGrantedColor : theme.muted)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(isGranted ? Color.green.opacity(0.09) : theme.control, in: Capsule())
-    }
-
-    private var permissionGrantedColor: Color {
-        theme.isDark ? Color(red: 0.49, green: 0.84, blue: 0.63) : Color(red: 0.20, green: 0.47, blue: 0.36)
-    }
-
-    private func pageHeading(_ title: LocalizedStringKey, description: LocalizedStringKey, bottomPadding: CGFloat = 24) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title)
-                .font(.system(size: 20, weight: .semibold))
-                .tracking(-0.4)
-                .frame(height: 28, alignment: .leading)
-                .accessibilityAddTraits(.isHeader)
-                .serviceDesignMetric("settings.pageHeading")
-            Text(description)
-                .font(.system(size: 12))
-                .lineSpacing(4)
-                .foregroundStyle(theme.muted)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(.top, 7)
-        .padding(.bottom, bottomPadding)
     }
 
     private func groupCaption(_ title: LocalizedStringKey) -> some View {
-        Text(title)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(theme.muted)
-            .padding(.bottom, 10)
-            .accessibilityAddTraits(.isHeader)
+        Text(title).font(.system(size: 11, weight: .semibold)).foregroundStyle(p.muted)
+            .padding(.bottom, 7).accessibilityAddTraits(.isHeader)
     }
 
     private func group<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 0, content: content)
-            .padding(.horizontal, 17)
-            .background(theme.card, in: RoundedRectangle(cornerRadius: 17))
-            .overlay {
-                RoundedRectangle(cornerRadius: 17)
-                    .strokeBorder(theme.divider, lineWidth: 1)
-                    .allowsHitTesting(false)
-            }
+        VStack(alignment: .leading, spacing: 0, content: content).padding(.horizontal, 17)
+            .background(p.panel, in: RoundedRectangle(cornerRadius: 14))
+            .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(p.line).allowsHitTesting(false) }
     }
+    private var separator: some View { Rectangle().fill(p.line).frame(height: 1).accessibilityHidden(true) }
 
-    private var separator: some View {
-        Rectangle().fill(theme.divider).frame(height: 1).accessibilityHidden(true)
-    }
-
-    private func segmented<Value: Hashable>(
-        _ title: LocalizedStringKey, selection: Binding<Value>, choices: [(Value, LocalizedStringKey)]
-    ) -> some View {
+    private func segmented<Value: Hashable>(_ title: LocalizedStringKey, selection: Binding<Value>, choices: [(Value, LocalizedStringKey)]) -> some View {
         HStack(spacing: 2) {
             ForEach(Array(choices.enumerated()), id: \.offset) { _, choice in
-                segment(Text(choice.1), value: choice.0, selection: selection)
+                Button { selection.wrappedValue = choice.0 } label: {
+                    Text(choice.1).font(.system(size: 11, weight: selection.wrappedValue == choice.0 ? .medium : .regular))
+                        .foregroundStyle(selection.wrappedValue == choice.0 ? p.ink : p.muted)
+                        .padding(.horizontal, 11).padding(.vertical, 6)
+                        .background(selection.wrappedValue == choice.0 ? p.panel : .clear, in: RoundedRectangle(cornerRadius: 5))
+                }.buttonStyle(TranslateXHoverButtonStyle(radius: 5))
+                    .accessibilityAddTraits(selection.wrappedValue == choice.0 ? [.isSelected] : [])
             }
-        }
-        .padding(3)
-        .background(theme.control, in: RoundedRectangle(cornerRadius: 7))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text(title))
+        }.padding(3).background(p.fill, in: RoundedRectangle(cornerRadius: 7))
+            .accessibilityElement(children: .contain).accessibilityLabel(Text(title))
     }
+}
 
-    private func segment<Value: Hashable>(_ label: Text, value: Value, selection: Binding<Value>) -> some View {
-        Button { selection.wrappedValue = value } label: {
-            label
-                .font(.system(size: 11, weight: selection.wrappedValue == value ? .medium : .regular))
-                .foregroundStyle(selection.wrappedValue == value ? theme.ink : theme.muted)
-                .padding(.horizontal, 11)
-                .padding(.vertical, 5)
-                .background {
-                    if selection.wrappedValue == value {
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(theme.card)
-                            .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
-                    }
-                }
-                .contentShape(RoundedRectangle(cornerRadius: 5))
-        }
-        .buttonStyle(TranslateXHoverButtonStyle())
-        .accessibilityAddTraits(selection.wrappedValue == value ? [.isSelected] : [])
+private struct SettingsNavigationButtonStyle: ButtonStyle {
+    @Environment(\.translateXTheme) private var theme
+    let selected: Bool
+    @State private var hovered = false
+    func makeBody(configuration: Configuration) -> some View {
+        let p = TranslationServicePalette(theme: theme)
+        configuration.label
+            .foregroundStyle(selected || hovered ? p.accent : p.muted)
+            .background(selected ? p.color(theme.isDark ? 0x294564 : 0xdfebff)
+                        : hovered ? p.color(theme.isDark ? 0x334960 : 0xeaf1fc) : .clear,
+                        in: RoundedRectangle(cornerRadius: 8))
+            .contentShape(RoundedRectangle(cornerRadius: 8)).onHover { hovered = $0 }
+            .opacity(configuration.isPressed ? 0.8 : 1).translateXControlCursor()
     }
 }
 
@@ -552,39 +386,11 @@ private extension ShortcutAction {
         case .ocr: L10n.string("Screenshot Translation")
         }
     }
-
     var settingsDescription: String {
         switch self {
         case .selection: L10n.string("Read the selection and show its translation")
         case .input: L10n.string("Open the workspace to continue writing")
         case .ocr: L10n.string("Capture an area to recognize and translate")
-        }
-    }
-}
-
-/// Fixed geometry from the approved settings design, with native toggle semantics.
-private struct SettingsSwitchStyle: ToggleStyle {
-    @Environment(\.translateXTheme) private var theme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    func makeBody(configuration: Configuration) -> some View {
-        Button { configuration.isOn.toggle() } label: {
-            Capsule()
-                .fill(configuration.isOn ? theme.accent : theme.muted.opacity(0.30))
-                .overlay(alignment: configuration.isOn ? .trailing : .leading) {
-                    Circle().fill(.white)
-                        .shadow(color: .black.opacity(0.20), radius: 1, y: 1)
-                        .frame(width: 15, height: 15)
-                        .padding(2)
-                }
-                .frame(width: 32, height: 19)
-                .frame(height: 30)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(TranslateXHoverButtonStyle())
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: configuration.isOn)
-        .accessibilityRepresentation {
-            Toggle(isOn: configuration.$isOn) { configuration.label }.toggleStyle(.switch)
         }
     }
 }

@@ -16,8 +16,8 @@ final class TranslationServiceRoutingTests: XCTestCase {
         config.website = "https://example.com/console"
         try services.save(config, apiKey: nil)
         services.usage.clearAll()
-        services.usage.setEnabled(false)
-        services.usage.setEnabled(true)
+        services.usage.setEnabled(false, for: config.id)
+        services.usage.setEnabled(true, for: config.id)
         _ = services.usage.records(for: config.id, days: 30)
         await settle()
         XCTAssertEqual(services.revision, revision)

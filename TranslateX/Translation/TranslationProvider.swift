@@ -35,15 +35,20 @@ nonisolated struct TranslationUsage: Codable, Equatable, Sendable {
     let outputTokens: Int?
     let totalTokens: Int?
     let characters: Int?
+    let cacheReadTokens: Int?
+    let cacheWriteTokens: Int?
 
-    init(inputTokens: Int? = nil, outputTokens: Int? = nil, totalTokens: Int? = nil, characters: Int? = nil) {
+    init(inputTokens: Int? = nil, outputTokens: Int? = nil, totalTokens: Int? = nil, characters: Int? = nil,
+         cacheReadTokens: Int? = nil, cacheWriteTokens: Int? = nil) {
         self.inputTokens = Self.validated(inputTokens)
         self.outputTokens = Self.validated(outputTokens)
         self.totalTokens = Self.validated(totalTokens)
         self.characters = Self.validated(characters)
+        self.cacheReadTokens = Self.validated(cacheReadTokens)
+        self.cacheWriteTokens = Self.validated(cacheWriteTokens)
     }
 
-    private enum CodingKeys: String, CodingKey { case inputTokens, outputTokens, totalTokens, characters }
+    private enum CodingKeys: String, CodingKey { case inputTokens, outputTokens, totalTokens, characters, cacheReadTokens, cacheWriteTokens }
 
     init(from decoder: any Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -51,18 +56,38 @@ nonisolated struct TranslationUsage: Codable, Equatable, Sendable {
             inputTokens: try? values.decode(Int.self, forKey: .inputTokens),
             outputTokens: try? values.decode(Int.self, forKey: .outputTokens),
             totalTokens: try? values.decode(Int.self, forKey: .totalTokens),
-            characters: try? values.decode(Int.self, forKey: .characters)
+            characters: try? values.decode(Int.self, forKey: .characters),
+            cacheReadTokens: try? values.decode(Int.self, forKey: .cacheReadTokens),
+            cacheWriteTokens: try? values.decode(Int.self, forKey: .cacheWriteTokens)
         )
     }
 
+    var reportedTokenTotal: Int? {
+        if let totalTokens { return totalTokens }
+        guard let inputTokens, let outputTokens else { return nil }
+        let total = inputTokens.addingReportingOverflow(outputTokens)
+        return total.overflow ? nil : total.partialValue
+    }
+
     var nonempty: Self? {
-        inputTokens != nil || outputTokens != nil || totalTokens != nil || characters != nil ? self : nil
+        inputTokens != nil || outputTokens != nil || totalTokens != nil || characters != nil || cacheReadTokens != nil || cacheWriteTokens != nil ? self : nil
     }
 
     static func reportedTokens(_ value: Any?, inputKey: String = "prompt_tokens", outputKey: String = "completion_tokens") -> Self? {
         guard let values = value as? [String: Any] else { return nil }
-        return Self(inputTokens: reportedCount(values[inputKey]), outputTokens: reportedCount(values[outputKey]),
-                    totalTokens: reportedCount(values["total_tokens"])).nonempty
+        let details = (values["prompt_tokens_details"] ?? values["input_tokens_details"]) as? [String: Any]
+        let read = reportedCount(values["cache_read_input_tokens"] ?? values["prompt_cache_hit_tokens"] ?? details?["cached_tokens"])
+        let write = reportedCount(values["cache_creation_input_tokens"])
+        var input = reportedCount(values[inputKey])
+        // Anthropic reports uncached input separately; normalize to all input
+        // tokens while retaining its explicit cache split for price estimation.
+        if values["cache_read_input_tokens"] != nil || values["cache_creation_input_tokens"] != nil,
+           let uncached = input {
+            if (values["cache_read_input_tokens"] != nil && read == nil) || (values["cache_creation_input_tokens"] != nil && write == nil) { input = nil }
+            else { input = validated(uncached + (read ?? 0) + (write ?? 0)) }
+        }
+        return Self(inputTokens: input, outputTokens: reportedCount(values[outputKey]),
+                    totalTokens: reportedCount(values["total_tokens"]), cacheReadTokens: read, cacheWriteTokens: write).nonempty
     }
 
     static func reportedCount(_ value: Any?) -> Int? {

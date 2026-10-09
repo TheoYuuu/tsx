@@ -19,7 +19,9 @@ enum LegacyPreferencesMigration {
             TranslationServiceStore.StorageKey.services,
             TranslationServiceStore.StorageKey.appleAutomaticTranslation,
             TranslationUsageStore.StorageKey.enabled,
-            TranslationUsageStore.StorageKey.records
+            TranslationUsageStore.StorageKey.records,
+            TranslationUsageStore.StorageKey.services,
+            TranslationUsageStore.StorageKey.snapshot
         ]
         for action in ShortcutAction.allCases {
             keys.insert(AppPreferences.StorageKey.shortcut(action))

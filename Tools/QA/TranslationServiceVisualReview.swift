@@ -140,6 +140,8 @@ final class TranslationServiceVisualReview: NSObject {
             await presentResumeFixture()
             return
         }
+        let dropdownContextsReview = CommandLine.arguments.contains("--review-dropdown-contexts")
+        let refinementReview = CommandLine.arguments.contains("--review-settings-refinement")
         let languageSettingsReview = CommandLine.arguments.contains("--review-language-settings")
         let languageReview = CommandLine.arguments.contains("--review-language")
         let serviceListReview = CommandLine.arguments.contains("--review-service-list")
@@ -157,8 +159,8 @@ final class TranslationServiceVisualReview: NSObject {
         let localSync = CommandLine.arguments.contains("--review-local-sync")
         let allProviders = CommandLine.arguments.contains("--review-all-providers")
         let states = CommandLine.arguments.contains("--review-states")
-        let batch = serviceEditorReview || serviceUsageReview || languageSettingsReview || serviceListReview || languageReview || CommandLine.arguments.contains("--review-batch") || allProviders || states || interactions || layouts || brand || workspace || inputFeedback || localSync || toolbar || toolbarMotion || captureReview
-        let scenes = serviceEditorReview ? ["edit", "edit-minimum"] : serviceUsageChartsReview ? ["usage-7", "usage-30-minimum", "usage-samples-minimum"] : serviceUsageReview ? ["usage-card", "usage-card-hover-minimum", "usage-7", "usage-30-minimum", "usage-day-minimum", "usage-samples-minimum", "usage-empty-minimum", "usage-account-empty", "usage-account-deepseek-minimum", "usage-account-deepl-minimum"] : languageSettingsReview ? ["general", "general-minimum"] : serviceListReview ? ["list-untested", "list-selected", "list-history", "list-long-name", "list-empty"] : languageReview ? ["general", "general-controls", "shortcuts", "privacy", "main-minimum", "quick-stacked-minimum", "main-failed", "test-error"] : captureReview ? ["main-capture-dense-text", "main-capture-dense-image", "main-capture-text", "main-capture-menu-image", "main-capture-menu-original", "main-capture-stacked-minimum", "main-capture-recognizing", "main-capture-failed", "quick-capture-minimum", "quick-capture-menu-image"] : toolbarMotion ? ["main-motion", "main-motion-reduced", "main-motion-off", "quick-motion", "quick-motion-reduced", "quick-motion-off"] : toolbar ? ["main", "main-failed", "main-stopped-empty", "main-requesting", "main-empty", "main-minimum", "main-stacked-minimum", "main-manual-minimum", "quick", "quick-failed", "quick-stacked-minimum", "quick-stacked-minimum-manual-long-name", "list", "list-history"] : localSync ? ["main-numeric", "main-same-language", "main-swapped", "main-swapped-stacked-minimum", "main-manual-minimum", "main-uncertain", "quick-numeric-minimum", "quick-same-language-stacked-minimum", "quick-swapped", "quick-swapped-stacked-minimum"] : inputFeedback ? ["main-numeric", "main-uncertain", "main-manual-minimum", "main-requesting", "main-partial", "quick-numeric-minimum", "quick-uncertain-stacked-minimum", "quick-stacked-minimum-manual-long-name"] : workspace ? ["main-edited", "main-stopped-empty", "main-partial", "main-manual", "main-minimum", "main-stacked-minimum", "quick-edited", "quick-stopped-empty", "quick-partial", "quick-minimum", "quick-stacked-minimum", "quick-stacked-minimum-manual-long-name", "quick-long"] : brand ? ["main", "main-stacked", "main-stacked-minimum"] : layouts ? ["general", "general-controls", "main", "main-stacked", "main-stacked-minimum", "quick", "quick-stacked", "quick-stacked-long", "quick-stacked-minimum"] : interactions ? ["general", "shortcuts", "privacy", "list", "add", "edit", "quick", "quick-long", "quick-minimum"] : allProviders ? TranslationServiceKind.allCases.map(\.rawValue) : states ?
+        let batch = dropdownContextsReview || refinementReview || serviceEditorReview || serviceUsageReview || languageSettingsReview || serviceListReview || languageReview || CommandLine.arguments.contains("--review-batch") || allProviders || states || interactions || layouts || brand || workspace || inputFeedback || localSync || toolbar || toolbarMotion || captureReview
+        let scenes = dropdownContextsReview ? ["main-minimum", "quick-minimum", "main-capture-stacked-minimum"] : refinementReview ? ["general", "general-minimum", "general-controls", "general-controls-minimum", "usage-card", "usage-card-hover-minimum", "usage-summary-minimum", "usage-manager-minimum", "usage-empty-minimum"] : serviceEditorReview ? ["edit", "edit-minimum"] : serviceUsageChartsReview ? ["usage-7", "usage-30-minimum", "usage-samples-minimum"] : serviceUsageReview ? ["usage-card", "usage-card-hover-minimum", "usage-7", "usage-30-minimum", "usage-day-minimum", "usage-samples-minimum", "usage-empty-minimum", "usage-account-empty", "usage-account-deepseek-minimum", "usage-account-deepl-minimum"] : languageSettingsReview ? ["general", "general-minimum"] : serviceListReview ? ["list-untested", "list-selected", "list-history", "list-long-name", "list-empty"] : languageReview ? ["general", "general-controls", "shortcuts", "privacy", "main-minimum", "quick-stacked-minimum", "main-failed", "test-error"] : captureReview ? ["main-capture-dense-text", "main-capture-dense-image", "main-capture-text", "main-capture-menu-image", "main-capture-menu-original", "main-capture-stacked-minimum", "main-capture-recognizing", "main-capture-failed", "quick-capture-minimum", "quick-capture-menu-image"] : toolbarMotion ? ["main-motion", "main-motion-reduced", "main-motion-off", "quick-motion", "quick-motion-reduced", "quick-motion-off"] : toolbar ? ["main", "main-failed", "main-stopped-empty", "main-requesting", "main-empty", "main-minimum", "main-stacked-minimum", "main-manual-minimum", "quick", "quick-failed", "quick-stacked-minimum", "quick-stacked-minimum-manual-long-name", "list", "list-history"] : localSync ? ["main-numeric", "main-same-language", "main-swapped", "main-swapped-stacked-minimum", "main-manual-minimum", "main-uncertain", "quick-numeric-minimum", "quick-same-language-stacked-minimum", "quick-swapped", "quick-swapped-stacked-minimum"] : inputFeedback ? ["main-numeric", "main-uncertain", "main-manual-minimum", "main-requesting", "main-partial", "quick-numeric-minimum", "quick-uncertain-stacked-minimum", "quick-stacked-minimum-manual-long-name"] : workspace ? ["main-edited", "main-stopped-empty", "main-partial", "main-manual", "main-minimum", "main-stacked-minimum", "quick-edited", "quick-stopped-empty", "quick-partial", "quick-minimum", "quick-stacked-minimum", "quick-stacked-minimum-manual-long-name", "quick-long"] : brand ? ["main", "main-stacked", "main-stacked-minimum"] : layouts ? ["general", "general-controls", "main", "main-stacked", "main-stacked-minimum", "quick", "quick-stacked", "quick-stacked-long", "quick-stacked-minimum"] : interactions ? ["general", "shortcuts", "privacy", "list", "add", "edit", "quick", "quick-long", "quick-minimum"] : allProviders ? TranslationServiceKind.allCases.map(\.rawValue) : states ?
             ["catalog-loading", "catalog-empty", "catalog-error", "test-running", "test-success", "test-error", "validation", "account-code", "account-committing", "account-ready"] :
             batch ? ["list", "add", "edit", "deepl", "codex"] : [argument("--review-scene", fallback: "edit")]
         let themes = batch && !states ? ["light", "dark", "glass"] : [argument("--review-theme", fallback: "light")]
@@ -169,7 +171,7 @@ final class TranslationServiceVisualReview: NSObject {
                 try? await Task.sleep(for: .milliseconds(900))
                 guard let window else { continue }
                 window.contentView?.layoutSubtreeIfNeeded()
-                if scene == "general-controls", let content = window.contentView, let scroll = findScrollView(content) {
+                if scene.hasPrefix("general-controls"), let content = window.contentView, let scroll = findScrollView(content) {
                     scroll.documentView?.scroll(NSPoint(x: 0, y: max(0, (scroll.documentView?.frame.height ?? 0) - scroll.contentSize.height)))
                     scroll.reflectScrolledClipView(scroll.contentView)
                 }
@@ -193,14 +195,18 @@ final class TranslationServiceVisualReview: NSObject {
         }
         try? Data("Ready: native production views; constructed credentials, accounts and results only.\n".utf8)
             .write(to: output.appendingPathComponent("ready.txt"))
-        if batch { NSApp.terminate(nil) }
+        if batch {
+            closeReviewWindow()
+            NSApp.terminate(nil)
+        }
     }
 
     private func capture(_ window: NSWindow, key: String, output: URL) async {
         let screenTop = NSScreen.screens.first?.frame.maxY ?? 0
         let captureRect = [window.frame.minX, screenTop - window.frame.maxY, window.frame.width, window.frame.height]
         let job: [String: Any] = ["windowID": window.windowNumber, "region": captureRect, "scene": key,
-            "output": output.appendingPathComponent("\(key).png").path]
+            "output": output.appendingPathComponent("\(key).png").path,
+            "sheetCount": window.sheets.count]
         if let data = try? JSONSerialization.data(withJSONObject: job) {
             try? data.write(to: output.appendingPathComponent("capture-job.json"), options: .atomic)
         }
@@ -240,37 +246,60 @@ final class TranslationServiceVisualReview: NSObject {
         try? await Task.sleep(for: .milliseconds(150))
     }
 
-    private func seedUsage(_ store: TranslationUsageStore, configuration: TranslationServiceConfiguration) {
+    private func seedUsage(_ store: TranslationUsageStore, configuration: TranslationServiceConfiguration, unpriced: Bool = false) {
         let now = Date()
+        // Constructed, isolated visual-review rates, never fetched or used by
+        // the installed application. Legacy currency preservation has unit coverage.
+        let historical = TranslationServiceConfiguration(
+            id: UUID(uuidString: "00000000-0000-0000-0000-000000000042")!, name: "OpenAI", kind: .openAI,
+            endpoint: "https://api.openai.com/v1", model: "fixture-text-model")
+        let prices = [
+            TranslationModelPrice(provider: "deepseek", model: configuration.model, currency: "USD", input: 0.2, output: 0.8,
+                cacheRead: 0.02, cacheWrite: nil, fetchedAt: now, source: "models.dev"),
+            TranslationModelPrice(provider: "openai", model: historical.model, currency: "USD", input: 1.5, output: 6,
+                cacheRead: 0.15, cacheWrite: nil, fetchedAt: now, source: "models.dev"),
+            TranslationModelPrice(provider: "anthropic", model: "fixture-long-model", currency: "USD", input: 3, output: 15,
+                cacheRead: 0.3, cacheWrite: 3.75, fetchedAt: now, source: "models.dev")
+        ]
+        if !unpriced { store.pricing.installReferencePrices(prices) }
+        store.registerConfigurations([configuration, historical])
         for offset in (0..<29).reversed() {
             let count = [3, 5, 2, 7, 4, 6, 8][offset % 7]
             for index in (0..<count).reversed() {
                 let completed = Calendar.current.date(byAdding: .day, value: -offset, to: now)!
                     .addingTimeInterval(-600 - Double(index * 83))
-                let outcome: TranslationUsageOutcome = index == 0 && offset % 4 == 0 ? .failed
-                    : index == 1 && offset % 6 == 0 ? .cancelled : .succeeded
-                let ticket = store.begin(configurationID: configuration.id, model: configuration.model,
+                let local = index == 1
+                let external = index % 4 == 0 ? historical : configuration
+                let outcome: TranslationUsageOutcome = index == 0 && offset % 4 == 0 ? .failed : .succeeded
+                let ticket = store.begin(configurationID: local ? nil : external.id, model: local ? "" : external.model,
                     purpose: .translation, now: completed.addingTimeInterval(-0.7 - Double(index) * 0.2))
-                let usage = outcome == .succeeded && index % 3 != 1
-                    ? TranslationUsage(inputTokens: 180 + index * 32, outputTokens: 90 + offset * 4,
-                                       totalTokens: 270 + index * 32 + offset * 4) : nil
-                store.finish(ticket, outcome: outcome, usage: usage, now: completed)
+                let counts = local ? nil : TranslationUsage(inputTokens: 180 + index * 32, outputTokens: 90 + offset * 4,
+                    totalTokens: 270 + index * 32 + offset * 4, cacheReadTokens: index * 10)
+                store.finish(ticket, outcome: outcome, usage: counts,
+                    httpStatus: local ? nil : outcome == .succeeded ? 200 : offset % 8 == 0 ? 429 : 500, now: completed)
             }
             if offset % 3 == 0 {
                 let completed = Calendar.current.date(byAdding: .day, value: -offset, to: now)!.addingTimeInterval(-300)
                 let ticket = store.begin(configurationID: configuration.id, model: configuration.model,
                                          purpose: .sampleTest, now: completed.addingTimeInterval(-0.9))
-                store.finish(ticket, outcome: .succeeded, usage: TranslationUsage(inputTokens: 24, outputTokens: 11, totalTokens: 35), now: completed)
+                store.finish(ticket, outcome: .succeeded, usage: TranslationUsage(inputTokens: 24, outputTokens: 11, totalTokens: 35, cacheReadTokens: 0), httpStatus: 200, now: completed)
             }
         }
         store.flush()
+    }
+
+    private func closeReviewWindow() {
+        if let window {
+            for sheet in window.sheets { window.endSheet(sheet); sheet.orderOut(nil) }
+            window.close()
+        }
     }
 
     private func present(scene: String, theme: String) async {
         quickModel?.cancel()
         session?.close()
         fixture?.cancelAll()
-        window?.close()
+        closeReviewWindow()
         frames = [:]
         let domain = "TranslateX.TranslationServiceVisualReview.Ephemeral"
         let defaults = UserDefaults(suiteName: domain)!
@@ -288,6 +317,22 @@ final class TranslationServiceVisualReview: NSObject {
         self.fixture = fixture
         let services = TranslationServiceStore(defaults: defaults, credentials: VisualCredentialStore(),
             codex: CodexAccountController(sessionFactory: { request in fixture.session(request) }))
+        if scene.hasPrefix("release-notes") {
+            if scene.contains("minimum") {
+                preferences.rememberWindowSize(preferences.translationLayout.minimumSize(for: .main),
+                                               for: .main, layout: preferences.translationLayout)
+            }
+            let windows = WindowCoordinator(preferences: preferences, services: services)
+            windows.updates = AppUpdateController.visualReview(previewInstalledNotes: true,
+                                                               shortReleaseNotes: scene.contains("short"))
+            reviewWindows = windows
+            windows.showMainReleaseNotes()
+            window = NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" }
+            window?.level = .floating
+            window?.appearance = NSAppearance(named: theme.hasPrefix("dark") ? .darkAqua : .aqua)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
         var deepSeek = TranslationServiceConfiguration(kind: .deepSeek)
         deepSeek.name = scene.contains("long-name") ? "My translation service with a long name" : "DeepSeek"
         var openAI = TranslationServiceConfiguration(kind: .openAI)
@@ -300,21 +345,23 @@ final class TranslationServiceVisualReview: NSObject {
         }
         if scene == "list-selected" { try? services.select(deepSeek.id) }
         var usageState: TranslationServiceReviewUsageState?
-        if scene.hasPrefix("usage-") {
+        if scene.hasPrefix("usage-") || scene.hasPrefix("statistics") {
             let reviewed: TranslationServiceConfiguration
             if scene.contains("deepl") {
                 reviewed = TranslationServiceConfiguration(kind: .deepL)
                 try? services.save(reviewed, apiKey: "constructed-visual-key-never-valid")
             } else { reviewed = deepSeek }
             try? services.select(reviewed.id)
-            if !scene.contains("empty") { seedUsage(services.usage, configuration: reviewed) }
+            if !scene.contains("empty") { seedUsage(services.usage, configuration: reviewed, unpriced: scene.contains("unpriced")) }
             usageState = .init(configurationID: reviewed.id, accountTab: scene.contains("account"),
-                days: scene.contains("30") ? 30 : 7,
+                days: scene.contains("summary") ? 0 : scene.contains("30") ? 30 : 7,
                 selectedDay: scene.contains("day") ? Calendar.current.startOfDay(for: Date().addingTimeInterval(-600)) : nil,
                 sampleTests: scene.contains("samples"),
                 snapshot: scene.contains("account") && !scene.contains("empty") ? VisualAccountUsageFixture.snapshot(kind: reviewed.kind) : nil)
             usageState?.opensUsagePage = !scene.contains("account") && scene != "usage-card" && scene != "usage-card-hover-minimum"
             usageState?.hoveredID = scene == "usage-card-hover-minimum" ? reviewed.id : nil
+            usageState?.expandDetails = scene.contains("day") || scene.contains("samples") || scene.contains("30") || scene == "usage-7"
+            if scene.contains("manager") { usageState?.opensUsagePage = false; usageState?.opensManager = true }
             if scene == "usage-card" || scene == "usage-card-hover-minimum" {
                 usageState?.snapshot = VisualAccountUsageFixture.snapshot(kind: reviewed.kind)
                 services.recordSampleTest(.succeeded, for: reviewed, revision: services.configurationRevision(for: reviewed.id), completedAt: Date())
@@ -332,7 +379,7 @@ final class TranslationServiceVisualReview: NSObject {
             }
         }
         let kind = TranslationServiceKind(rawValue: scene) ?? (scene == "deepl" ? .deepL : scene == "codex" || scene.hasPrefix("account-") ? .codex : .openAI)
-        let pageTabs = ["general": 0, "general-minimum": 0, "general-controls": 0, "shortcuts": 1, "privacy": 2]
+        let pageTabs = ["general": 0, "general-minimum": 0, "general-controls": 0, "general-controls-minimum": 0, "shortcuts": 1, "privacy": 2, "statistics": 4, "statistics-minimum": 4, "statistics-unpriced-minimum": 4, "about": 5, "about-minimum": 5]
         let isQuick = scene.hasPrefix("quick")
         let isMain = scene.hasPrefix("main")
         let session: TranslationServiceDraftSession? = scene.hasPrefix("list") || scene.hasPrefix("usage-") || pageTabs[scene] != nil || isQuick || isMain ? nil : .init(services: services,
@@ -344,11 +391,11 @@ final class TranslationServiceVisualReview: NSObject {
         let content = SettingsView(preferences: preferences, shortcuts: shortcuts, permissions: PermissionStatus(),
             catalog: LanguageCatalog(), defaultTargetChanged: {}, appearanceChanged: {},
             interfaceLanguageChanged: { L10n.apply(preferences.interfaceLanguage) }, services: services,
-            serviceNavigation: navigation, serviceSession: session, tab: pageTabs[scene] ?? 3)
+            serviceNavigation: navigation, updates: AppUpdateController.visualReview(), serviceSession: session, tab: pageTabs[scene] ?? 3)
         let size: NSSize = isQuick || isMain
             ? (scene.contains("minimum") ? preferences.translationLayout.minimumSize(for: isMain ? .main : .quick)
                 : preferences.translationLayout.defaultSize(for: isMain ? .main : .quick))
-            : (scene == "edit-minimum" || scene == "general-minimum" || scene.hasPrefix("usage-") && scene.contains("minimum") ? NSSize(width: 620, height: 540) : NSSize(width: 700, height: 610))
+            : (scene.contains("minimum") ? NSSize(width: 900, height: 600) : NSSize(width: 1100, height: 700))
         let rect = NSRect(origin: .zero, size: size)
         let window = NSWindow(contentRect: rect,
             styleMask: [.titled, .closable], backing: .buffered, defer: false)

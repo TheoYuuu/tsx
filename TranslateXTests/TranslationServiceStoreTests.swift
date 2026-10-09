@@ -255,6 +255,10 @@ final class TranslationServiceStoreTests: XCTestCase {
             XCTAssertNil(store.selectedID)
             try store.select(config.id)
             let readCount = credentials.readIDs.count
+            let revision = store.revision
+            try store.select(config.id)
+            XCTAssertEqual(credentials.readIDs.count, readCount, "Selecting the current service must not re-read its key.")
+            XCTAssertEqual(store.revision, revision)
             let reloaded = TranslationServiceStore(defaults: defaults, credentials: credentials)
             XCTAssertEqual(reloaded.selectedConfiguration, config)
             XCTAssertEqual(credentials.readIDs.count, readCount, "Loading preferences must not prompt for Keychain.")

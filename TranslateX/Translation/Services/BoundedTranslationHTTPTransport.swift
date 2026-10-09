@@ -26,6 +26,7 @@ nonisolated enum BoundedTranslationHTTPTransport {
             defer { task.cancel() }
             return try await withTaskCancellationHandler {
                 guard let http = response as? HTTPURLResponse else { throw RemoteTranslationError.invalidResponse }
+                TranslationUsageHTTPContext.record(status: http.statusCode)
                 guard http.url == request.url, !(300...399).contains(http.statusCode) else {
                     throw RemoteTranslationError.redirected
                 }

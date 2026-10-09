@@ -43,7 +43,9 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     private var mainWindow: NSWindow?
     private var settingsWindow: NSWindow?
     let serviceNavigation = TranslationServiceNavigationCoordinator()
-    private var aboutWindow: NSWindow?
+    let settingsNavigation = SettingsNavigation()
+    lazy var accounts = TranslationAccountUsageController(services: services)
+    private var observesAccountQueries = false
     private var settingsShortcuts: ShortcutSettings?
     private weak var inputEditor: TranslationInputTextView?
     private weak var quickEditor: TranslationInputTextView?
@@ -89,10 +91,30 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         }
     }
 
+    func startAccountQueries() {
+        guard !observesAccountQueries else { return }
+        observesAccountQueries = true
+        accounts.startAutomaticRefresh()
+        trackAccountConfigurations()
+    }
+
+    private func trackAccountConfigurations() {
+        guard observesAccountQueries else { return }
+        withObservationTracking {
+            _ = services.configurations
+            _ = services.revision
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, self.observesAccountQueries else { return }
+                self.accounts.configurationDidChange()
+                self.trackAccountConfigurations()
+            }
+        }
+    }
+
     func applyInterfaceLanguage() {
         L10n.apply(preferences.interfaceLanguage)
         settingsWindow?.title = L10n.string("Settings")
-        aboutWindow?.title = L10n.string("About TSX")
     }
 
     private func trackLayout() {
@@ -263,7 +285,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     func showMain(handoff: TranslationHandoff? = nil) {
         lastTranslationWindow = .main
         applyTranslationLayout()
-        needsInputFocus = true
+        needsInputFocus = updates?.mainReleaseNotesPresentation == nil
         closeQuick(restoreFocus: false)
         if let handoff {
             inputEditor?.finishCompositionForReplacement()
@@ -302,8 +324,15 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
                     self?.mainWindow?.initialFirstResponder = editor
                     self?.focusInputWhenReady()
                 },
-                translationEditorReady: { [weak self] in self?.inputTranslationEditor = $0 as? TranslationInputTextView }
+                translationEditorReady: { [weak self] in self?.inputTranslationEditor = $0 as? TranslationInputTextView },
+                updates: updates
             ))
+        }
+        if let updates, updates.mainReleaseNotesPresentation != nil,
+           let surface = mainWindow?.contentView as? WindowSurface<InputTranslationView> {
+            surface.presentModal { [weak self] in
+                MainReleaseNotesOverlay(updates: updates) { [weak self] in self?.dismissMainReleaseNotes() }
+            }
         }
         if mainWindow?.isMiniaturized == true { mainWindow?.deminiaturize(nil) }
         mainWindow?.makeKeyAndOrderFront(nil)
@@ -315,7 +344,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         // SwiftUI attaches the native editor and establishes its own responder chain
         // during layout. Apply the requested focus after that transaction completes.
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.needsInputFocus,
+            guard let self, self.needsInputFocus, self.updates?.mainReleaseNotesPresentation == nil,
                   let window = self.mainWindow,
                   let editor = self.inputEditor, editor.window === window else { return }
             if window.makeFirstResponder(editor) { self.needsInputFocus = false }
@@ -347,10 +376,11 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         settingsShortcuts = shortcuts
         permissions.refresh()
         if settingsWindow == nil {
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 700, height: 610),
-                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1100, height: 700),
+                                  styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
             TranslateXWindowChrome.configure(window)
-            window.setFrame(NSRect(x: 0, y: 0, width: 700, height: 610), display: false)
+            window.minSize = NSSize(width: 900, height: 600)
+            window.setFrame(NSRect(x: 0, y: 0, width: 1100, height: 700), display: false)
             window.title = L10n.string("Settings")
             window.identifier = NSUserInterfaceItemIdentifier("translatex.settings")
             window.isReleasedWhenClosed = false
@@ -360,7 +390,8 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
                 defaultTargetChanged: { [weak self] in self?.applyDefaultTarget() },
                 appearanceChanged: { [weak self] in self?.applyAppearance() },
                 interfaceLanguageChanged: { [weak self] in self?.applyInterfaceLanguage() }, services: services,
-                serviceNavigation: serviceNavigation, updates: updates
+                serviceNavigation: serviceNavigation, updates: updates, accounts: accounts,
+                navigation: settingsNavigation
             ))
             window.contentView = content
             window.center()
@@ -376,20 +407,31 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     }
 
     func showAbout() {
-        if aboutWindow == nil {
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 360, height: 325),
-                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
-            TranslateXWindowChrome.configure(window)
-            window.title = L10n.string("About TSX")
-            window.identifier = NSUserInterfaceItemIdentifier("translatex.about")
-            window.isReleasedWhenClosed = false
-            window.contentView = WindowSurface(preferences: preferences, content: AboutView())
-            window.setFrame(NSRect(x: 0, y: 0, width: 360, height: 325), display: false)
-            window.center()
-            aboutWindow = window
+        if let settingsShortcuts { showSettings(shortcuts: settingsShortcuts) }
+        else { onSettings?() }
+        settingsNavigation.showAbout()
+    }
+
+    /// Startup notes are part of the existing translation workspace. Keep its
+    /// native editors mounted so dismissing the overlay preserves the draft.
+    func showMainReleaseNotes() {
+        guard updates?.mainReleaseNotesPresentation != nil else { return }
+        inputEditor?.setInteractionEnabled(false)
+        inputTranslationEditor?.setInteractionEnabled(false)
+        showMain()
+        if mainWindow?.firstResponder === inputEditor || mainWindow?.firstResponder === inputTranslationEditor {
+            mainWindow?.makeFirstResponder(nil)
         }
-        aboutWindow?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    func dismissMainReleaseNotes() {
+        guard updates?.mainReleaseNotesPresentation != nil else { return }
+        updates?.dismissReleaseNotes(in: .mainWindow)
+        (mainWindow?.contentView as? WindowSurface<InputTranslationView>)?.dismissModal()
+        inputEditor?.setInteractionEnabled(true)
+        inputTranslationEditor?.setInteractionEnabled(true)
+        needsInputFocus = true
+        focusInputWhenReady()
     }
 
     func showQuick(source: NSRunningApplication?, bounds: CGRect? = nil, permission: SystemPermission? = nil) {
@@ -492,9 +534,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     /// the user was working in, without bringing an inactive app to the front.
     func hideForScreenshot() -> ScreenshotRestoration {
         let restoration: ScreenshotRestoration
-        if NSApp.isActive, aboutWindow?.isKeyWindow == true {
-            restoration = .about
-        } else if NSApp.isActive, settingsWindow?.isKeyWindow == true {
+        if NSApp.isActive, settingsWindow?.isKeyWindow == true {
             restoration = .settings
         } else if NSApp.isActive, mainWindow?.isKeyWindow == true {
             restoration = .input
@@ -504,7 +544,6 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         mainWindow?.orderOut(nil)
         settingsWindow?.orderOut(nil)
         NotificationCenter.default.post(name: .translateXTranslationSettingsObscured, object: nil)
-        aboutWindow?.orderOut(nil)
         settingsShortcuts?.endRecording()
         return restoration
     }
@@ -526,6 +565,8 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     }
 
     func shutdown() {
+        observesAccountQueries = false
+        accounts.stopAutomaticRefresh()
         rememberMainSize()
         needsInputFocus = false
         inputModel.cancel()
@@ -533,7 +574,6 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         mainWindow?.orderOut(nil)
         settingsWindow?.orderOut(nil)
         NotificationCenter.default.post(name: .translateXTranslationSettingsClosed, object: nil)
-        aboutWindow?.orderOut(nil)
         settingsShortcuts?.endRecording()
     }
 

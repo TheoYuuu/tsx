@@ -94,7 +94,7 @@
 "Translation preferences" = "翻译";
 "Settings" = "设置";
 "Settings…" = "设置…";
-"General" = "通用";
+"General" = "常规";
 "Shortcuts" = "快捷键";
 "Privacy" = "隐私";
 "Default target language" = "默认目标语言";
@@ -228,7 +228,7 @@
 "Enter a model identifier without spaces, up to 256 characters." = "请输入不含空格的模型标识，最多 256 个字符。";
 "Enter an API base URL without a username, password, query, or fragment." = "请输入 API 基础地址，不要包含用户名、密码、查询参数或片段标识。";
 "Remote services require HTTPS. HTTP is allowed only for a loopback address." = "远程服务必须使用 HTTPS，仅本机回环地址可使用 HTTP。";
-"Additional translation instructions must be no longer than 8,000 characters." = "补充翻译要求不能超过 8,000 个字符。";
+"Additional translation instructions must be no longer than 8,000 characters." = "翻译规范不能超过 8,000 个字符。";
 "Enter an API key for this service." = "请输入此服务的 API 密钥。";
 "Enter an API key without spaces or control characters." = "请输入不含空格或控制字符的 API 密钥。";
 "The service address changed. Re-enter the API key for this address." = "服务地址已更改，请重新输入用于该地址的 API 密钥。";
@@ -742,7 +742,7 @@
 "Unlimited" = "不限";
 "Refresh failed" = "更新失败";
 "Fetching…" = "查询中…";
-"Not queried" = "尚未查询";
+"Not queried" = "未查询";
 "Refresh account allowance" = "刷新账户额度";
 "No account needed" = "无需账户";
 "Local translation" = "本地翻译";
@@ -775,3 +775,275 @@
 "Automatically check for updates" = "自动检查更新";
 "Download updates and install when quitting" = "下载更新并在退出时安装";
 "Updates connect to lumaxspace.com and GitHub. Copy any text you want to keep before installing and restarting." = "更新会连接 lumaxspace.com 和 GitHub。安装并重新启动前，请复制需要保留的文字。";
+
+// Settings and per-service statistics
+"All request metrics and historical totals will be deleted. This cannot be undone. Service configurations stay unchanged." = "将删除所有请求指标和历史汇总，且无法恢复。服务配置不受影响。";
+"Clear all statistics" = "清空全部统计";
+"Clear all statistics?" = "清空全部统计？";
+"Control statistics for each service." = "按服务选择是否统计用量。";
+"Done" = "完成";
+"Keys stay in Keychain. External services receive translation text." = "密钥保存在钥匙串中，外部服务会接收翻译文字。";
+"Keys stay in Keychain. Only requests sent through TSX are counted; translation text, screenshots and full responses are never saved. Recent request metrics are automatically summarized by day, preserving historical totals. Pausing statistics keeps existing data and does not affect translation or balance queries. Switching services does not send existing text. Connection tests send a short sample and may incur provider charges." = "密钥保存在钥匙串中。仅统计通过 TSX 发出的请求，不保存翻译正文、截图或完整响应。近期请求指标会自动按天汇总，历史总量持续保留。暂停统计会保留已有数据，不影响翻译和余额查询。切换服务不会发送已有文字。测试连接会发送一小段示例，服务商可能收取费用。";
+"No account needed · Local translation" = "无需账户 · 本地翻译";
+"Send a short sample to check the service. Your provider may charge for it." = "发送一小段示例文字，确认服务可用。服务商可能收取费用。";
+"Service and data details" = "服务与数据说明";
+"Start test" = "开始测试";
+"Test connection?" = "测试连接？";
+"Test connection" = "测试连接";
+"Track this service" = "统计此服务";
+"Usage statistics" = "用量统计";
+"%@ usage statistics" = "%@ 用量统计";
+"All request metrics and historical totals for this service will be deleted. This cannot be undone. Your service configuration stays unchanged." = "将删除此服务的请求指标和历史汇总，且无法恢复。服务配置不受影响。";
+"All time" = "全部时间";
+"Clear statistics" = "清空统计";
+"Clear this service’s statistics" = "清空此服务统计";
+"Clear this service’s statistics?" = "清空此服务统计？";
+"Historical totals are kept automatically." = "历史用量自动汇总保留";
+"Only requests sent through TSX are counted. Translation content is not saved." = "仅统计通过 TSX 发出的请求，不保存翻译内容。";
+"Recent request metrics" = "近期请求指标";
+"Recent request metrics are kept for up to 30 days and summarized earlier if the local detail budget is reached. Daily totals remain until you clear statistics. No translation content is saved." = "近期请求指标最多保留 30 天，达到本机明细容量时会提前汇总。按天汇总的数据会一直保留，直到你清空统计。不保存翻译内容。";
+"Current version %@" = "当前版本 %@";
+"Language" = "语言";
+"Retry update check" = "重新检查更新";
+"Update to %@" = "更新至 %@";
+"Window and appearance" = "窗口与外观";
+"Stopping" = "正在停止";
+"Querying" = "查询中";
+"Query failed" = "查询失败";
+"Statistics enabled" = "正在统计";
+"Statistics paused" = "已暂停统计";
+"Check again" = "再次检查";
+"Check for updates" = "检查更新";
+"TSX" = "TSX";
+
+"Preferences" = "偏好设置";
+"Settings categories" = "设置分类";
+"Permissions" = "权限";
+"About" = "关于";
+"Solid color" = "纯色";
+"Restore defaults" = "恢复默认";
+"Function" = "功能";
+"Combination" = "组合键";
+"Manage" = "管理";
+"Authorize" = "去授权";
+"Authorized" = "已授权";
+"Not authorized" = "未授权";
+"Enable the permissions needed for selection and screenshot translation." = "开启所需权限，使用划词与截图翻译。";
+"Read selected text when you start a translation." = "仅在你发起翻译时读取选中文字。";
+"Recognize text only in the screen area you select." = "仅识别你选定屏幕区域内的文字。";
+"Permissions are used only for actions you start. Translation text and screenshots are not saved." = "仅在你主动操作时使用权限，不保存翻译正文和截图。";
+"Some shortcuts could not be restored. Check the affected shortcuts and try again." = "部分快捷键暂时无法恢复，请检查对应提示后重试。";
+"Automatic updates" = "自动更新";
+"At launch, check, download and install updates, then restart." = "启动时检查、下载并安装更新，完成后自动重启。";
+"Check at launch. You choose when to install." = "启动时检查新版本，由你选择何时安装。";
+"Free and open source · MIT License" = "免费开源 · MIT 许可证";
+"Official website" = "官方网站";
+"Release notes" = "更新日志";
+"Recent updates" = "近期更新";
+"If TSX has helped you, please give it a Star on GitHub. It means a lot to us." = "如果 TSX 帮到了你，请在 GitHub 点个 Star，这对我们意义重大。";
+"Star on GitHub" = "去点 Star";
+"Dismiss support message" = "关闭支持提示";
+"Checking for updates" = "正在检查更新";
+"Update to v%@" = "更新到 v%@";
+"Could not check for updates. Please try again." = "暂时无法检查更新，请重试。";
+"New version v%@ is available" = "发现新版本 v%@";
+"What's new" = "更新内容";
+"Release notes are not available here yet. You can view them on GitHub." = "暂时无法显示更新内容，可前往 GitHub 查看。";
+"Retry" = "重试";
+"Got it" = "知道了";
+"Later" = "稍后";
+"View details" = "查看详情";
+"Update and restart" = "更新并重启";
+"You're up to date" = "已是最新版本";
+"Update could not be completed" = "暂时无法完成更新";
+"This update requires a separate download. View its details to continue." = "此更新需要单独下载，请查看详情后继续。";
+"TSX will restart after the update. Copy any text you want to keep before continuing." = "更新完成后将自动重启 TSX。请先复制需要保留的文字。";
+"Connecting to the update server" = "正在连接更新服务器";
+"Downloading the update. It will be installed and TSX will restart." = "正在下载更新，完成后自动安装并重启 TSX。";
+"Verifying and preparing the update" = "正在验证并准备更新";
+"Installing the update. TSX will restart shortly." = "正在安装更新，TSX 即将重新启动。";
+"Please try again later. Your current version is unchanged." = "请稍后重试，当前版本仍可继续使用。";
+"The latest available version is already installed." = "你已安装当前可用的最新版本。";
+"Updated to v%@" = "已更新到 v%@";
+"Release notes for published versions" = "所有已发布版本的更新内容";
+"TSX has restarted. Here is what changed." = "TSX 已重新启动，看看这次的新变化。";
+"Could not refresh release notes. Showing saved notes." = "暂时无法获取最新内容，正在显示已保存的更新说明。";
+"Loading release notes" = "正在加载更新内容";
+"Current version" = "当前版本";
+"Details" = "详情";
+"View all versions" = "查看所有版本";
+"View full release notes" = "查看完整更新内容";
+"Configure usage query" = "配置用量查询";
+"Configure usage query for %@" = "配置 %@ 的用量查询";
+"Usage query configuration saved" = "已保存用量查询配置";
+"Enable usage query" = "启用用量查询";
+"Show account allowance in the service list" = "在服务列表显示账户余额";
+"Account queries are hidden from the service list" = "已关闭，服务列表将隐藏余额查询";
+"Applies only to" = "仅应用于";
+"Save configuration" = "保存配置";
+"Automatic query interval" = "自动查询间隔";
+"Request timeout" = "请求超时";
+"Minutes" = "分钟";
+"Seconds" = "秒";
+"Set to 0 for manual refresh only" = "设为 0 时，仅手动刷新";
+"End this query when the timeout is reached" = "超时后结束本次查询";
+"Query now" = "立即查询";
+"Record local translation usage" = "记录本机翻译用量";
+"New records are paused. Existing statistics are kept." = "已暂停新增统计，已有数据继续保留。";
+"Record request counts and duration without translation content." = "统计请求次数与耗时，不保存翻译内容。";
+"Record requests, tokens, costs and duration without translation content." = "仅记录请求、Token、费用与耗时，不保存翻译内容。";
+"Apple Translation needs no balance query" = "Apple 翻译无需查询余额";
+"Translate on this Mac without an account." = "在这台 Mac 上翻译，无需账户。";
+"Account query is unavailable for this service" = "此服务暂不支持账户用量查询";
+"Local request statistics remain available. Check account allowance on the provider’s website." = "仍可记录本机请求用量。账户额度请前往服务商网站查询。";
+"Querying account allowance" = "正在查询账户余额";
+"Account allowance has not been queried" = "尚未查询账户余额";
+"Use 0–1440 minutes for the interval and 1–120 seconds for the timeout." = "查询间隔请填 0–1440 分钟，超时请填 1–120 秒。";
+"Unsaved query preferences will be discarded. Existing statistics stay unchanged." = "未保存的查询设置将被丢弃，已有统计数据不会改变。";
+"Historical usage statistics will be kept." = "历史用量统计会保留。";
+"Switch" = "切换";
+"Send a short sample to check availability. A small charge may apply." = "发送一小段示例，检查服务是否可用。可能产生少量费用。";
+"Start connection test" = "开始检测";
+"Keys stay in Keychain. Only requests sent through TSX are counted. Translation text, screenshots and full responses are not saved. Pausing statistics keeps existing data. Switching services does not send existing text. Connection tests may incur provider charges." = "密钥保存在钥匙串中，仅统计通过 TSX 发出的请求。不保存翻译内容、截图或完整响应。暂停统计会保留已有数据；切换服务不会发送现有文字。连接检测可能产生少量费用。";
+"%@ / page" = "%@ 条/页";
+"%d local · %d API requests" = "本地 %d 次 · API %d 次";
+"%d records" = "%d 条记录";
+"%dd" = "%d 天";
+"%d–%d of %d" = "%d–%d 条，共 %d 条";
+"API Token" = "API Token";
+"API-reported tokens only. Apple Translation does not provide token counts. * indicates a known subtotal." = "仅统计 API 返回的 Token。Apple 翻译不提供 Token 数量。* 表示仅包含已知部分。";
+"API-reported tokens · Apple Translation is not applicable" = "API 返回的 Token · 不含 Apple 本地翻译";
+"All services" = "全部服务";
+"Apply" = "应用";
+"Cache read" = "缓存读取";
+"Cache write" = "缓存写入";
+"Clear all usage statistics? This cannot be undone." = "将清空所有服务的统计数据，清空后无法恢复。";
+"Clear all statistics for this service? This cannot be undone." = "将清空此服务的全部统计数据，清空后无法恢复。";
+"Completed successfully divided by all requests, including failed and cancelled requests." = "成功完成的请求占全部请求的比例，分母包含失败和取消的请求。";
+"Currency" = "币种";
+"Earlier requests remain in totals and charts as daily summaries; individual records are unavailable." = "较早的请求已按日归纳，仍计入总量和图表，不再提供逐条记录。";
+"End" = "结束日期";
+"Estimated fees" = "预估费用";
+"Update official text-model reference prices from models.dev. Reseller duplicates and non-text models are excluded. No account information is sent." = "从 models.dev 更新官方文本模型参考价格，过滤重复转售与非文本模型，不发送账号信息。";
+"Fetching prices" = "正在拉取价格";
+"Update model prices" = "更新模型定价";
+"Free" = "免费";
+"HTTP status" = "状态码";
+"Heatmap" = "热力图";
+"Includes translations and connection tests" = "包含翻译和连接测试请求";
+"Input / output Token" = "输入 / 输出 Token";
+"Last %d days" = "近 %d 天";
+"Less" = "少";
+"Local" = "本地";
+"Metric" = "指标";
+"Missing prices or usage are not counted as zero. This estimate is not the provider's billed amount." = "缺少价格或用量时不计为零，预估费用不等同于服务商实际账单。";
+"More" = "多";
+"Next page" = "下一页";
+"No request records in this range" = "此范围内暂无请求记录";
+"Not reported" = "未提供";
+"Only %@-priced API requests · reference estimate" = "仅 %@ 计价的 API 请求 · 参考估算";
+"Previous page" = "上一页";
+"Prices could not be refreshed. Existing reference rates are unchanged." = "暂时无法拉取价格，已保存的参考费率不受影响。";
+"Pricing" = "定价";
+"Reference estimates in the original currency, not an invoice. Missing rates or usage are excluded, never counted as zero." = "按原币种参考费率估算，不等同于账单。缺少费率或用量的请求未计入，不记为零。";
+"Removed service" = "已删除的服务";
+"Request records" = "请求记录";
+"Requests on %@" = "%@ 的请求记录";
+"Rows per page" = "每页条数";
+"Select a day to filter request records" = "点击日期筛选请求记录";
+"Service / model" = "服务 / 模型";
+"Show all dates" = "显示全部日期";
+"Success rate" = "成功率";
+"Test" = "连接测试";
+"Time" = "时间";
+"Trend" = "趋势";
+"models.dev public reference · per 1M Token in the original currency. Automatic estimates currently match official OpenAI, Anthropic and DeepSeek endpoints only. Refreshing never changes historical fees." = "models.dev 公开参考价格 · 每百万 Token，保留原币种。目前仅自动匹配 OpenAI、Anthropic、DeepSeek 官方端点，刷新不改写历史费用。";
+"— means not applicable or not reported. Fees use the rate saved with each request; no translation text is stored." = "— 表示不适用或未提供。费用沿用请求时的费率，不保存翻译正文。";
+"Apple Translation does not provide token counts." = "Apple 本地翻译不提供 Token 数量。";
+"Token counts reported by the API. A dash means the service did not report a value." = "显示 API 返回的 Token 数量，— 表示服务未提供。";
+"Local translation does not use HTTP." = "本地翻译不使用 HTTP，无状态码。";
+"No HTTP response code was recorded." = "未记录到 HTTP 响应状态码。";
+"HTTP response code returned by the service." = "服务返回的 HTTP 响应状态码。";
+"Local translation is free and has no token pricing." = "本地翻译免费，不按 Token 计价。";
+"Fetch reference prices to populate this catalog" = "拉取参考价格后，将在此显示模型目录";
+"Known subtotals only; unreported values are excluded." = "仅显示已知部分，未提供的数据不计入。";
+"Enable" = "启用";
+"Version information and software updates" = "版本信息与软件更新";
+"Status" = "状态码";
+
+"Start date" = "开始日期";
+
+"End date" = "结束日期";
+
+"settings.navigation.services" = "翻译服务";
+"settings.navigation.usage" = "用量统计";
+
+"Translation guidelines" = "翻译规范";
+
+"Optional: keep technical terms in English and use a concise tone." = "可选，例如：术语保留英文，译文简洁自然";
+
+"Adds preferences to this service’s translation tasks; built-in translation rules stay in place." = "仅为此服务的翻译任务补充要求，不替换内置翻译规则。";
+
+"Translation guidelines optional" = "翻译规范可选";
+
+
+
+"Release notes are not available in this language yet." = "暂未提供此语言的更新说明。";
+
+"Date year" = "年";
+
+"Date month" = "月";
+
+"Date day" = "日";
+
+"Previous month" = "上个月";
+
+"Next month" = "下个月";
+
+"Choose the start date" = "选择开始日期";
+
+"Choose the end date" = "选择结束日期";
+
+"Today" = "今天";
+
+"Choose a valid query interval and request timeout." = "请选择有效的查询间隔和请求超时。";
+
+"No automatic queries" = "不自动查询";
+
+"%d seconds" = "%d秒";
+
+"Refresh manually from the service list" = "从服务列表手动刷新余额";
+
+"Automatic queries run while TSX is open." = "TSX 运行期间按所选间隔自动查询。";
+
+"Unpriced" = "待计价";
+
+"Total cost" = "总成本";
+
+"Total requests" = "总请求数";
+
+"Consumed Tokens" = "消耗 Tokens";
+
+"Estimated in dollars, not a bill. Missing rates or usage are excluded; * marks a known subtotal." = "以美元估算，不等同于实际账单。缺少费率或用量的请求不计为零；* 表示已知部分的合计。";
+
+"Dollar estimates · not the provider bill" = "美元预估费用 · 非服务商账单";
+
+"Note: a dash means not applicable or not reported. Dollar estimates are for reference; no translation text is stored." = "注释：横线表示不适用或未提供。美元费用为参考估值，不保存翻译正文。";
+
+"models.dev reference · $ per 1M Tokens. Matches official OpenAI, Anthropic and DeepSeek services. Missing recent costs use current reference rates; existing costs stay unchanged." = "models.dev 参考定价 · $ / 百万 Tokens。匹配 OpenAI、Anthropic 和 DeepSeek 官方服务；近期缺失费用按当前参考价补算，已有费用保持不变。";
+
+"Recalculated estimate" = "补算估值";
+
+"Statistics data" = "统计数据";
+
+"Clear all local statistics, keeping service settings." = "清空本机全部统计记录，保留服务配置。";
+
+"Clear this service's statistics, keeping its settings." = "清空当前服务的统计记录，保留服务配置。";
+
+"Estimated using the current service and reference rate, not a historical bill." = "按当前服务配置与参考费率补算，不代表当时的实际账单。";
+
+"Estimated using the rate saved with this request." = "按请求时保存的费率估算。";
+
+"Bar chart" = "柱状图";
+
+"Estimated cost" = "预估成本";

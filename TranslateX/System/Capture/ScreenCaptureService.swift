@@ -23,7 +23,8 @@ actor ScreenCaptureService {
     /// A prior denial may require the person to change access in System Settings.
     @MainActor @discardableResult
     static func requestPermission() -> Bool {
-        CGRequestScreenCaptureAccess()
+        guard !hasPermission else { return true }
+        return CGRequestScreenCaptureAccess()
     }
 
     /// `region` is AppKit global bottom-left points. `referenceTop` is the primary

@@ -14,6 +14,8 @@ struct TranslationServiceCredential: Codable, Equatable, Sendable {
 @MainActor
 protocol TranslationCredentialStore {
     func credential(for id: UUID) throws -> TranslationServiceCredential?
+    /// Scheduled work must fail rather than showing system authentication UI.
+    func credentialWithoutInteraction(for id: UUID) throws -> TranslationServiceCredential?
     /// Metadata only. A store that cannot inspect presence without loading the
     /// value returns nil rather than silently reading a secret.
     func containsCredential(for id: UUID) throws -> Bool?
@@ -22,6 +24,9 @@ protocol TranslationCredentialStore {
 }
 
 extension TranslationCredentialStore {
+    func credentialWithoutInteraction(for id: UUID) throws -> TranslationServiceCredential? {
+        throw TranslationServiceConfigurationError.credentialUnavailable
+    }
     func containsCredential(for id: UUID) throws -> Bool? { nil }
 }
 
@@ -44,7 +49,7 @@ struct KeychainTranslationCredentialStore: TranslationCredentialStore {
         authentication.interactionNotAllowed = true
         query[kSecUseAuthenticationContext as String] = authentication
         var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = TSXCopyKeychainItemWithoutInteraction(query as CFDictionary, &result)
         if status == errSecItemNotFound { return false }
         guard status == errSecSuccess else {
             throw TranslationServiceConfigurationError.credentialUnavailable
@@ -53,11 +58,26 @@ struct KeychainTranslationCredentialStore: TranslationCredentialStore {
     }
 
     func credential(for id: UUID) throws -> TranslationServiceCredential? {
+        try credential(for: id, allowsInteraction: true)
+    }
+
+    func credentialWithoutInteraction(for id: UUID) throws -> TranslationServiceCredential? {
+        try credential(for: id, allowsInteraction: false)
+    }
+
+    private func credential(for id: UUID, allowsInteraction: Bool) throws -> TranslationServiceCredential? {
         var query = query(for: id)
+        if !allowsInteraction {
+            let authentication = LAContext()
+            authentication.interactionNotAllowed = true
+            query[kSecUseAuthenticationContext as String] = authentication
+        }
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = allowsInteraction
+            ? SecItemCopyMatching(query as CFDictionary, &result)
+            : TSXCopyKeychainItemWithoutInteraction(query as CFDictionary, &result)
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess, let data = result as? Data,
               let credential = try? JSONDecoder().decode(TranslationServiceCredential.self, from: data) else {
@@ -115,6 +135,7 @@ final class TranslationServiceStore {
 
     let codex: CodexAccountController
     let usage: TranslationUsageStore
+    let accountQueryPreferences: TranslationAccountQueryPreferencesStore
     private(set) var configurations: [TranslationServiceConfiguration]
     private(set) var selectedID: UUID?
     private(set) var revision: Int = 0
@@ -141,6 +162,7 @@ final class TranslationServiceStore {
         self.credentials = credentials
         self.codex = codex
         usage = TranslationUsageStore(defaults: defaults)
+        accountQueryPreferences = TranslationAccountQueryPreferencesStore(defaults: defaults)
         appleAutomaticallyTranslates = defaults.object(forKey: StorageKey.appleAutomaticTranslation) as? Bool ?? true
         // Invalid versions, duplicate identifiers, and any malformed record fail
         // closed. Do not rewrite or automatically activate recovered cloud data.
@@ -163,6 +185,8 @@ final class TranslationServiceStore {
         for configuration in configurations where configurationRevisions[configuration.id] == nil {
             configurationRevisions[configuration.id] = UUID()
         }
+        usage.registerServices([nil] + configurations.map { Optional($0.id) })
+        usage.registerConfigurations(configurations)
         codex.onIdentityChange = { [weak self] in
             guard let self else { return }
             for configuration in self.configurations where configuration.kind == .codex {
@@ -238,6 +262,7 @@ final class TranslationServiceStore {
         }
         defaults.set(data, forKey: StorageKey.services)
         configurations = updated
+        usage.registerConfigurations(configurations)
         configurationRevisions = revisions
         var priorIgnoringWebsite = prior
         priorIgnoringWebsite?.website = configuration.website
@@ -258,21 +283,23 @@ final class TranslationServiceStore {
         }
         defaults.set(data, forKey: StorageKey.services)
         configurations = updated
+        usage.registerConfigurations(configurations)
         selectedID = selection
         sampleTests[id] = nil
         configurationRevisions[id] = nil
-        usage.clear(configurationID: id)
+        usage.setEnabled(false, for: id)
+        accountQueryPreferences.remove(id)
         revision &+= 1
     }
 
     func select(_ id: UUID?) throws {
+        guard selectedID != id else { return }
         if let id {
             guard let configuration = configurations.first(where: { $0.id == id }) else {
                 throw TranslationServiceConfigurationError.unknownService
             }
             _ = try apiKey(for: configuration, replacement: nil)
         }
-        guard selectedID != id else { return }
         let data = try encoded(configurations: configurations, selectedID: id)
         defaults.set(data, forKey: StorageKey.services)
         selectedID = id
@@ -298,14 +325,15 @@ final class TranslationServiceStore {
         let data = try encoded(configurations: updated, selectedID: selectedID)
         defaults.set(data, forKey: StorageKey.services)
         configurations = updated
+        usage.registerConfigurations(configurations)
         automaticTranslationRevision &+= 1
     }
 
-    func apiKey(for id: UUID) throws -> String? {
+    func apiKey(for id: UUID, allowsInteraction: Bool = true) throws -> String? {
         guard let configuration = configurations.first(where: { $0.id == id }) else {
             throw TranslationServiceConfigurationError.unknownService
         }
-        return try apiKey(for: configuration, replacement: nil)
+        return try resolveAPIKey(for: configuration.validated(), replacement: nil, allowsInteraction: allowsInteraction)
     }
 
     /// Resolve the credential for an unsaved Test request using the same rules
@@ -352,7 +380,7 @@ final class TranslationServiceStore {
         }
     }
 
-    private func resolveAPIKey(for configuration: TranslationServiceConfiguration, replacement: String?) throws -> String? {
+    private func resolveAPIKey(for configuration: TranslationServiceConfiguration, replacement: String?, allowsInteraction: Bool = true) throws -> String? {
         if configuration.kind == .codex {
             guard replacement == nil || replacement == "" else { throw TranslationServiceConfigurationError.invalidAPIKey }
             return nil
@@ -363,13 +391,18 @@ final class TranslationServiceStore {
         let candidate: String?
         if let replacement {
             candidate = replacement.trimmingCharacters(in: .whitespacesAndNewlines)
-        } else if let credential = try credentials.credential(for: configuration.id) {
-            guard credential.endpoint == configuration.endpoint else {
-                throw TranslationServiceConfigurationError.endpointChanged
-            }
-            candidate = credential.apiKey
         } else {
-            candidate = nil
+            let credential = try allowsInteraction
+                ? credentials.credential(for: configuration.id)
+                : credentials.credentialWithoutInteraction(for: configuration.id)
+            if let credential {
+                guard credential.endpoint == configuration.endpoint else {
+                    throw TranslationServiceConfigurationError.endpointChanged
+                }
+                candidate = credential.apiKey
+            } else {
+                candidate = nil
+            }
         }
         return try validatedKey(candidate, required: configuration.kind.requiresAPIKey)
     }

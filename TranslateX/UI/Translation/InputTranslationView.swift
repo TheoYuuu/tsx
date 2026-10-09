@@ -9,10 +9,22 @@ struct InputTranslationView: View {
     var manageServices: () -> Void = {}
     var editorReady: (NSTextView) -> Void = { _ in }
     var translationEditorReady: (NSTextView) -> Void = { _ in }
+    var updates: AppUpdateController? = nil
     @Environment(\.translateXTheme) private var theme
     @Environment(\.translationLayout) private var layout
 
+    private var showsReleaseNotes: Bool { updates?.mainReleaseNotesPresentation != nil }
+
     var body: some View {
+        workspace
+            .disabled(showsReleaseNotes)
+            .allowsHitTesting(!showsReleaseNotes)
+            .accessibilityHidden(showsReleaseNotes)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea()
+    }
+
+    private var workspace: some View {
         VStack(spacing: 0) {
             HStack(spacing: 18) {
                 WindowTrafficLights().frame(width: 58, height: 14)

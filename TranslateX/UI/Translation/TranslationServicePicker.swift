@@ -8,8 +8,9 @@ struct TranslationServicePicker: View {
     var maximumWidth: CGFloat = 160
     var openSettings: () -> Void = {}
     @Environment(\.translateXTheme) private var theme
+    @Environment(\.isEnabled) private var enabled
     @State private var hovered = false
-    private var highlighted: Bool { hovered && !model.isComposing }
+    private var highlighted: Bool { hovered && enabled && !model.isComposing }
     private var fill: Color {
         let tint = theme.isDark ? Color(red: 0.17, green: 0.22, blue: 0.32) : Color(red: 0.86, green: 0.91, blue: 0.98)
         return tint.opacity(theme.isGlass ? (highlighted ? 0.8 : 0.6) : (highlighted ? 1 : 0.75))
@@ -42,9 +43,10 @@ private struct NativeTranslationServicePicker: NSViewRepresentable {
     func updateNSView(_ control: TranslationServiceMenuControl, context: Context) {
         control.maximumWidth = maximumWidth
         control.font = .systemFont(ofSize: 13)
-        control.contentTintColor = NSColor(model.isComposing ? theme.disabledInk : theme.ink)
+        let enabled = context.environment.isEnabled && !model.isComposing
+        control.contentTintColor = NSColor(enabled ? theme.ink : theme.disabledInk)
         control.hoverCursor = theme.hoverCursor
-        control.isEnabled = !model.isComposing
+        control.isEnabled = enabled
         control.configure(title: model.serviceDisplayName, selectedID: model.serviceConfiguration?.id,
                           services: model.availableServices, select: { model.selectService($0) }, manage: openSettings)
     }
@@ -59,7 +61,7 @@ final class TranslationServiceMenuControl: NSPopUpButton, NSMenuDelegate {
     private var selectService: ((UUID?) -> Void)?
     private var manage: (() -> Void)?
     private var displayName = ""
-    override var acceptsFirstResponder: Bool { true }
+    override var acceptsFirstResponder: Bool { isEnabled }
     override var intrinsicContentSize: NSSize { NSSize(width: min(maximumWidth, ceil((displayName as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 12, weight: .medium)]).width) + 40), height: 28) }
     override func resetCursorRects() {
         if isEnabled { addCursorRect(bounds, cursor: hoverCursor == .pointingHand ? .pointingHand : .arrow) }

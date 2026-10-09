@@ -40,7 +40,8 @@ struct ClaudeTranslationResponseParser {
             let reported = TranslationUsage.reportedTokens(messageObject?["usage"], inputKey: "input_tokens", outputKey: "output_tokens")
             // The start event's output count is provisional. Output usage is
             // taken from later cumulative message_delta snapshots.
-            usage = TranslationUsage(inputTokens: reported?.inputTokens).nonempty
+            usage = TranslationUsage(inputTokens: reported?.inputTokens,
+                cacheReadTokens: reported?.cacheReadTokens, cacheWriteTokens: reported?.cacheWriteTokens).nonempty
         case "content_block_start":
             guard started, !sawMessageDelta, activeIndex == nil,
                   event.index == nextIndex, let block = event.content_block else {
@@ -84,9 +85,18 @@ struct ClaudeTranslationResponseParser {
             let envelope = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
             let reported = TranslationUsage.reportedTokens(envelope?["usage"], inputKey: "input_tokens", outputKey: "output_tokens")
             // These are cumulative snapshots, never amounts to add together.
+            // A delta may repeat uncached input without repeating the cache split.
+            let rawUsage = envelope?["usage"] as? [String: Any]
+            var input = reported?.inputTokens
+            if let uncached = input, rawUsage?["cache_read_input_tokens"] == nil,
+               rawUsage?["cache_creation_input_tokens"] == nil {
+                input = uncached + (usage?.cacheReadTokens ?? 0) + (usage?.cacheWriteTokens ?? 0)
+            }
             usage = TranslationUsage(
-                inputTokens: reported?.inputTokens ?? usage?.inputTokens,
-                outputTokens: reported?.outputTokens ?? usage?.outputTokens
+                inputTokens: input ?? usage?.inputTokens,
+                outputTokens: reported?.outputTokens ?? usage?.outputTokens,
+                cacheReadTokens: reported?.cacheReadTokens ?? usage?.cacheReadTokens,
+                cacheWriteTokens: reported?.cacheWriteTokens ?? usage?.cacheWriteTokens
             ).nonempty
         case "message_stop":
             guard started, activeIndex == nil, sawMessageDelta, stopReason == "end_turn" else {

@@ -92,6 +92,7 @@ struct ClaudeTranslationProvider: TranslationProvider {
             return try await withTaskCancellationHandler {
                 try Task.checkCancellation()
                 guard let response = response as? HTTPURLResponse else { throw RemoteTranslationError.invalidResponse }
+                TranslationUsageHTTPContext.record(status: response.statusCode)
                 guard response.url == request.url, !(300...399).contains(response.statusCode) else {
                     throw RemoteTranslationError.redirected
                 }

@@ -2,7 +2,7 @@
 
 [返回首页](../README.md) · [English](#english)
 
-本说明对应 TSX 1.0.0。需要 macOS 15 或更新版本；从 [GitHub Releases](https://github.com/TheoYuuu/tsx/releases/latest) 下载 DMG，打开后将 TSX 拖入 Applications。
+本说明对应当前源码，正式安装包见 Releases。需要 macOS 15 或更新版本；从 [GitHub Releases](https://github.com/TheoYuuu/tsx/releases/latest) 下载 DMG，打开后将 TSX 拖入 Applications。
 
 ## 三种翻译入口
 
@@ -34,19 +34,25 @@
 
 翻译正文和截图仅在当前运行期间保留，退出应用后不会恢复。需要保留的内容请先复制到自己的文档。具体数据行为见[隐私与数据说明](PRIVACY.md)。
 
+## 用量统计
+
+在「设置 → 用量统计」查看总成本、总请求数和消耗 Tokens，使用日期及服务筛选，并切换柱状图或热力图。下方「请求记录」按页展示近期请求，「定价」可刷新受支持官方模型的美元参考费率。成本属于估算，不能替代服务商账单；微小非零成本显示为 `<$0.0001`，悬停可查看完整值。Apple 本地翻译免费，不报告 Token 或 HTTP 状态码。
+
+「翻译服务」中每个服务的「配置用量查询」可设置余额查询、自动查询间隔、超时与本机用量记录。这里只统计通过 TSX 发出的请求，不保存翻译内容；暂停不影响翻译和账户查询。近期明细最多保留 30 个自然日、10,000 条，更早或超额明细按天汇总，历史总量持续保留。清空统计需确认；删除服务也会删除其统计。
+
 ## 问题反馈
 
 遇到问题时，请在 [Issues](https://github.com/TheoYuuu/tsx/issues/new/choose) 中提供软件版本、macOS 版本、芯片类型、操作步骤、预期结果与实际结果。用自行构造的短文本复现即可，不需要提供真实私人内容、API Key 或完整账号信息。
 
 ## 软件更新
 
-可从 TSX 菜单或「设置 → 通用 → 软件更新」手动检查更新。自动检查与自动下载默认关闭，可按需开启；检查连接官网，下载来自 GitHub。正文和截图不保存为历史，安装并重启前请复制需要保留的文字。
+可从 TSX 菜单或「设置 → 关于」手动检查更新和查看近期更新。每次启动会检查新版本；自动更新默认关闭，仅提示可用版本。开启后将下载、安装并重启，升级后在主窗口展示一次更新内容。检查连接官网，下载与更新说明来自 GitHub。正文和截图不保存为历史，安装并重启前请复制需要保留的文字。
 
 # English
 
 [Back to overview](../README.en.md)
 
-This guide covers TSX 1.0.0, which requires macOS 15 or later. Download the DMG from [GitHub Releases](https://github.com/TheoYuuu/tsx/releases/latest), open it, and drag TSX into Applications.
+This guide covers the current source. Published installers require macOS 15 or later. Download the DMG from [GitHub Releases](https://github.com/TheoYuuu/tsx/releases/latest), open it, and drag TSX into Applications.
 
 ## Translation entry points
 
@@ -78,10 +84,16 @@ Apple local translation is the default. Add other services in Settings and selec
 
 Translation text and screenshots remain available only during the current app session and are not restored after quitting. Copy anything you need to keep into your own document. See [Privacy and data](PRIVACY.md#english) for details.
 
+## Usage statistics
+
+Settings → Usage shows total cost, total requests, and consumed tokens. Filter by date or service, switch between bar charts and heatmaps, and page through recent request records. The Pricing tab refreshes USD reference rates for supported official models. Costs are estimates, not provider invoices. Tiny nonzero costs appear as `<$0.0001`; hover for the precise amount. Apple local translation is free and does not report tokens or HTTP status codes.
+
+Use Configure usage query on a service row to manage balance querying, intervals, timeouts, and local usage recording. Only requests made through TSX are counted; translation text is not stored. Pausing keeps history and does not affect translation or balance queries. Recent details are kept for up to 30 calendar days and 10,000 requests, with older or excess metrics aggregated by day. Clearing statistics requires confirmation; deleting a service also removes its statistics.
+
 ## Reporting a problem
 
 Open an [issue](https://github.com/TheoYuuu/tsx/issues/new/choose) with your TSX version, macOS version, chip type, steps, expected result, and actual result. Use a short synthetic example without private text, API keys, or complete account details.
 
 ## Software updates
 
-Use Check for Updates in the TSX menu and Settings → General. Automatic checks and downloads are off by default and can be enabled there. Checks use the website and downloads use GitHub. Copy text you want to keep before installing and restarting; translation text and screenshots are not saved as history.
+Use Check for Updates in the TSX menu or Settings → About, where recent release notes are also available. Launch checks run without automatic downloads by default. Enabling automatic updates allows downloading, installation, and restart. After upgrading, release notes appear once in the main window. Checks use the website; downloads and release history use GitHub. Copy text you want to keep before installing and restarting; translation text and screenshots are not saved as history.

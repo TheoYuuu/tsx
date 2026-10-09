@@ -20,6 +20,7 @@ private struct TranslationServiceEditorContent: View {
     let finish: () -> Void
     let saved: () -> Void
     @State private var advanced = false
+    @State private var advancedHovered = false
     @State private var popup: Popup?
     @State private var openCatalogWhenReady = false
     @State private var keyFocused = false
@@ -36,7 +37,7 @@ private struct TranslationServiceEditorContent: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header.padding(.bottom, 12)
+            header.padding(.horizontal, 36).padding(.bottom, 12)
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
@@ -46,7 +47,7 @@ private struct TranslationServiceEditorContent: View {
                         advancedSection
                         feedback.id("service-feedback")
                         recipient.padding(.top, 1).padding(.bottom, 9)
-                    }.padding(1)
+                    }.padding(1).padding(.horizontal, 36)
                         .translationServiceScrollContent()
                 }
                 .scrollIndicators(.automatic)
@@ -71,9 +72,9 @@ private struct TranslationServiceEditorContent: View {
                 }
             }
             .frame(maxHeight: .infinity, alignment: .top)
-            footer
+            footer.padding(.horizontal, 36)
         }
-        .padding(.horizontal, 36).padding(.top, 10)
+        .padding(.top, 10)
         .disabled(popup != nil)
         .accessibilityHidden(popup != nil)
         .overlayPreferenceValue(TranslationServicePopupAnchorKey.self) { anchors in
@@ -390,7 +391,7 @@ private struct TranslationServiceEditorContent: View {
                 editor.hideKey(); advanced.toggle()
             } label: {
                 HStack(spacing: 6) {
-                    Image(systemName: advanced ? "chevron.down" : "chevron.right").font(.system(size: 10))
+                    Image(systemName: advanced ? "chevron.down" : "chevron.right").font(.system(size: 10, weight: .semibold))
                     Text(L10n.string("Advanced settings")).font(.system(size: 11))
                     Spacer(minLength: 4)
                     Text(advanced ? L10n.string("Collapse") : advancedSummary)
@@ -398,9 +399,13 @@ private struct TranslationServiceEditorContent: View {
                         .foregroundStyle(!advanced && editor.configuration.automaticallyTranslates ? p.accent : p.muted)
                         .lineLimit(1)
                 }
-                .foregroundStyle(p.muted).padding(.horizontal, 2).frame(height: 39).contentShape(Rectangle())
+                .foregroundStyle(advancedHovered ? p.accent : p.muted)
+                .padding(.horizontal, 2).frame(height: 39).contentShape(Rectangle())
             }
-            .buttonStyle(TranslateXHoverButtonStyle())
+            .buttonStyle(.plain)
+            .onHover { advancedHovered = $0 }
+            .translateXControlCursor()
+            .accessibilityIdentifier("service.advanced")
             .accessibilityValue(L10n.string(advanced ? "Expanded" : "Collapsed"))
             if advanced {
                 TranslationServiceCard {
@@ -412,35 +417,32 @@ private struct TranslationServiceEditorContent: View {
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer(minLength: 0)
-                        Button { editor.configuration.automaticallyTranslates.toggle() } label: {
-                            Circle().fill(.white).frame(width: 14, height: 14)
-                                .shadow(color: .black.opacity(0.1), radius: 1, y: 1)
-                                .frame(width: 27, height: 18, alignment: editor.configuration.automaticallyTranslates ? .trailing : .leading)
-                                .padding(.horizontal, 2)
-                                .background(editor.configuration.automaticallyTranslates ? p.accent : p.color(theme.isDark ? 0x5d6878 : 0xcad0da), in: Capsule())
-                        }
-                        .buttonStyle(TranslateXHoverButtonStyle())
-                        .accessibilityLabel(L10n.string("Automatic bidirectional translation"))
-                        .accessibilityValue(L10n.string(editor.configuration.automaticallyTranslates ? "On" : "Off"))
+                        Toggle(L10n.string("Automatic bidirectional translation"),
+                               isOn: $editor.configuration.automaticallyTranslates)
+                            .labelsHidden()
+                            .toggleStyle(TranslateXSwitchStyle())
+                            .accessibilityLabel(L10n.string("Automatic bidirectional translation"))
+                            .accessibilityValue(L10n.string(editor.configuration.automaticallyTranslates ? "On" : "Off"))
                     }
                     .padding(.vertical, 11).frame(minHeight: 52)
                     if kind.supportsAdditionalInstructions {
                         TranslationServiceDivider()
-                        TranslationServiceFormRow(title: "Additional instructions") {
+                        TranslationServiceFormRow(title: "Translation guidelines") {
                             TranslationTextEditor(text: $editor.configuration.additionalInstructions,
                                                       onEdit: { _, _ in }, onSubmit: {}, fontSize: 12, lineSpacing: 4,
-                                                      accessibilityID: "service.instructions")
+                                                      accessibilityID: "service.instructions", accessibilityName: "Translation guidelines")
                                 .padding(.horizontal, 5).padding(.vertical, 5).frame(height: 65)
                                 .background(p.fill, in: RoundedRectangle(cornerRadius: 6))
                                 .overlay { RoundedRectangle(cornerRadius: 6).strokeBorder(p.line.opacity(0.34), lineWidth: 1) }
                                 .overlay(alignment: .topLeading) {
                                     if editor.configuration.additionalInstructions.isEmpty {
-                                        Text(L10n.string("Optional, for example: Keep technical terms in English"))
+                                        Text(L10n.string("Optional: keep technical terms in English and use a concise tone."))
                                             .font(.system(size: 11)).foregroundStyle(p.muted)
                                             .padding(.horizontal, 10).padding(.top, 8).allowsHitTesting(false)
                                     }
                                 }
-                                .accessibilityLabel(L10n.string("Additional translation instructions"))
+                                .accessibilityLabel(L10n.string("Translation guidelines"))
+                            TranslationServiceHint(text: L10n.string("Adds preferences to this service’s translation tasks; built-in translation rules stay in place."))
                             fieldError(.instructions)
                         }.id(TranslationServiceEditor.Field.instructions)
                     }
@@ -472,7 +474,7 @@ private struct TranslationServiceEditorContent: View {
     }
     private var advancedSummary: String {
         let status = L10n.string(editor.configuration.automaticallyTranslates ? "Automatic translation on" : "Automatic translation off")
-        return status + (kind.supportsAdditionalInstructions ? " · " + L10n.string("Instructions optional") : "")
+        return status + (kind.supportsAdditionalInstructions ? " · " + L10n.string("Translation guidelines optional") : "")
     }
     private var outputTokenChoices: [Int] {
         Array(Set([1_024, 2_048, 4_096, 8_192, 16_384, 32_768, 65_536, 131_072, editor.configuration.maximumOutputTokens])).sorted()

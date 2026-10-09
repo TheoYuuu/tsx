@@ -48,6 +48,7 @@ final class SelectionService {
     /// Call only after an explicit user action; initialization never prompts for access.
     @discardableResult
     static func requestAccessibilityPermission() -> Bool {
+        guard !isAccessibilityTrusted else { return true }
         let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
         return AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
     }

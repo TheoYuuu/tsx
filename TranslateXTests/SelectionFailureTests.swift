@@ -38,3 +38,41 @@ final class SelectionFailureTests: XCTestCase {
         XCTAssertFalse(key.contains("private-selection-value"))
     }
 }
+
+@MainActor
+final class PermissionRequestTests: XCTestCase {
+    func testGrantedPermissionsNeverPromptAndRefreshRechecksTheSystem() {
+        var granted = true
+        var requests: [SystemPermission] = []
+        var settings: [SystemPermission] = []
+        let status = PermissionStatus(check: { _ in granted }, request: { requests.append($0) }, openSettings: { settings.append($0) })
+        status.refresh()
+        status.request(.accessibility)
+        status.request(.screenCapture)
+        XCTAssertTrue(requests.isEmpty)
+        XCTAssertTrue(settings.isEmpty)
+        granted = false
+        status.refresh()
+        XCTAssertFalse(status.accessibility)
+        XCTAssertFalse(status.screenCapture)
+        XCTAssertTrue(requests.isEmpty, "Checking permission must never request it")
+    }
+
+    func testDeniedPermissionOnlyPromptsOncePerLaunchThenOpensSettings() {
+        var granted = false
+        var requests: [SystemPermission] = []
+        var settings: [SystemPermission] = []
+        let status = PermissionStatus(check: { _ in granted }, request: { requests.append($0) }, openSettings: { settings.append($0) })
+        status.request(.accessibility)
+        status.request(.accessibility)
+        XCTAssertEqual(requests, [.accessibility])
+        XCTAssertEqual(settings, [.accessibility, .accessibility])
+        status.request(.screenCapture)
+        XCTAssertEqual(requests, [.accessibility, .screenCapture])
+        granted = true
+        status.request(.accessibility)
+        XCTAssertTrue(status.accessibility)
+        XCTAssertEqual(requests.count, 2)
+        XCTAssertEqual(settings.count, 3)
+    }
+}

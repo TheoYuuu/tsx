@@ -82,6 +82,40 @@ final class ShortcutSettings {
         return update(action.defaultShortcut, for: action)
     }
 
+    var hasCustomizedCombinations: Bool {
+        ShortcutAction.allCases.contains { rememberedShortcut(for: $0) != $0.defaultShortcut }
+    }
+
+    /// A single reset keeps paused actions paused and commits only after the
+    /// operating system accepts the complete active set, including key swaps.
+    @discardableResult
+    func resetAll() -> Bool {
+        endRecording()
+        let enabled = ShortcutAction.allCases.filter { isEnabled($0) }
+        let desired = Dictionary(uniqueKeysWithValues: enabled.map { ($0, $0.defaultShortcut) })
+        do {
+            try manager.replaceBindings(desired) { [weak self] in self?.onAction($0) }
+            for action in ShortcutAction.allCases {
+                if enabled.contains(action) { preferences.setShortcut(action.defaultShortcut, for: action) }
+                else { preferences.setPausedShortcut(action.defaultShortcut, for: action) }
+                effectiveBindings[action] = manager.shortcut(for: action)
+                errors[action] = nil
+            }
+            onBindingsChanged()
+            return true
+        } catch {
+            let previousBindings = effectiveBindings
+            for action in ShortcutAction.allCases {
+                effectiveBindings[action] = manager.shortcut(for: action)
+                if isEnabled(action), effectiveBindings[action] != configuredShortcut(for: action) {
+                    errors[action] = (error as? ShortcutError) ?? .registrationFailed(-1)
+                }
+            }
+            if effectiveBindings != previousBindings { onBindingsChanged() }
+            return false
+        }
+    }
+
     @discardableResult
     func beginRecording(for action: ShortcutAction) -> UUID {
         endRecording()

@@ -34,11 +34,11 @@
 
 ## 下载与更新
 
-从 [最新 Release](https://github.com/TheoYuuu/tsx/releases/latest) 下载 **TSX-1.0.0-macOS-universal.dmg**，打开后将 TSX 拖入 Applications。正式安装包使用 Developer ID 签名并通过 Apple 公证。
+从 [最新 Release](https://github.com/TheoYuuu/tsx/releases/latest) 下载 **TSX-1.1.0-macOS-universal.dmg**，打开后将 TSX 拖入 Applications。正式安装包使用 Developer ID 签名并通过 Apple 公证。
 
 GitHub 自动生成的 **Source code (zip / tar.gz)** 包含对应版本的项目源码，**不是可以直接安装的 TSX 应用**。请下载 Release 附件中的安装包。
 
-在应用菜单或设置中选择「检查更新」，也可按需开启自动检查和自动下载；两项自动选项默认关闭。退出更新前，请复制需要保留的原文和译文。也可在 GitHub 的 **Watch → Custom → Releases** 中订阅通知。
+在应用菜单或「设置 → 关于」中选择「检查更新」。应用启动时检查新版本，默认不下载安装；开启「自动更新」后会下载、安装并重启。退出更新前，请复制需要保留的原文和译文。也可在 GitHub 的 **Watch → Custom → Releases** 中订阅通知。
 
 [官网产品页](https://lumaxspace.com/zh/products/tsx/) · [构建与发布流程](Docs/RELEASING.md)
 

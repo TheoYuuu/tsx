@@ -174,7 +174,7 @@ final class LanguageSwitchingWindowTests: XCTestCase {
         }
     }
 
-    func testOpenSettingsAndAboutWindowsUpdateTheirTitlesWithoutReplacement() async throws {
+    func testAboutUsesSettingsWindowAndLanguageChangesKeepItsHost() async throws {
         try await withPreferences { preferences in
             let windows = try isolatedWindows(preferences: preferences)
             defer { windows.shutdown() }
@@ -182,17 +182,14 @@ final class LanguageSwitchingWindowTests: XCTestCase {
             windows.showSettings(shortcuts: shortcuts)
             windows.showAbout()
             let settings = try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.settings" })
-            let about = try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.about" })
             let settingsContent = settings.contentView
-            let aboutContent = about.contentView
+            XCTAssertFalse(NSApp.windows.contains { $0.identifier?.rawValue == "translatex.about" && $0.isVisible })
             for language in [AppInterfaceLanguage.english, .simplifiedChinese] {
                 preferences.interfaceLanguage = language
                 L10n.apply(language)
                 try await Task.sleep(for: .milliseconds(80))
                 XCTAssertEqual(settings.title, L10n.string("Settings"))
-                XCTAssertEqual(about.title, L10n.string("About TSX"))
                 XCTAssertTrue(settings.contentView === settingsContent)
-                XCTAssertTrue(about.contentView === aboutContent)
                 XCTAssertNil(windows.inputModel.request)
                 XCTAssertNil(windows.quickModel.request)
             }

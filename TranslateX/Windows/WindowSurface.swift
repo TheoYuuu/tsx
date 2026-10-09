@@ -8,6 +8,7 @@ import SwiftUI
 final class WindowSurface<Content: View & SendableMetatype>: NSView {
     let hostingView: NSHostingView<TranslateXThemeHost<Content>>
     let contentContainer = MaterialContentView()
+    private(set) var modalHostingView: NSView?
     private let preferences: AppPreferences
     private let materialView: NSView
     private var accessibilityObserver: (any NSObjectProtocol)?
@@ -33,6 +34,9 @@ final class WindowSurface<Content: View & SendableMetatype>: NSView {
         super.init(frame: .zero)
         wantsLayer = true
         hostingView.sizingOptions = []
+        // Custom title bars and overlays own the entire content rect, including
+        // the native top/bottom safe areas of a full-size macOS window.
+        hostingView.safeAreaRegions = []
         hostingView.autoresizingMask = [.width, .height]
         contentContainer.addSubview(hostingView)
         addSubview(materialView)
@@ -97,6 +101,25 @@ final class WindowSurface<Content: View & SendableMetatype>: NSView {
         materialView.frame = bounds
         contentContainer.frame = bounds
         hostingView.frame = contentContainer.bounds
+        modalHostingView?.frame = bounds
+    }
+
+    /// Modal content must composite ABOVE the native glass and its edge lighting,
+    /// not inside glass.contentView. Keep the editor's material owner untouched.
+    func presentModal<Modal: View>(@ViewBuilder content: @escaping () -> Modal) {
+        guard modalHostingView == nil else { return }
+        let host = NSHostingView(rootView: TranslateXThemeHost(preferences: preferences, content: content))
+        host.sizingOptions = []
+        host.safeAreaRegions = []
+        host.autoresizingMask = [.width, .height]
+        host.frame = bounds
+        addSubview(host, positioned: .above, relativeTo: nil)
+        modalHostingView = host
+    }
+
+    func dismissModal() {
+        modalHostingView?.removeFromSuperview()
+        modalHostingView = nil
     }
 
     isolated deinit {
@@ -177,6 +200,8 @@ enum TranslateXWindowChrome {
         window.isOpaque = false
         window.backgroundColor = .clear
         window.hasShadow = true
+        // Hosted SwiftUI charts use continuous pointer positions for daily values.
+        window.acceptsMouseMovedEvents = true
         window.isMovableByWindowBackground = true
         for type: NSWindow.ButtonType in [.closeButton, .miniaturizeButton, .zoomButton] {
             window.standardWindowButton(type)?.isHidden = true

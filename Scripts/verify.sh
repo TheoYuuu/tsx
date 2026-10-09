@@ -20,6 +20,10 @@ xcrun swiftc -parse-as-library -swift-version 6 -strict-concurrency=complete \
     Tools/QA/ValidateProject.swift -o "$task_project_check"
 "$task_project_check" "$PWD"
 
+xcrun clang -Wall -Wextra -Werror -framework Security -framework CoreFoundation \
+    Tools/QA/KeychainInteractionTests.c -o .build/QA/keychain-interaction-tests
+.build/QA/keychain-interaction-tests
+
 plutil -lint Config/TranslateX.entitlements
 plutil -lint Config/Info.plist
 xcrun swiftc -typecheck -swift-version 6 -strict-concurrency=complete \

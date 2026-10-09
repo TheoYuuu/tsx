@@ -1,11 +1,10 @@
 import AppKit
 import SwiftUI
 
-// Service pages reserve their own scrollbar gutter; other app pages keep
-// their existing layout and scroll behavior.
+// Content uses the shared scroll anchor. The outer page owns its scrollbar.
 extension View {
     func translationServiceScrollContent() -> some View {
-        padding(.trailing, 16).translateXScrollContent()
+        translateXScrollContent()
     }
 }
 
@@ -20,9 +19,9 @@ struct TranslationServiceIconButtonStyle: ButtonStyle {
         let p = TranslationServicePalette(theme: theme)
         configuration.label.font(.system(size: 13))
             .frame(width: size, height: size)
-            .foregroundStyle(hovered ? (destructive ? p.error : p.accent) : p.muted)
-            .background(hovered ? (destructive ? p.errorFill : p.accentSoft) : .clear,
-                        in: RoundedRectangle(cornerRadius: 7))
+            .foregroundStyle(destructive ? p.error : hovered ? p.accent : p.muted)
+            .background(hovered ? p.fill : p.panel, in: RoundedRectangle(cornerRadius: 7))
+            .overlay { RoundedRectangle(cornerRadius: 7).strokeBorder(p.line) }
             .contentShape(RoundedRectangle(cornerRadius: 7))
             .opacity(enabled ? (configuration.isPressed ? 0.65 : 1) : 0.4)
             .onHover { hovered = $0 }.translateXControlCursor()
@@ -33,11 +32,11 @@ struct TranslationServiceIconButtonStyle: ButtonStyle {
 /// use the application's native material; these are only content surfaces.
 struct TranslationServicePalette {
     let theme: TranslateXTheme
-    var ink: Color { color(theme.isDark ? 0xe9edf3 : theme.isGlass ? 0x253346 : 0x242b37) }
-    var muted: Color { color(theme.isDark ? 0xadb7c7 : theme.isGlass ? 0x677b91 : 0x697789) }
-    var fill: Color { color(theme.isDark ? 0x353e4b : theme.isGlass ? 0xedf2f7 : 0xf5f6f8).opacity(theme.isGlass && !theme.isDark ? 0.68 : 1) }
-    var line: Color { color(theme.isDark ? 0x4d5968 : theme.isGlass ? 0xafbed0 : 0xe5e9ef).opacity(theme.increaseContrast ? 1 : theme.isDark ? 0.33 : theme.isGlass ? 0.35 : 1) }
-    var panel: Color { color(theme.isDark ? 0x303946 : 0xffffff).opacity(theme.isGlass && !theme.isDark ? 0.78 : 1) }
+    var ink: Color { color(theme.isDark ? 0xedf0f5 : 0x262d39) }
+    var muted: Color { color(theme.isDark ? 0xadb7c7 : 0x6c798c) }
+    var fill: Color { color(theme.isDark ? 0x293544 : 0xf2f7fc).opacity(theme.isGlass ? 0.55 : 1) }
+    var line: Color { color(theme.increaseContrast ? (theme.isDark ? 0x8391a5 : 0x899bad) : (theme.isDark ? 0x3e4d60 : 0xdfe8f1)) }
+    var panel: Color { color(theme.isDark ? 0x303946 : 0xffffff).opacity(theme.isGlass ? (theme.isDark ? 0.62 : 0.68) : 1) }
     var accent: Color { color(theme.isDark ? 0x4a99ff : 0x0875f5) }
     var accentSoft: Color { color(theme.isDark ? 0x30455e : 0xedf4fe) }
     var primary: Color { color(theme.isDark ? 0x176dde : 0x0875f5) }
@@ -81,7 +80,7 @@ struct TranslationServiceButtonStyle: ButtonStyle {
         switch kind {
         case .primary, .danger: return .white
         case .soft: return p.accent
-        case .quiet: return hovered ? p.ink : p.muted
+        case .quiet: return hovered ? p.accent : p.muted
         case .regular: return p.ink
         }
     }
@@ -91,7 +90,7 @@ struct TranslationServiceButtonStyle: ButtonStyle {
         case .primary: return p.primary.opacity(pressed ? 0.8 : hovered ? 0.9 : 1)
         case .danger: return p.error.opacity(pressed ? 0.8 : hovered ? 0.9 : 1)
         case .soft: return hovered || pressed ? p.accent.opacity(0.18) : p.accentSoft
-        case .quiet: return hovered || pressed ? p.fill : .clear
+        case .quiet: return .clear
         case .regular: return hovered || pressed ? p.fill : p.panel
         }
     }

@@ -2,7 +2,7 @@
 
 [返回首页](../README.md) · [English](#english)
 
-本说明描述 TSX 1.0.0 的数据行为。后续版本的数据行为变化会同步更新到相应说明。
+本说明描述 TSX 当前源码的数据行为。正式版本请参阅对应发布标签中的说明。
 
 ## 本机处理
 
@@ -11,7 +11,7 @@
 - TSX 不把翻译正文和译文保存为磁盘历史，也不将它们写入应用诊断日志。退出应用后不会恢复这些内容。
 - 偏好设置、服务地址、模型选择及服务测试的时间与结果状态会保存在本机。测试状态记录不包含翻译正文或完整响应。
 - API 密钥使用 macOS 钥匙串保存。可选账号登录使用独立的本机凭据存储；退出应用与退出账号是不同操作。
-- 应用仅在本机记录最近 30 天、最多 10,000 条翻译及样例请求的时间、模型、结果状态、耗时和服务返回的用量数字，可在设置中关闭或清空；不记录正文、截图、请求地址、完整错误或凭据，不上报给开发者。TSX 没有开发者运营的翻译中转服务。取词诊断可能在本机记录操作阶段、方式及错误码，不记录选区正文、剪贴板正文或截图。
+- 应用仅在本机记录翻译及样例请求的时间、模型、结果状态、耗时和服务返回的用量数字，可按服务暂停或清空统计。近期明细最多保留 30 个自然日、10,000 条，更早或超出明细容量的指标自动按天汇总，历史总量持续保留，直到清空统计或删除服务。暂停不删除历史；不记录正文、截图、请求地址、完整错误或凭据，不上报给开发者。TSX 没有开发者运营的翻译中转服务。取词诊断可能在本机记录操作阶段、方式及错误码，不记录选区正文、剪贴板正文或截图。
 
 ## 外部服务与联网
 
@@ -21,7 +21,7 @@
 
 ## 应用更新
 
-通过 Sparkle 检查更新，更新信息来自 `https://lumaxspace.com/updates/tsx/appcast.xml`，安装包通过 GitHub 下载。自动检查及自动下载默认关闭，可在设置中开启；自动检查通常每天一次。请求会向网站及下载托管服务提供 IP 地址、应用版本等常规连接信息，不包含翻译正文、截图、服务凭据或本机用量记录。未开启 Sparkle 系统信息采集。更新信息和安装包分别验证更新签名，正式安装包还需通过 Apple 签名及公证验证。
+通过 Sparkle 检查更新，更新信息来自 `https://lumaxspace.com/updates/tsx/appcast.xml`，安装包通过 GitHub 下载。应用启动时检查新版本；自动下载、安装和重启默认关闭，可在「关于」中开启自动更新。近期更新内容来自公开 GitHub Releases；用户主动刷新定价时，会无认证地连接 models.dev 获取公共美元参考费率。请求会向网站及下载托管服务提供 IP 地址、应用版本等常规连接信息，不包含翻译正文、截图、服务凭据或本机用量记录。未开启 Sparkle 系统信息采集。更新信息和安装包分别验证更新签名，正式安装包还需通过 Apple 签名及公证验证。
 
 ## 权限与剪贴板
 
@@ -37,7 +37,7 @@
 
 [Back to overview](../README.en.md)
 
-This notice describes data behavior in TSX 1.0.0. Changes to data behavior will be reflected in the relevant release documentation.
+This notice describes data behavior in the current TSX source. For a published version, refer to the notice at its release tag.
 
 ## Processing on your Mac
 
@@ -46,7 +46,7 @@ This notice describes data behavior in TSX 1.0.0. Changes to data behavior will 
 - TSX does not save translation text or results as disk history or include them in application diagnostic logs. They are not restored after quitting.
 - Preferences, service endpoints, model selections, and service-test timestamps and status are stored locally. Test status records do not include translation text or full responses.
 - API keys are stored in macOS Keychain. Optional account sign-in uses separate local credential storage. Quitting the app does not sign you out of an account.
-- TSX keeps local numeric usage records for up to 30 days and 10,000 translation or sample requests: time, model, result status, duration, and counts returned by the service. You can disable or clear these records in Settings. They exclude text, screenshots, request addresses, full errors, and credentials, and are not sent to the developer. TSX has no developer-operated translation relay. Local selection diagnostics may record operation stages, methods, and error codes, without selected text, clipboard text, or screenshots.
+- TSX keeps local numeric metrics for translation and sample requests: time, model, result status, duration, and counts returned by the service. Statistics can be paused or cleared separately for each service. Recent details are kept for up to 30 calendar days and 10,000 requests; older or excess details are summarized by day before removal, preserving historical totals until you clear statistics or delete the service. Pausing keeps existing history. They exclude text, screenshots, request addresses, full errors, and credentials, and are not sent to the developer. TSX has no developer-operated translation relay. Local selection diagnostics may record operation stages, methods, and error codes, without selected text, clipboard text, or screenshots.
 
 ## External services and network requests
 
@@ -56,7 +56,7 @@ Third-party retention, processing, and billing follow each service's own policie
 
 ## Software updates
 
-Sparkle retrieves update information from `https://lumaxspace.com/updates/tsx/appcast.xml`; installers are downloaded from GitHub. Automatic checks and downloads are off by default and can be enabled in Settings. Automatic checks normally run daily. Hosting providers receive ordinary connection information, such as IP address and app version, but no translation text, screenshots, service credentials or local usage records. Sparkle system profiling is disabled. Update metadata and archives have update signatures; official installers also require Apple code signing and notarization.
+Sparkle retrieves update information from `https://lumaxspace.com/updates/tsx/appcast.xml`; installers are downloaded from GitHub. The app checks for new versions at launch. Automatic downloading, installation and restart are off by default and can be enabled in About. Release history comes from public GitHub Releases. Refreshing model prices makes an unauthenticated request to models.dev for public USD reference rates. Hosting providers receive ordinary connection information, such as IP address and app version, but no translation text, screenshots, service credentials or local usage records. Sparkle system profiling is disabled. Update metadata and archives have update signatures; official installers also require Apple code signing and notarization.
 
 ## Permissions and clipboard
 

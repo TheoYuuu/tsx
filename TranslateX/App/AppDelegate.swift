@@ -57,8 +57,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.screenshots.cancel()
         }
         windows.applyAppearance()
-        updates.start()
         windows.updates = updates
+        updates.onPresentUpdate = { [weak self] in self?.windows.showAbout() }
+        updates.onPresentReleaseNotes = { [weak self] in self?.windows.showMainReleaseNotes() }
+        windows.startAccountQueries()
         configureMenus()
         shortcutSettings.start()
         updateMenuShortcuts()
@@ -67,6 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         menuBar.start()
         windows.showMain()
+        updates.start()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -112,6 +115,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func stopAcceptingWork() {
+        windows.accounts.stopAutomaticRefresh()
         windows.services.codex.beginShutdown()
         selectionID = nil
         selectionTask?.cancel()

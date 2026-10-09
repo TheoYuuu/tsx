@@ -1,7 +1,7 @@
 import Foundation
 
-/// Account data is fetched only on an explicit action, at verified official
-/// destinations. It is neither TSX request history nor a cost estimate.
+/// Account data is fetched manually or on an explicitly configured schedule,
+/// at verified official destinations. It is not a local spending estimate.
 /// https://api-docs.deepseek.com/zh-cn/api/get-user-balance/
 /// https://developers.deepl.com/api-reference/usage-and-quota/check-usage-and-limits
 nonisolated struct TranslationAccountUsageLoader: TranslationAccountUsageLoading {
@@ -11,7 +11,7 @@ nonisolated struct TranslationAccountUsageLoader: TranslationAccountUsageLoading
 
     init(session: URLSession? = nil, timeout: Duration = .seconds(20)) {
         self.session = session
-        self.timeout = max(.milliseconds(1), min(timeout, .seconds(20)))
+        self.timeout = max(.milliseconds(1), min(timeout, .seconds(120)))
     }
 
     static func supports(_ configuration: TranslationServiceConfiguration) -> Bool {
@@ -19,8 +19,15 @@ nonisolated struct TranslationAccountUsageLoader: TranslationAccountUsageLoading
     }
 
     func usage(configuration: TranslationServiceConfiguration, apiKey: String?) async throws -> TranslationAccountUsageSnapshot {
+        try await usage(configuration: configuration, apiKey: apiKey, timeout: timeout)
+    }
+
+    func usage(configuration: TranslationServiceConfiguration, apiKey: String?, timeout: Duration) async throws -> TranslationAccountUsageSnapshot {
         try Task.checkCancellation()
-        let request = try Self.makeRequest(configuration: configuration, apiKey: apiKey)
+        let deadline = max(.milliseconds(1), min(timeout, .seconds(120)))
+        let components = deadline.components
+        let seconds = Double(components.seconds) + Double(components.attoseconds) / 1e18
+        let request = try Self.makeRequest(configuration: configuration, apiKey: apiKey, timeout: seconds)
         do {
             return try await withThrowingTaskGroup(of: TranslationAccountUsageSnapshot.self) { group in
                 group.addTask {
@@ -40,7 +47,7 @@ nonisolated struct TranslationAccountUsageLoader: TranslationAccountUsageLoading
                     return try Self.parse(payload.data, kind: configuration.kind)
                 }
                 group.addTask {
-                    try await Task.sleep(for: timeout)
+                    try await Task.sleep(for: deadline)
                     throw RemoteTranslationError.timedOut
                 }
                 defer { group.cancelAll() }
@@ -58,7 +65,7 @@ nonisolated struct TranslationAccountUsageLoader: TranslationAccountUsageLoading
         }
     }
 
-    static func makeRequest(configuration: TranslationServiceConfiguration, apiKey: String?) throws -> URLRequest {
+    static func makeRequest(configuration: TranslationServiceConfiguration, apiKey: String?, timeout: TimeInterval = 20) throws -> URLRequest {
         // Check the destination before reading or placing a key in a request.
         let url = try queryURL(for: configuration)
         let key = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -67,7 +74,8 @@ nonisolated struct TranslationAccountUsageLoader: TranslationAccountUsageLoading
               !key.unicodeScalars.contains(where: CharacterSet.whitespacesAndNewlines.union(.controlCharacters).contains) else {
             throw RemoteTranslationError.invalidKey
         }
-        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 20)
+        let seconds = timeout.isFinite ? max(0.001, min(timeout, 120)) : 20
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: seconds)
         request.httpMethod = "GET"
         request.httpShouldHandleCookies = false
         request.setValue("application/json", forHTTPHeaderField: "Accept")

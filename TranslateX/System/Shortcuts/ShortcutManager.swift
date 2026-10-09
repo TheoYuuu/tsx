@@ -121,6 +121,52 @@ final class ShortcutManager {
         registrations[action] = nil
     }
 
+    /// Reuses existing key reservations when actions swap combinations. Newly
+    /// needed keys are reserved before any obsolete reservation is removed.
+    func replaceBindings(_ desired: [ShortcutAction: GlobalShortcut],
+                         handler: @escaping @MainActor (ShortcutAction) -> Void) throws {
+        guard Set(desired.values).count == desired.count else { throw ShortcutError.alreadyInUse }
+        for shortcut in desired.values {
+            guard shortcut.isValid else { throw ShortcutError.invalidShortcut }
+            guard !shortcut.isReserved else { throw ShortcutError.reservedShortcut }
+        }
+        let original = registrations
+        var reserved: [GlobalShortcut: UInt32] = [:]
+        var added: [UInt32] = []
+        var removed: [(ShortcutAction, Registration)] = []
+        do {
+            for shortcut in desired.values {
+                if let existing = original.values.first(where: { $0.shortcut == shortcut }) {
+                    reserved[shortcut] = existing.id
+                } else {
+                    guard nextID < UInt32.max else { throw ShortcutError.registrationFailed(OSStatus(paramErr)) }
+                    let id = nextID; nextID += 1
+                    try registrar.register(shortcut, id: id)
+                    reserved[shortcut] = id; added.append(id)
+                }
+            }
+            for (action, registration) in original where !desired.values.contains(registration.shortcut) {
+                try registrar.unregister(id: registration.id)
+                removed.append((action, registration))
+            }
+        } catch {
+            for id in added {
+                do { try registrar.unregister(id: id) }
+                catch { pendingCleanup.insert(id) }
+            }
+            // Keep actual registration state truthful if macOS also rejects
+            // restoring a removed key. Preferences are never committed here.
+            for (action, registration) in removed {
+                do { try registrar.register(registration.shortcut, id: registration.id) }
+                catch { registrations[action] = nil }
+            }
+            throw error
+        }
+        registrations = Dictionary(uniqueKeysWithValues: desired.map { action, shortcut in
+            (action, Registration(shortcut: shortcut, id: reserved[shortcut]!, handler: { handler(action) }))
+        })
+    }
+
     /// Attempts every binding even when one removal fails. Failed bindings stay represented.
     func unregisterAll() throws {
         recording = nil

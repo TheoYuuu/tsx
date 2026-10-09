@@ -30,6 +30,7 @@ struct TranslationTextEditor: NSViewRepresentable {
         scrollView.hasHorizontalScroller = false
         TranslateXScrollStyle.apply(to: scrollView)
         let textView = TranslationInputTextView(frame: .zero)
+        textView.setInteractionEnabled(context.environment.isEnabled)
         textView.configureReadingStyle(fontSize: fontSize, lineSpacing: lineSpacing)
         textView.setAccessibilityIdentifier(accessibilityID)
         textView.setAccessibilityLabel(L10n.string(accessibilityName))
@@ -45,6 +46,7 @@ struct TranslationTextEditor: NSViewRepresentable {
         TranslateXScrollStyle.apply(to: scrollView)
         context.coordinator.parent = self
         guard let textView = scrollView.documentView as? TranslationInputTextView else { return }
+        textView.setInteractionEnabled(context.environment.isEnabled)
         _ = locale
         textView.setAccessibilityLabel(L10n.string(accessibilityName))
         if textView.textColor != editorColor { textView.textColor = editorColor }
@@ -117,6 +119,7 @@ final class TranslationInputTextView: NSTextView {
     var undoWorkspace: (() -> Void)?
     var redoWorkspace: (() -> Void)?
     var onCancel: (() -> Bool)?
+    private(set) var isInteractionEnabled = true
     private let localUndoManager = UndoManager()
     private var ownedTextStorage: NSTextStorage?
     private var inputMutationDepth = 0
@@ -137,6 +140,7 @@ final class TranslationInputTextView: NSTextView {
     }
 
     override var undoManager: UndoManager? { localUndoManager }
+    override var acceptsFirstResponder: Bool { isInteractionEnabled && super.acceptsFirstResponder }
 
     override init(frame frameRect: NSRect, textContainer container: NSTextContainer? = nil) {
         let editingContainer: NSTextContainer
@@ -201,6 +205,16 @@ final class TranslationInputTextView: NSTextView {
 
     required init?(coder: NSCoder) { nil }
 
+    /// SwiftUI's disabled environment does not disable a represented NSTextView.
+    /// Keep its native storage, selection, marked text and undo history intact.
+    func setInteractionEnabled(_ enabled: Bool) {
+        guard isInteractionEnabled != enabled else { return }
+        isInteractionEnabled = enabled
+        isEditable = enabled
+        isSelectable = enabled
+        setAccessibilityEnabled(enabled)
+    }
+
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if window != nil { onWindowAttachment?(self) }
@@ -210,6 +224,11 @@ final class TranslationInputTextView: NSTextView {
     /// SwiftUI refreshes still go through the marked-text guard below.
     func finishCompositionForReplacement() {
         guard hasMarkedText() else { return }
+        // An explicit replacement may arrive while the workspace is covered.
+        // It remains separate from implicit input-method commits while disabled.
+        let wasEnabled = isInteractionEnabled
+        if !wasEnabled { setInteractionEnabled(true) }
+        defer { if !wasEnabled { setInteractionEnabled(false) } }
         unmarkText()
         inputContext?.discardMarkedText()
     }
@@ -261,25 +280,30 @@ final class TranslationInputTextView: NSTextView {
     }
 
     override func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
+        guard isInteractionEnabled else { return }
         withInputMutation {
             super.setMarkedText(string, selectedRange: selectedRange, replacementRange: replacementRange)
         }
     }
 
     override func insertText(_ insertString: Any, replacementRange: NSRange) {
+        guard isInteractionEnabled else { return }
         withInputMutation { super.insertText(insertString, replacementRange: replacementRange) }
     }
 
     override func unmarkText() {
+        guard isInteractionEnabled else { return }
         withInputMutation { super.unmarkText() }
     }
 
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard isInteractionEnabled else { return false }
         if handleSubmitKey(event) { return true }
         return super.performKeyEquivalent(with: event)
     }
 
     override func keyDown(with event: NSEvent) {
+        guard isInteractionEnabled else { return }
         if handleSubmitKey(event) { return }
         super.keyDown(with: event)
     }
@@ -288,6 +312,7 @@ final class TranslationInputTextView: NSTextView {
     // Our editor has its own undo stack, so both actions and validation must resolve
     // here instead of using the unrelated window undo manager.
     @objc func undo(_ sender: Any?) {
+        guard isInteractionEnabled else { return }
         if !hasMarkedText(), canUndoWorkspace?() == true { undoWorkspace?(); return }
         guard !hasMarkedText(), localUndoManager.canUndo else { return }
         breakUndoCoalescing()
@@ -295,6 +320,7 @@ final class TranslationInputTextView: NSTextView {
     }
 
     @objc func redo(_ sender: Any?) {
+        guard isInteractionEnabled else { return }
         if !hasMarkedText(), canRedoWorkspace?() == true { redoWorkspace?(); return }
         guard !hasMarkedText(), localUndoManager.canRedo else { return }
         breakUndoCoalescing()
@@ -312,12 +338,13 @@ final class TranslationInputTextView: NSTextView {
     }
 
     private func validateUndoAction(_ action: Selector?) -> Bool? {
-        if action == #selector(undo(_:)) { return !hasMarkedText() && (canUndoWorkspace?() == true || localUndoManager.canUndo) }
-        if action == #selector(redo(_:)) { return !hasMarkedText() && (canRedoWorkspace?() == true || localUndoManager.canRedo) }
+        if action == #selector(undo(_:)) { return isInteractionEnabled && !hasMarkedText() && (canUndoWorkspace?() == true || localUndoManager.canUndo) }
+        if action == #selector(redo(_:)) { return isInteractionEnabled && !hasMarkedText() && (canRedoWorkspace?() == true || localUndoManager.canRedo) }
         return nil
     }
 
     override func cancelOperation(_ sender: Any?) {
+        guard isInteractionEnabled else { return }
         if !hasMarkedText(), onCancel?() == true { return }
         super.cancelOperation(sender)
     }

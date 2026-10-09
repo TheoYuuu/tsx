@@ -22,21 +22,23 @@ final class TranslationUsageStoreTests: XCTestCase {
         XCTAssertNil(restored.records.first?.usage)
         XCTAssertEqual(restored.records.first?.duration, 2)
         XCTAssertEqual(restored.records.first?.configurationID, id)
-        let data = try XCTUnwrap(defaults.data(forKey: TranslationUsageStore.StorageKey.records))
-        let rows = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [[String: Any]])
-        XCTAssertEqual(Set(try XCTUnwrap(rows.first).keys), Set(["id", "configurationID", "model", "purpose", "outcome", "completedAt", "duration"]))
+        let data = try XCTUnwrap(defaults.data(forKey: TranslationUsageStore.StorageKey.snapshot))
+        let payload = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        let rows = try XCTUnwrap(payload["records"] as? [[String: Any]])
+        XCTAssertEqual(Set(try XCTUnwrap(rows.first).keys), Set(["id", "configurationID", "model", "purpose", "outcome", "completedAt", "duration", "pricingProvider"]))
+        XCTAssertEqual(rows.first?["pricingProvider"] as? String, "", "An unknown provider stores no endpoint, credential or translation text.")
     }
 
     func testDisableAndReenableDoNotResurrectInFlightRecords() throws {
         let defaults = try defaults(), store = TranslationUsageStore(defaults: defaults)
         let old = store.begin(configurationID: nil, model: "", purpose: .translation)
-        store.setEnabled(false)
+        store.setEnabled(false, for: nil)
         XCTAssertNil(store.begin(configurationID: nil, model: "", purpose: .translation))
-        store.setEnabled(true)
+        store.setEnabled(true, for: nil)
         store.finish(old, outcome: .succeeded)
         XCTAssertTrue(store.records.isEmpty)
-        store.setEnabled(false)
-        XCTAssertFalse(TranslationUsageStore(defaults: defaults).isEnabled)
+        store.setEnabled(false, for: nil)
+        XCTAssertFalse(TranslationUsageStore(defaults: defaults).isEnabled(for: nil))
     }
 
     func testClearOneServiceSuppressesOnlyItsPendingRequests() throws {
@@ -58,10 +60,10 @@ final class TranslationUsageStoreTests: XCTestCase {
         store.finish(pending, outcome: .failed)
         for _ in 0..<100 { await Task.yield() }
         XCTAssertTrue(store.records.isEmpty)
-        XCTAssertNil(defaults.data(forKey: TranslationUsageStore.StorageKey.records))
+        XCTAssertFalse(TranslationUsageStore(defaults: defaults).hasStatistics)
     }
 
-    func testRetentionDropsExpiredInvalidDuplicateAndExcessRecords() throws {
+    func testRetentionSummarizesExpiredAndExcessMetricsAndRejectsInvalidDuplicates() throws {
         let defaults = try defaults(), now = Date(), id = UUID()
         let valid = TranslationUsageRecord(id: id, configurationID: nil, model: "", purpose: .translation,
             outcome: .succeeded, completedAt: now, duration: 1, usage: nil)
@@ -82,6 +84,10 @@ final class TranslationUsageStoreTests: XCTestCase {
         XCTAssertEqual(store.records.count, TranslationUsageStore.maximumRecords)
         XCTAssertEqual(store.records.filter { $0.id == id }.count, 1)
         XCTAssertFalse(store.records.contains { $0.id == expired.id || $0.id == future.id })
+        XCTAssertEqual(store.totals(for: nil, now: now).requests, TranslationUsageStore.maximumRecords + 2)
+        XCTAssertEqual(store.summaries.reduce(0) { $0 + $1.totals.requests }, 2)
+        store.prune(now: now); store.flush()
+        XCTAssertEqual(TranslationUsageStore(defaults: defaults, now: now).totals(for: nil, now: now).requests, TranslationUsageStore.maximumRecords + 2)
     }
 
     func testDayRangeAndConfigurationFiltersKeepSampleTestsDistinct() throws {
@@ -107,7 +113,7 @@ final class TranslationUsageStoreTests: XCTestCase {
         XCTAssertEqual(result.text, "constructed private result")
         XCTAssertEqual(store.records.first?.usage?.totalTokens, 12)
         store.flush()
-        let serialized = String(decoding: try XCTUnwrap(defaults.data(forKey: TranslationUsageStore.StorageKey.records)), as: UTF8.self)
+        let serialized = String(decoding: try XCTUnwrap(defaults.data(forKey: TranslationUsageStore.StorageKey.snapshot)), as: UTF8.self)
         XCTAssertFalse(serialized.contains("private"))
         XCTAssertEqual(store.records.first?.purpose, .translation)
     }
@@ -128,6 +134,68 @@ final class TranslationUsageStoreTests: XCTestCase {
             XCTAssertEqual(store.records.first?.outcome, error is CancellationError ? .cancelled : .failed)
             XCTAssertEqual(store.records.first?.purpose, .sampleTest)
         }
+    }
+
+    func testPerServicePauseDoesNotAffectOtherServicesOrRemoveHistory() throws {
+        let defaults = try defaults(), store = TranslationUsageStore(defaults: defaults)
+        let first = UUID(), second = UUID()
+        store.finish(store.begin(configurationID: first, model: "a", purpose: .translation), outcome: .succeeded)
+        let pending = store.begin(configurationID: first, model: "a", purpose: .translation)
+        let other = store.begin(configurationID: second, model: "b", purpose: .translation)
+        store.setEnabled(false, for: first)
+        XCTAssertNil(store.begin(configurationID: first, model: "a", purpose: .translation))
+        store.setEnabled(true, for: first)
+        store.finish(pending, outcome: .succeeded)
+        store.finish(other, outcome: .succeeded)
+        XCTAssertEqual(store.totals(for: first).requests, 1)
+        XCTAssertEqual(store.totals(for: second).requests, 1)
+        store.setEnabled(false, for: first)
+        XCTAssertFalse(TranslationUsageStore(defaults: defaults).isEnabled(for: first))
+        XCTAssertTrue(store.isEnabled(for: second))
+        XCTAssertTrue(store.isEnabled(for: nil))
+        store.clearAll()
+        let cleared = TranslationUsageStore(defaults: defaults)
+        XCTAssertFalse(cleared.hasStatistics)
+        XCTAssertFalse(cleared.isEnabled(for: first), "Clearing statistics preserves each service's switch.")
+        XCTAssertTrue(cleared.isEnabled(for: second))
+    }
+
+    func testLegacyGlobalOptOutMigratesOnlyExistingServices() throws {
+        let defaults = try defaults(), existing = UUID()
+        defaults.set(false, forKey: TranslationUsageStore.StorageKey.enabled)
+        let store = TranslationUsageStore(defaults: defaults)
+        store.registerServices([nil, existing])
+        XCTAssertFalse(store.isEnabled(for: nil))
+        XCTAssertFalse(store.isEnabled(for: existing))
+        XCTAssertTrue(store.isEnabled(for: UUID()))
+        XCTAssertNil(defaults.object(forKey: TranslationUsageStore.StorageKey.enabled))
+        let restored = TranslationUsageStore(defaults: defaults)
+        XCTAssertFalse(restored.isEnabled(for: existing))
+    }
+
+    func testDailyRollupKeepsKnownZerosUnknownsPurposesAndWeightedDuration() throws {
+        let defaults = try defaults(), now = Date(), id = UUID(), store = TranslationUsageStore(defaults: defaults)
+        let old = now.addingTimeInterval(-40 * 86_400)
+        store.finish(store.begin(configurationID: id, model: "a", purpose: .translation, now: old.addingTimeInterval(-2)),
+                     outcome: .succeeded, usage: .init(inputTokens: 10, outputTokens: 0), now: old)
+        store.finish(store.begin(configurationID: id, model: "b", purpose: .sampleTest, now: old.addingTimeInterval(-4)),
+                     outcome: .failed, now: old)
+        store.finish(store.begin(configurationID: id, model: "a", purpose: .translation, now: now.addingTimeInterval(-6)),
+                     outcome: .succeeded, usage: .init(inputTokens: 20, outputTokens: 30), now: now)
+        store.prune(now: now); store.flush()
+        let restored = TranslationUsageStore(defaults: defaults, now: now)
+        XCTAssertEqual(restored.records.count, 1)
+        XCTAssertEqual(restored.totals(for: id, now: now).requests, 3)
+        XCTAssertEqual(restored.totals(for: id, now: now).averageDuration, 4)
+        XCTAssertEqual(restored.totals(for: id, now: now).inputTokens, 30)
+        XCTAssertEqual(restored.totals(for: id, purpose: .translation, now: now).outputTokens, 30)
+        XCTAssertNil(restored.totals(for: id, purpose: .sampleTest, now: now).totalTokens)
+        XCTAssertEqual(restored.totals(for: id, days: 30, now: now).requests, 1)
+        restored.setEnabled(false, for: id)
+        restored.clear(configurationID: id)
+        let cleared = TranslationUsageStore(defaults: defaults, now: now)
+        XCTAssertFalse(cleared.hasStatistics(for: id))
+        XCTAssertFalse(cleared.isEnabled(for: id))
     }
 
     func testWebsiteValidationMigrationAndRequestIdentity() throws {

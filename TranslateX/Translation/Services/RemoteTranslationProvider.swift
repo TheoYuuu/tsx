@@ -117,6 +117,7 @@ struct RemoteTranslationProvider: TranslationProvider {
             defer { task.cancel() }
             return try await withTaskCancellationHandler {
                 guard let response = response as? HTTPURLResponse else { throw RemoteTranslationError.invalidResponse }
+                TranslationUsageHTTPContext.record(status: response.statusCode)
                 guard response.url == request.url else { throw RemoteTranslationError.redirected }
                 if (300...399).contains(response.statusCode) { throw RemoteTranslationError.redirected }
                 if !(200...299).contains(response.statusCode) {

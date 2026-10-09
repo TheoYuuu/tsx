@@ -4,6 +4,104 @@ import XCTest
 
 @MainActor
 final class ShortcutSettingsTests: XCTestCase {
+    func testResetAllRestoresSwappedCombinationsAndKeepsPausedActionPaused() async throws {
+        let fixture = ShortcutSettingsFixture()
+        fixture.settings.start()
+        let temporary = GlobalShortcut(keyCode: UInt32(kVK_ANSI_J), modifiers: UInt32(optionKey))
+        XCTAssertTrue(fixture.settings.update(temporary, for: .selection))
+        XCTAssertTrue(fixture.settings.update(ShortcutAction.selection.defaultShortcut, for: .input))
+        XCTAssertTrue(fixture.settings.update(ShortcutAction.input.defaultShortcut, for: .selection))
+        XCTAssertTrue(fixture.settings.update(temporary, for: .ocr))
+        XCTAssertTrue(fixture.settings.setEnabled(false, for: .ocr))
+        let attempts = fixture.registrar.registrationAttempts
+        XCTAssertTrue(fixture.settings.hasCustomizedCombinations)
+        XCTAssertTrue(fixture.settings.resetAll())
+        XCTAssertFalse(fixture.settings.hasCustomizedCombinations)
+        XCTAssertFalse(fixture.settings.isEnabled(.ocr))
+        XCTAssertNil(fixture.settings.effectiveShortcut(for: .ocr))
+        XCTAssertEqual(fixture.registrar.registrationAttempts, attempts, "Swapped reservations should be reused")
+        for action in [ShortcutAction.selection, .input] {
+            XCTAssertEqual(fixture.settings.effectiveShortcut(for: action), action.defaultShortcut)
+            fixture.registrar.onHotKey?(try fixture.id(for: action))
+        }
+        XCTAssertEqual(fixture.events.actions, [.selection, .input])
+        let reloaded = AppPreferences(defaults: fixture.defaults)
+        XCTAssertEqual(reloaded.rememberedShortcut(for: .ocr), ShortcutAction.ocr.defaultShortcut)
+        XCTAssertNil(reloaded.shortcut(for: .ocr))
+    }
+
+    func testFailedResetAllKeepsEveryPreferenceAndExistingBinding() async {
+        let fixture = ShortcutSettingsFixture()
+        fixture.settings.start()
+        let custom = GlobalShortcut(keyCode: UInt32(kVK_ANSI_J), modifiers: UInt32(optionKey))
+        XCTAssertTrue(fixture.settings.update(custom, for: .selection))
+        let prior = fixture.registrar.registered
+        let revision = fixture.preferences.shortcutRevision
+        fixture.registrar.failingShortcuts = [ShortcutAction.selection.defaultShortcut]
+        XCTAssertFalse(fixture.settings.resetAll())
+        XCTAssertEqual(fixture.registrar.registered, prior)
+        XCTAssertEqual(fixture.preferences.shortcutRevision, revision)
+        XCTAssertEqual(fixture.settings.rememberedShortcut(for: .selection), custom)
+        XCTAssertEqual(fixture.settings.effectiveShortcut(for: .selection), custom)
+    }
+
+    func testResetAllRemovalFailureReleasesCandidateWithoutCommitting() async throws {
+        let fixture = ShortcutSettingsFixture()
+        fixture.settings.start()
+        let custom = GlobalShortcut(keyCode: UInt32(kVK_ANSI_J), modifiers: UInt32(optionKey))
+        XCTAssertTrue(fixture.settings.update(custom, for: .selection))
+        fixture.registrar.failingRemovalIDs = [try fixture.id(for: .selection)]
+        let prior = fixture.registrar.registered
+        let revision = fixture.preferences.shortcutRevision
+        XCTAssertFalse(fixture.settings.resetAll())
+        XCTAssertEqual(fixture.registrar.registered, prior)
+        XCTAssertEqual(fixture.preferences.shortcutRevision, revision)
+        XCTAssertEqual(fixture.settings.effectiveShortcut(for: .selection), custom)
+    }
+
+    func testResetAllRollbackRegistrationFailureNotifiesMenusOfLostBinding() async throws {
+        let fixture = ShortcutSettingsFixture()
+        fixture.settings.start()
+        let customBindings: [ShortcutAction: GlobalShortcut] = [
+            .selection: .init(keyCode: UInt32(kVK_ANSI_J), modifiers: UInt32(optionKey)),
+            .input: .init(keyCode: UInt32(kVK_ANSI_K), modifiers: UInt32(optionKey)),
+            .ocr: .init(keyCode: UInt32(kVK_ANSI_L), modifiers: UInt32(optionKey))
+        ]
+        for (action, shortcut) in customBindings {
+            XCTAssertTrue(fixture.settings.update(shortcut, for: action))
+        }
+        let originalIDs = try Dictionary(uniqueKeysWithValues: ShortcutAction.allCases.map {
+            ($0, try fixture.id(for: $0))
+        })
+        let preferenceRevision = fixture.preferences.shortcutRevision
+        let notifications = fixture.events.bindingChanges
+        // Whichever dictionary entry is removed first cannot be restored after
+        // the second removal fails. No assertion depends on iteration order.
+        fixture.registrar.failingRemovalAttempt = fixture.registrar.removalAttempts + 2
+        fixture.registrar.failingShortcuts = Set(customBindings.values)
+
+        XCTAssertFalse(fixture.settings.resetAll())
+
+        let lostActions = ShortcutAction.allCases.filter { fixture.settings.effectiveShortcut(for: $0) == nil }
+        XCTAssertEqual(lostActions.count, 1)
+        XCTAssertEqual(fixture.events.bindingChanges, notifications + 1,
+                       "Menus must refresh when rollback cannot restore an active shortcut.")
+        XCTAssertEqual(fixture.preferences.shortcutRevision, preferenceRevision)
+        for action in ShortcutAction.allCases {
+            XCTAssertEqual(fixture.settings.configuredShortcut(for: action), customBindings[action])
+            XCTAssertEqual(fixture.manager.shortcut(for: action), fixture.settings.effectiveShortcut(for: action))
+            if lostActions.contains(action) {
+                XCTAssertNotNil(fixture.settings.error(for: action))
+                XCTAssertNil(fixture.registrar.registered[try XCTUnwrap(originalIDs[action])])
+            } else {
+                XCTAssertEqual(fixture.settings.effectiveShortcut(for: action), customBindings[action])
+            }
+        }
+        let lostAction = try XCTUnwrap(lostActions.first)
+        fixture.registrar.onHotKey?(try XCTUnwrap(originalIDs[lostAction]))
+        XCTAssertTrue(fixture.events.actions.isEmpty, "A removed reservation must not route a stale action.")
+    }
+
     func testPauseRetainsCustomCombinationAcrossRestartAndResumeChecksConflicts() async {
         let fixture = ShortcutSettingsFixture()
         fixture.settings.start()
@@ -266,6 +364,8 @@ final class SettingsHotKeyRegistrar: HotKeyRegistering {
     var failingShortcuts: Set<GlobalShortcut> = []
     var failingRemovalIDs: Set<UInt32> = []
     var registrationAttempts = 0
+    var removalAttempts = 0
+    var failingRemovalAttempt: Int?
 
     func register(_ shortcut: GlobalShortcut, id: UInt32) throws {
         registrationAttempts += 1
@@ -274,7 +374,10 @@ final class SettingsHotKeyRegistrar: HotKeyRegistering {
     }
 
     func unregister(id: UInt32) throws {
-        if failingRemovalIDs.contains(id) { throw ShortcutError.unregistrationFailed(-50) }
+        removalAttempts += 1
+        if failingRemovalIDs.contains(id) || removalAttempts == failingRemovalAttempt {
+            throw ShortcutError.unregistrationFailed(-50)
+        }
         registered[id] = nil
     }
 }
