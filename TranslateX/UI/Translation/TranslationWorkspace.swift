@@ -81,7 +81,7 @@ struct TranslationWorkspace: View {
         .overlay(alignment: .topLeading) {
             if model.text(on: side).isEmpty {
                 Text(side == .source ? "Type or paste text…" : "Your translation appears here.\nYou can also type directly…")
-                    .font(.system(size: fontSize)).lineSpacing(2)
+                    .font(.system(size: 16)).lineSpacing(2)
                     .foregroundStyle(theme.faint).padding(.top, 2).allowsHitTesting(false)
             }
         }
@@ -97,7 +97,7 @@ struct TranslationWorkspace: View {
                 .fixedSize()
         } else {
             Text(LanguageCatalog.displayName(for: side == .source ? model.source : model.target))
-                .font(.system(size: compact ? 12 : 14, weight: .medium))
+                .font(.system(size: 12, weight: .medium))
         }
     }
 

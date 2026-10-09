@@ -270,6 +270,14 @@ final class TranslationModel {
         let changed = value != text(on: side) || self.isComposing != isComposing
         guard changed else { return }
         self.isComposing = isComposing
+        if !isComposing, value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            // Empty input has no provider response to replace the opposite pane.
+            // Reset the pair immediately; native undo still owns the user's deletion.
+            clear(keepingUndo: false)
+            setText(value, on: side)
+            inputSide = side
+            return
+        }
         screenshot = nil
         setText(value, on: side)
         contentChanged(on: side)

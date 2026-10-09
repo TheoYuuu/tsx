@@ -512,7 +512,7 @@ final class TranslationModelTests: XCTestCase {
         XCTAssertEqual(model.displayedResult?.text, "A quiet morning.")
     }
 
-    func testDeletingSourceKeepsTheOtherEditorAndRejectsTheRunningResponse() async throws {
+    func testDeletingSourceClearsTheOtherEditorAndRejectsTheRunningResponse() async throws {
         let model = TranslationModel(automaticallyTranslates: true)
         model.source = "en"
         model.text = "Original passage."
@@ -525,12 +525,14 @@ final class TranslationModelTests: XCTestCase {
         let task = Task { await model.run(request, provider: provider) }
         while provider.continuation == nil { await Task.yield() }
         model.editingChanged(" \n ", isComposing: false)
-        XCTAssertEqual(model.translatedText, "原文。")
+        XCTAssertEqual(model.text, " \n ")
+        XCTAssertTrue(model.translatedText.isEmpty)
+        XCTAssertNil(model.displayedResult)
         XCTAssertNil(model.result)
         XCTAssertEqual(model.phase, .empty)
         provider.continuation?.resume(returning: TranslationResult(text: "late", source: "en", target: "zh-Hans"))
         await task.value
-        XCTAssertEqual(model.translatedText, "原文。")
+        XCTAssertTrue(model.translatedText.isEmpty)
         XCTAssertNil(model.result)
         XCTAssertNil(model.request)
     }

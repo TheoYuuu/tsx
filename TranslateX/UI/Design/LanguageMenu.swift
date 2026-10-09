@@ -29,7 +29,7 @@ struct LanguageMenu: NSViewRepresentable {
         control.onSelect = { selection = $0 }
         control.isEnabled = enabled && context.environment.isEnabled
         control.hoverCursor = theme.hoverCursor
-        control.labelFont = .systemFont(ofSize: prominent ? 14 : 12, weight: prominent ? .semibold : .regular)
+        control.labelFont = .systemFont(ofSize: 12, weight: prominent ? .semibold : .regular)
         control.contentTintColor = NSColor(theme.ink)
         control.setAccessibilityLabel(label)
         control.fillColor = NSColor(theme.card)
@@ -80,7 +80,7 @@ final class LanguageMenuControl: NSPopUpButton, NSMenuDelegate {
         }
     }
 
-    var labelFont = NSFont.systemFont(ofSize: 14, weight: .semibold)
+    var labelFont = NSFont.systemFont(ofSize: 12, weight: .semibold)
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect, pullsDown: true)

@@ -135,6 +135,153 @@ final class BidirectionalTranslationTests: XCTestCase {
         XCTAssertEqual(f.model.translatedText, "最新结果。")
     }
 
+    func testDeletingLastNativeCharacterClearsBothSidesAndEitherSideCanRestart() async throws {
+        try await checkNativeDeletion(selectAll: false)
+    }
+
+    func testSelectAllDeletionClearsBothSidesAndEitherSideCanRestart() async throws {
+        try await checkNativeDeletion(selectAll: true)
+    }
+
+    private func checkNativeDeletion(selectAll: Bool) async throws {
+        for deletedSide in [TranslationSide.source, .target] {
+            for restartedSide in [TranslationSide.source, .target] {
+                let f = try fixture()
+                defer { f.finish() }
+                f.model.source = "en"
+                f.model.editingChanged(selectAll ? "A clear sentence." : "A", isComposing: false)
+                await f.pauseAndStart()
+                f.provider.complete(0, text: selectAll ? "一个清晰的句子。" : "啊")
+                await settle()
+
+                let editors = [TranslationSide.source, .target].map { side in
+                    let editor = TranslationTextEditor(text: Binding(get: { f.model.text(on: side) }, set: { _ in }),
+                        onEdit: { f.model.editingChanged($0, isComposing: $1, side: side) }, onSubmit: { f.model.submit() },
+                        managesWorkspaceUndo: true)
+                    let coordinator = editor.makeCoordinator()
+                    let native = TranslationInputTextView(frame: NSRect(x: 0, y: 0, width: 300, height: 180))
+                    coordinator.connect(native)
+                    coordinator.synchronize(native)
+                    return (coordinator, native)
+                }
+                let deleting = editors[deletedSide == .source ? 0 : 1].1
+                if selectAll { deleting.selectAll(nil) }
+                else { deleting.setSelectedRange(NSRange(location: (deleting.string as NSString).length, length: 0)) }
+                let credentialReads = f.credentials.reads
+                deleting.deleteBackward(nil)
+                for (coordinator, native) in editors { coordinator.synchronize(native) }
+                await settle()
+                XCTAssertTrue(editors.allSatisfy { $0.1.string.isEmpty })
+                XCTAssertTrue(f.model.text.isEmpty && f.model.translatedText.isEmpty)
+                XCTAssertEqual(f.model.phase, .empty)
+                XCTAssertNil(f.model.displayedResult)
+                XCTAssertNil(f.model.partialSide)
+                XCTAssertFalse(f.model.translationWasEdited)
+                XCTAssertEqual(f.credentials.reads, credentialReads)
+                XCTAssertEqual(f.clock.pendingCount, 0)
+                XCTAssertEqual(f.provider.requests.count, 1)
+
+                let restarting = editors[restartedSide == .source ? 0 : 1].1
+                let input = restartedSide == .source ? "A new sentence." : "重新输入中文。"
+                let output = restartedSide == .source ? "一个新句子。" : "Enter Chinese again."
+                if restartedSide == .target {
+                    restarting.setMarkedText("chong", selectedRange: NSRange(location: 5, length: 0),
+                        replacementRange: NSRange(location: NSNotFound, length: 0))
+                    for (coordinator, native) in editors { coordinator.synchronize(native) }
+                    XCTAssertTrue(f.model.isComposing)
+                    XCTAssertEqual(f.provider.requests.count, 1)
+                }
+                restarting.insertText(input, replacementRange: NSRange(location: NSNotFound, length: 0))
+                await f.pauseAndStart()
+                XCTAssertEqual(f.provider.requests.count, 2)
+                XCTAssertEqual(f.provider.requests.last?.text, input)
+                XCTAssertEqual(f.provider.requests.last?.source, restartedSide == .source ? "en" : "zh-Hans")
+                XCTAssertEqual(f.provider.requests.last?.target, restartedSide == .source ? "zh-Hans" : "en")
+                f.provider.complete(1, text: output)
+                await settle()
+                for (coordinator, native) in editors { coordinator.synchronize(native) }
+                XCTAssertEqual(f.model.text(on: restartedSide.opposite), output)
+                XCTAssertEqual(editors[restartedSide == .source ? 1 : 0].1.string, output)
+                XCTAssertEqual(f.model.phase, .completed)
+                XCTAssertEqual(f.clock.pendingCount, 0)
+            }
+        }
+    }
+
+    func testBlankEditCancelsPendingAndStreamingWorkInBothDirections() async throws {
+        for side in [TranslationSide.source, .target] {
+            let f = try fixture()
+            defer { f.finish() }
+            f.model.source = "en"
+            f.model.editingChanged("First input.", isComposing: false, side: side)
+            await f.pauseAndStart()
+            f.provider.partial(0, "A")
+            f.model.editingChanged("", isComposing: false, side: side)
+            f.provider.partial(0, "Late chunk")
+            f.provider.complete(0, text: "Late completion")
+            await settle()
+            XCTAssertTrue(f.model.text.isEmpty && f.model.translatedText.isEmpty)
+            XCTAssertNil(f.model.partialSide)
+            XCTAssertNil(f.model.result)
+            XCTAssertNil(f.model.request)
+
+            f.model.editingChanged("Waiting input.", isComposing: false, side: side)
+            await settle()
+            XCTAssertEqual(f.clock.pendingCount, 1)
+            f.model.editingChanged(" \n\t", isComposing: false, side: side)
+            await f.pauseAndStart()
+            XCTAssertEqual(f.model.text(on: side), " \n\t")
+            XCTAssertTrue(f.model.text(on: side.opposite).isEmpty)
+            XCTAssertEqual(f.provider.requests.count, 1)
+            XCTAssertEqual(f.model.phase, .empty)
+        }
+    }
+
+    func testBlankCompositionWaitsForCommitBeforeClearingTheOtherSide() async throws {
+        for side in [TranslationSide.source, .target] {
+            let f = try fixture()
+            defer { f.finish() }
+            f.model.source = "en"
+            f.model.editingChanged("A clear sentence.", isComposing: false)
+            await f.pauseAndStart()
+            f.provider.complete(0, text: "一个清晰的句子。")
+            await settle()
+            let previous = f.model.text(on: side.opposite)
+            f.model.editingChanged("", isComposing: true, side: side)
+            XCTAssertEqual(f.model.text(on: side.opposite), previous)
+            XCTAssertEqual(f.model.phase, .composing)
+            f.model.editingChanged("", isComposing: false, side: side)
+            XCTAssertTrue(f.model.text.isEmpty && f.model.translatedText.isEmpty)
+            XCTAssertEqual(f.model.phase, .empty)
+            XCTAssertFalse(f.model.isComposing)
+            XCTAssertNil(f.model.displayedResult)
+        }
+    }
+
+    func testBlankEditClearsLocalCopiesAndManualTranslationsWithoutRequests() async throws {
+        for side in [TranslationSide.source, .target] {
+            let f = try fixture()
+            defer { f.finish() }
+            f.model.editingChanged("123", isComposing: false, side: side)
+            f.model.editingChanged("", isComposing: false, side: side)
+            XCTAssertTrue(f.model.text.isEmpty && f.model.translatedText.isEmpty)
+            XCTAssertTrue(f.provider.requests.isEmpty)
+
+            f.model.source = "en"
+            f.model.setAutomaticTranslation(false)
+            f.model.editingChanged("Manual input.", isComposing: false, side: side)
+            f.model.submit()
+            await settle()
+            f.provider.complete(0, text: "Manual output.")
+            await settle()
+            f.model.editingChanged("", isComposing: false, side: side)
+            XCTAssertTrue(f.model.text.isEmpty && f.model.translatedText.isEmpty)
+            XCTAssertEqual(f.provider.requests.count, 1)
+            XCTAssertEqual(f.clock.pendingCount, 0)
+            XCTAssertFalse(f.model.usesAutomaticTranslation)
+        }
+    }
+
     func testStoppingRetainsPartialTextAndOnlyNewInputRestartsAutomaticTranslation() async throws {
         for side in [TranslationSide.source, .target] {
             let f = try fixture()
