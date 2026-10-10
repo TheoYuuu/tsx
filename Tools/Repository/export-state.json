@@ -24,6 +24,10 @@
       "mode": "100644",
       "sha256": "97704a8960b4facceef54397a08fb5d0a456247c3627359215aa2a27df22656c"
     },
+    "Docs/ProviderAPIs.md": {
+      "mode": "100644",
+      "sha256": "6ddccf3bc12746e6e1e9a64c5af066bd709cde3c7c45a36db4356a58faadee36"
+    },
     "LICENSE": {
       "mode": "100644",
       "sha256": "12e3d9c7c5d983a8410af6140b9894e255dd0d02c06c3e81d3f815387dd8d8b4"
@@ -150,7 +154,7 @@
     },
     "Tools/Assets/ProviderLogos/README.md": {
       "mode": "100644",
-      "sha256": "33631c63e17b2769993b0a2fa58dc1c2b612df25138566db41de0a5d45e62f35"
+      "sha256": "e2dfa6652fcfe5c8e107a9c9808f52e0009c1e6fd1e8cd73ee6334eff05ba0c2"
     },
     "Tools/Assets/ProviderLogos/Source/azure-color.svg": {
       "mode": "100644",
@@ -168,9 +172,33 @@
       "mode": "100644",
       "sha256": "deba5f98a5c1796e20fcac3149bcd7eb8a32f0bdd04d048819400b1f28bd1439"
     },
+    "Tools/Assets/ProviderLogos/Source/doubao-color.svg": {
+      "mode": "100644",
+      "sha256": "3cd31ba03ae44b8c29561597a3b863809efecb13fcdfd08407a086df86a69b55"
+    },
+    "Tools/Assets/ProviderLogos/Source/gemini-color.svg": {
+      "mode": "100644",
+      "sha256": "8ab0a9bafec11f7e69bcb9fc4ffd8f1bc927d1ddcbbb6ff36dee5ae8b5a9d602"
+    },
     "Tools/Assets/ProviderLogos/Source/googlecloud-color.svg": {
       "mode": "100644",
       "sha256": "c0faf37b180dfc1efe12440c039047b0e1c60a3c424cca6616e580f6f219a7dc"
+    },
+    "Tools/Assets/ProviderLogos/Source/kimi.svg": {
+      "mode": "100644",
+      "sha256": "ed08131b46acf70e6e2144eceb775e74098b58ea65fa21eaee04be7b05cfe63b"
+    },
+    "Tools/Assets/ProviderLogos/Source/minimax-color.svg": {
+      "mode": "100644",
+      "sha256": "7f7187fa6d9b341ac5f22f6c5a970523afb439dc45566d64eb4f4b9b604d6b01"
+    },
+    "Tools/Assets/ProviderLogos/Source/mistral-color.svg": {
+      "mode": "100644",
+      "sha256": "722f74b289d95486b43662fe24fa883b333701296f618406cd0ed502299170b6"
+    },
+    "Tools/Assets/ProviderLogos/Source/newapi-color.svg": {
+      "mode": "100644",
+      "sha256": "b54496a735b49c4e5d7d1b5f00be9f33e0e4ef3f04a7c4c167dc9209dcae334b"
     },
     "Tools/Assets/ProviderLogos/Source/ollama.svg": {
       "mode": "100644",
@@ -180,17 +208,41 @@
       "mode": "100644",
       "sha256": "a595df6b423920c67a7f8f73c063e4bfb72d415948097b6cac063a2366bb5186"
     },
+    "Tools/Assets/ProviderLogos/Source/openrouter.svg": {
+      "mode": "100644",
+      "sha256": "ae671cc83de9bd45db97a47ed5e38a4e1bd9f93a12be495ba4b4f8b284026bca"
+    },
     "Tools/Assets/ProviderLogos/Source/qwen-color.svg": {
       "mode": "100644",
       "sha256": "77f5768c66d08ce1d3d14e73373975c1bc0454be88c81523ddd0ffd7e2974029"
+    },
+    "Tools/Assets/ProviderLogos/Source/siliconcloud-color.svg": {
+      "mode": "100644",
+      "sha256": "a02d8d7ccb81739fbc720e2e5daaf149013dd5088605dc2dce1b71df0784d424"
+    },
+    "Tools/Assets/ProviderLogos/Source/stepfun-color.svg": {
+      "mode": "100644",
+      "sha256": "f55afc0e6004c8854f76bd5bbcc0fce9fc0ed9316691d54fb02d088c24fab40d"
     },
     "Tools/Assets/ProviderLogos/Source/tencentcloud-color.svg": {
       "mode": "100644",
       "sha256": "f860dae064a3afd24970efd2bc5892f39438526bf52c3a9748f61fc05c1cfd58"
     },
+    "Tools/Assets/ProviderLogos/Source/xai.svg": {
+      "mode": "100644",
+      "sha256": "89eb7de9f0d02a41cfecd9109e253d7fd3529e27467dee4254faa67f3ac21451"
+    },
+    "Tools/Assets/ProviderLogos/Source/xiaomimimo.svg": {
+      "mode": "100644",
+      "sha256": "b04ad7dad52af2212c4567daf0ee6856f2c4625c92c680a27f9880295d558b71"
+    },
+    "Tools/Assets/ProviderLogos/Source/zhipu-color.svg": {
+      "mode": "100644",
+      "sha256": "8174e65ff71647d5c705c920c953a82bd723d9e3e42887bdd4ffc9dfe51207a0"
+    },
     "Tools/Assets/ProviderLogos/sources.json": {
       "mode": "100644",
-      "sha256": "d92733eeedd4fd9739c9ebaaf61924fc8c9611af5f16a86cbe4f3be2f538d3bc"
+      "sha256": "35d40f73681319f88808db76ac01c232010b14159d373b9113431372f73f864b"
     },
     "Tools/Assets/README.md": {
       "mode": "100644",
@@ -242,7 +294,7 @@
     },
     "Tools/QA/CaptureTranslationServiceReview.py": {
       "mode": "100644",
-      "sha256": "99fbefddfe565f49fcea96dd618f440391fb835b6c1f305309de7d5608d65161"
+      "sha256": "f430d8e72ca9620ebd70de65deacbb0b76a9c8a10fdcfd51d508fbeedd16e160"
     },
     "Tools/QA/CheckInteractionLayout.py": {
       "mode": "100644",
@@ -370,7 +422,7 @@
     },
     "Tools/QA/README.md": {
       "mode": "100644",
-      "sha256": "c265261eb12040e6e3cf8124d38fca5e72dfb421edd751f785c6c6a34beb3bf0"
+      "sha256": "7fdfc758c33ad6a2d42e0f6dc1867b1744f6e71c95d02f1e3cc89f100aedfa21"
     },
     "Tools/QA/RemoteTranslationNetworkProbe.swift": {
       "mode": "100644",
@@ -390,7 +442,7 @@
     },
     "Tools/QA/TranslationServiceVisualReview.swift": {
       "mode": "100644",
-      "sha256": "7816c85a78b04eb7a2289a343e04e06b1c9a703fedffa09efd32a476f0bfce43"
+      "sha256": "d8ec843922c8ba947df82d512824225a3c41c2f5ed24142404c49fba08ed4b19"
     },
     "Tools/QA/ValidateProject.swift": {
       "mode": "100644",
@@ -408,17 +460,25 @@
       "mode": "100644",
       "sha256": "7ed2941a89c585b1772b15dcb4b66bf96f57522da1d24c4a0eefa37c856790e2"
     },
+    "Tools/Release/archive_evidence.py": {
+      "mode": "100644",
+      "sha256": "4ab17ded1f544a966cbed1270eb35dec5ffc27145815ed065b629256bfe0f7f6"
+    },
     "Tools/Release/release.py": {
       "mode": "100644",
-      "sha256": "10f05e5d7fd4a102fbbf8d9ac55291068c7b1b23035a143643474e2f7443329f"
+      "sha256": "14d3ca1a6b1fcaf5c6404097e60341bd612f7e6ab6209685406f44971a65a913"
     },
     "Tools/Release/setup_sparkle.py": {
       "mode": "100644",
       "sha256": "838296474c99805b3f9a008c806ce50ed61285015758f9568bcfc90c7cc7d2e0"
     },
+    "Tools/Release/test_release.py": {
+      "mode": "100644",
+      "sha256": "b39f7725e75e07ad12138f28c42759d463cfaac38f1fc600f48d595184fdb29a"
+    },
     "TranslateX.xcodeproj/project.pbxproj": {
       "mode": "100644",
-      "sha256": "b373eb5b80dc6b268a5c39e6b98f1126efd0c11e3e66ede26e22ebe9130225a7"
+      "sha256": "94e54974ce6fcf5aa466785d1d6870587cab30c1710025ecd34ce64f3bb232ba"
     },
     "TranslateX.xcodeproj/project.xcworkspace/contents.xcworkspacedata": {
       "mode": "100644",
@@ -580,6 +640,30 @@
       "mode": "100644",
       "sha256": "f61b815e6c16d14be5ec366cee45807e324176d8c2e0cad8387da1779809a2e5"
     },
+    "TranslateX/Resources/Assets.xcassets/ProviderDoubao.imageset/Contents.json": {
+      "mode": "100644",
+      "sha256": "f28022d57cfbdcb1a1e01694609eb5b48b88ec29f485cf4bc985f2a4debc24d5"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderDoubao.imageset/ProviderDoubao.svg": {
+      "mode": "100644",
+      "sha256": "8d3a58d483b603793fe21cf3a2fb79c49fdf7e6cf0dd121b62fb797cb6883020"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderGLM.imageset/Contents.json": {
+      "mode": "100644",
+      "sha256": "72d16c033dc1288f5f4abab57548caa66b086cbf8e062b342e1a1e9ca90f94a2"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderGLM.imageset/ProviderGLM.svg": {
+      "mode": "100644",
+      "sha256": "470987e3da10e7e029df6f19d64496e71d01d56792742d6123d140b7dbce75ac"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderGemini.imageset/Contents.json": {
+      "mode": "100644",
+      "sha256": "f629fb93c40cb45f37662ef8a56b77b1721fa7e0fcf91d042ff50b367b3c7b25"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderGemini.imageset/ProviderGemini.svg": {
+      "mode": "100644",
+      "sha256": "39e4f537289d0fff766d956578dbb381f0fc4622e1e486d9bcc9ceb051521d26"
+    },
     "TranslateX/Resources/Assets.xcassets/ProviderGoogleCloud.imageset/Contents.json": {
       "mode": "100644",
       "sha256": "f7eb42d899709b9fe1b269a3368e0e1e7ba797fee465ea618b97e729cd7cd4ff"
@@ -587,6 +671,38 @@
     "TranslateX/Resources/Assets.xcassets/ProviderGoogleCloud.imageset/ProviderGoogleCloud.svg": {
       "mode": "100644",
       "sha256": "87c9844cf867150b77bcb1556d5e57e440a3c63756952d8da86a74adeb404875"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderKimi.imageset/Contents.json": {
+      "mode": "100644",
+      "sha256": "f4a8c8255432797fae10e8419a034bd4a219dce73159e5808d24609c437bc04f"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderKimi.imageset/ProviderKimi.svg": {
+      "mode": "100644",
+      "sha256": "2d180fef1666f955b350f9809dd5d5d57da430dede0a28f14cd082966034bb17"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderMiniMax.imageset/Contents.json": {
+      "mode": "100644",
+      "sha256": "26188aae6a48bdaeb7ddfcf278573c4f2db8bc5233f36a24aa6933f4b5ffa89a"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderMiniMax.imageset/ProviderMiniMax.svg": {
+      "mode": "100644",
+      "sha256": "3ae50f887944f25f02b17bf8737cb1fbb42edc27a56ee16f9f412cf76d44870c"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderMistral.imageset/Contents.json": {
+      "mode": "100644",
+      "sha256": "12a76188ff88012f47944623fd88a5f05fa149e13da9d9b2233f88cc161dd07d"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderMistral.imageset/ProviderMistral.svg": {
+      "mode": "100644",
+      "sha256": "ad1c8af9c39264fcd064aa01a2a515b6e6168a892e7c5dff83c1644b49249a25"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderNewAPI.imageset/Contents.json": {
+      "mode": "100644",
+      "sha256": "aef1cde59845a081846a4f5117d9a5f3acffd22b61c52a01eaa3939bf63a8fbe"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderNewAPI.imageset/ProviderNewAPI.svg": {
+      "mode": "100644",
+      "sha256": "a7505a1a5c3e03b26b61d8f6c4ea77564ea55f78e6ac96193c8874e564191fcd"
     },
     "TranslateX/Resources/Assets.xcassets/ProviderOllama.imageset/Contents.json": {
       "mode": "100644",
@@ -604,6 +720,14 @@
       "mode": "100644",
       "sha256": "c20def2ccddd283992415c3040062ed3b0b94feea491470f210111d6ecea38ae"
     },
+    "TranslateX/Resources/Assets.xcassets/ProviderOpenRouter.imageset/Contents.json": {
+      "mode": "100644",
+      "sha256": "8cb14ee7703d277e515e0d24f93747d1c236732b24a1fffe6da3e3239b9f6e3f"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderOpenRouter.imageset/ProviderOpenRouter.svg": {
+      "mode": "100644",
+      "sha256": "0756fd6c2c6c4400696436becfea1915329a3ae763c0686b44a7d40b904da369"
+    },
     "TranslateX/Resources/Assets.xcassets/ProviderQwen.imageset/Contents.json": {
       "mode": "100644",
       "sha256": "7e0f50d0124445d5a5499a16d59a3f91b5e93b56550db63a238c503df3ffc988"
@@ -612,6 +736,22 @@
       "mode": "100644",
       "sha256": "1a7c6a2b45fcad90b2e7252af600e2ace7fc62cf8f5452aa7dea522c77d34ff0"
     },
+    "TranslateX/Resources/Assets.xcassets/ProviderSiliconFlow.imageset/Contents.json": {
+      "mode": "100644",
+      "sha256": "30a7a2f945abc2c3b2cf0b9a4bb5a0446c4476a7cad621b3da0555b44f86d804"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderSiliconFlow.imageset/ProviderSiliconFlow.svg": {
+      "mode": "100644",
+      "sha256": "48848aaee77e5a269feb555adc7304cb020f2a4e16a5d7561392efb3c683d38a"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderStepfun.imageset/Contents.json": {
+      "mode": "100644",
+      "sha256": "aa2a478172916948d721877635e11d95fb2b6a01d86c2fd40d892064fbc00523"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderStepfun.imageset/ProviderStepfun.svg": {
+      "mode": "100644",
+      "sha256": "ec2eb6834102df6dd27b02f9c4a8b022c68ce3e4e45a36921ca52b53680387ec"
+    },
     "TranslateX/Resources/Assets.xcassets/ProviderTencentCloud.imageset/Contents.json": {
       "mode": "100644",
       "sha256": "5308d5c0c1cb43de097d83aa587b21e14ae5f723c3969f0003e7bcc926f75be2"
@@ -619,6 +759,22 @@
     "TranslateX/Resources/Assets.xcassets/ProviderTencentCloud.imageset/ProviderTencentCloud.svg": {
       "mode": "100644",
       "sha256": "e713c57bb8fd0f6af7762af7a5004e9592d1b565421bb5a6abab48fc2b6eddec"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderXAI.imageset/Contents.json": {
+      "mode": "100644",
+      "sha256": "1df7ca9cf838aa13bd4c6bec0cfd507e10c33a91c45e73fdf3d892bd12dc6cdf"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderXAI.imageset/ProviderXAI.svg": {
+      "mode": "100644",
+      "sha256": "4bd1217ee5e196b3de28d9c8de63f3fc35638032216ce557c658e0bbf501a4ec"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderXiaomiMiMo.imageset/Contents.json": {
+      "mode": "100644",
+      "sha256": "5aa3ecd897573e255a72b2fb3d0308e0248a3c5e529624ba0fc660ddfb27a2d5"
+    },
+    "TranslateX/Resources/Assets.xcassets/ProviderXiaomiMiMo.imageset/ProviderXiaomiMiMo.svg": {
+      "mode": "100644",
+      "sha256": "ca834bb8aff332eb702a07ba95064ce80917c4bb7e618e552b161e8c2fc4cbb5"
     },
     "TranslateX/Resources/GitHubIconNotices.txt": {
       "mode": "100644",
@@ -630,7 +786,7 @@
     },
     "TranslateX/Resources/PublishedReleaseNotes.json": {
       "mode": "100644",
-      "sha256": "d81acb54add7bc6c8ed723f4eb16426abf8cc28c93af23eb94b407af16471a22"
+      "sha256": "a288379efa7d40f69c42b477dc756cf95036c59ad969b68b492f08040c223a95"
     },
     "TranslateX/Resources/en.lproj/InfoPlist.strings": {
       "mode": "100644",
@@ -638,7 +794,7 @@
     },
     "TranslateX/Resources/en.lproj/Localizable.strings": {
       "mode": "100644",
-      "sha256": "1dc8b0785d52660ba3402a891182ea90c245dcc3bc80417b8425a7848c7b66ec"
+      "sha256": "8939e9433cd490da1592a4065223ae2a267640fd81119ea2829084dbf9b3149c"
     },
     "TranslateX/Resources/zh-Hans.lproj/InfoPlist.strings": {
       "mode": "100644",
@@ -646,7 +802,7 @@
     },
     "TranslateX/Resources/zh-Hans.lproj/Localizable.strings": {
       "mode": "100644",
-      "sha256": "85ec6cc1b5e823e9c85c95f76dd11dd2150992f75d26ad37fb8a7035aa41d46d"
+      "sha256": "0155e65ae22f8a15c41d8eddb728860c36371bdb7233cc63ebd32dda65ac4195"
     },
     "TranslateX/Settings/AppPreferences.swift": {
       "mode": "100644",
@@ -722,19 +878,23 @@
     },
     "TranslateX/System/SystemPermission.swift": {
       "mode": "100644",
-      "sha256": "3742339d8b02d066b58403bd1650ac6cf798f41c369dce302ba96661c462f4a1"
+      "sha256": "62c9d586cd48a034ca5f8dcc28ec85070d4edfad119fa60225becc50871135a0"
     },
     "TranslateX/System/Updates/AppReleaseNotes.swift": {
       "mode": "100644",
-      "sha256": "91029d03f4098f5d7bd96d96cead83ac3499a74866eb8668d95fc7a6392284ff"
+      "sha256": "792a2cb36c1165f63ede78be20e8efd81a5bb0e502d4844d48401a22dd2964a0"
     },
     "TranslateX/System/Updates/AppUpdateController.swift": {
       "mode": "100644",
-      "sha256": "f770778be8b84e21d484a127e10740ef2d9b79bcc49a2b1b0e8156c2b2dc76d4"
+      "sha256": "e8784b51fadced3185110ece0013e9ec06080d6c950c6edea2d01823b2fa1d76"
+    },
+    "TranslateX/System/Updates/ReleaseNotesPresentation.swift": {
+      "mode": "100644",
+      "sha256": "f239f249c44bb7f473fce687354c153e7fec9f693abcc82446ca1d66a8b9e222"
     },
     "TranslateX/System/Updates/SparkleAppUpdater.swift": {
       "mode": "100644",
-      "sha256": "29767a12013d10151046f51dd35129996c42ee999ac72bf477a3ffed5b25a4ba"
+      "sha256": "c66b678740558b67a59a5c11a7fa779d213f4cb8983e04d9264399c90e8d12b3"
     },
     "TranslateX/Translation/AppleTranslationHost.swift": {
       "mode": "100644",
@@ -750,7 +910,7 @@
     },
     "TranslateX/Translation/Services/ClaudeTranslationProvider.swift": {
       "mode": "100644",
-      "sha256": "58f0fbaeb43c338dc6085ca8ec2e0b6c338806a61616a9ba019a8a8f99aed135"
+      "sha256": "4e64753919c4633252f05705b0ad69d2da53e70ec2f90819c3c6bec22cdbb6cc"
     },
     "TranslateX/Translation/Services/ClaudeTranslationResponseParser.swift": {
       "mode": "100644",
@@ -798,7 +958,7 @@
     },
     "TranslateX/Translation/Services/RemoteTranslationProvider.swift": {
       "mode": "100644",
-      "sha256": "8dba04f657ab311663f5095e98c1e2dff5fb824dadc45b6bb3e1a73f2e37b528"
+      "sha256": "c184aa85921856b425a06bce7317a40cb80d62fd33a24493840e06daead0173c"
     },
     "TranslateX/Translation/Services/RemoteTranslationResponseParser.swift": {
       "mode": "100644",
@@ -818,7 +978,7 @@
     },
     "TranslateX/Translation/Services/TranslationAccountUsage.swift": {
       "mode": "100644",
-      "sha256": "dec83a5e3cadaecc14ed00717763ddf960664b3dcea673fd375c4bbd1adb317e"
+      "sha256": "238b8ae42087a8ecfed4c2fa4acd05208542589c40017b95eff7938c867c296b"
     },
     "TranslateX/Translation/Services/TranslationAccountUsageLoader.swift": {
       "mode": "100644",
@@ -830,23 +990,27 @@
     },
     "TranslateX/Translation/Services/TranslationProviderFactory.swift": {
       "mode": "100644",
-      "sha256": "225701dce497061a619493269390052479bc8594ada1df142ea26643f10cb410"
+      "sha256": "89c8be675893254c93d955261b3bbec0bda6918cbf83df7e360b91cbca1f737a"
     },
     "TranslateX/Translation/Services/TranslationServiceConfiguration.swift": {
       "mode": "100644",
-      "sha256": "3ce537baf693445941cb7fef7ed4cd20be76181f948b936808ef441fd47e3de9"
+      "sha256": "0deacdca862c725f3db4a3c052634cf28a7efd92634900b706240316c6d5fc89"
     },
     "TranslateX/Translation/Services/TranslationServiceEditor.swift": {
       "mode": "100644",
-      "sha256": "13767abd550d6c4aeaa83ee9d4948150a97a01187ef7ed3f2c94d9df12978415"
+      "sha256": "745926d444b21f65eb72671585e39df5b17e4f7fc0e548ea0e3a5de08cfb63bd"
     },
     "TranslateX/Translation/Services/TranslationServiceModelCatalog.swift": {
       "mode": "100644",
-      "sha256": "00dc1ae0b4adc0de7b0538da7a02ba469ee757bbd45e8219f2a2662dc36ea03b"
+      "sha256": "0d309963be91a8ac08f58bea181ebb7701dadfe8daba6bd19bf41992d8155877"
+    },
+    "TranslateX/Translation/Services/TranslationServicePreset.swift": {
+      "mode": "100644",
+      "sha256": "feb0ec4063fd261c4b48b9114c1de054cbbb2b5a957d530dc3c031c80cf61f49"
     },
     "TranslateX/Translation/Services/TranslationServiceStore.swift": {
       "mode": "100644",
-      "sha256": "f1712c6c50055c4b19640860d69dd5aeea5b7ad950fb98dc7a1ed133f0e5d7b3"
+      "sha256": "9e935248308dc963e2fe1d3282bacb82c7c623b34cfbd2da47d5bff7281f03ef"
     },
     "TranslateX/Translation/Services/TranslationUsageDashboard.swift": {
       "mode": "100644",
@@ -898,7 +1062,7 @@
     },
     "TranslateX/UI/Design/TranslateXTooltip.swift": {
       "mode": "100644",
-      "sha256": "a78f744b4e6ef57e53e0852eea7d8acadad9bd82cc9cd115e81aa97dd364cb0e"
+      "sha256": "235c024954468167b3d06127a63e0473e6cc7e8981af23acbe9e1d6f58dc3816"
     },
     "TranslateX/UI/Design/TranslationSplitLayout.swift": {
       "mode": "100644",
@@ -906,15 +1070,19 @@
     },
     "TranslateX/UI/Settings/AboutSettingsView.swift": {
       "mode": "100644",
-      "sha256": "e54d085dd1fe576d98ab1b765597c79f5c1e4e4197328314f423635a794288f4"
+      "sha256": "5140f247403d806aceeb3a5c9995516dc424fa7ccaa0c1b7e1de634d866d391b"
     },
     "TranslateX/UI/Settings/CodexAccountSettingsView.swift": {
       "mode": "100644",
       "sha256": "0e64fdfc226449c0e1588e5eb18ce48038607045a471f67f1e9a690896a21ef4"
     },
+    "TranslateX/UI/Settings/CompactUpdateDialog.swift": {
+      "mode": "100644",
+      "sha256": "fd11745b6803020021270b0c2bf0c0ca4cfecbd5892f295d7b96f381f29f4927"
+    },
     "TranslateX/UI/Settings/ReleaseNotesView.swift": {
       "mode": "100644",
-      "sha256": "49dcc07882a792a15a6392150f2dc7972e91fa17645127df1a7086a614d8ee74"
+      "sha256": "432f0b5aa1f0eb19d0acc92882a78d67fc8fd5f2c201e5da98981e824891b5f1"
     },
     "TranslateX/UI/Settings/SettingsView.swift": {
       "mode": "100644",
@@ -930,11 +1098,15 @@
     },
     "TranslateX/UI/Settings/TranslationServiceComponents.swift": {
       "mode": "100644",
-      "sha256": "09a570eddc5589cfa8dde8d11e700f69a7a6ab398edd7306785fbb276abbfd52"
+      "sha256": "1cb4bed65e4244947b619bd4a0f2aae76721431fcaff28c58251826f0627d554"
     },
     "TranslateX/UI/Settings/TranslationServiceEditorView.swift": {
       "mode": "100644",
-      "sha256": "1e095d05248bcbeac8ce0e179ab9bb539735725442e7eb377abefe45b858b9d3"
+      "sha256": "9da6ec347c9b96a03748707eb3012d4409641bf3e08a8e9f3520729a1b03fe47"
+    },
+    "TranslateX/UI/Settings/TranslationServiceIcon.swift": {
+      "mode": "100644",
+      "sha256": "2bc9f3e94dd23bb6dd1c466cf67cb5afd61f14b95fe339867de0ce7b5a4a467c"
     },
     "TranslateX/UI/Settings/TranslationServiceLayoutProbe.swift": {
       "mode": "100644",
@@ -946,19 +1118,19 @@
     },
     "TranslateX/UI/Settings/TranslationServicePickers.swift": {
       "mode": "100644",
-      "sha256": "8dbc791b98f17f8e3dbf0729e7e87e25812b8dbbfdab55b4ffca1b6b463a666b"
+      "sha256": "94fa3b10dfa56be1f7884c1bc255433f225345e001282b987fc1a4913e384dd7"
     },
     "TranslateX/UI/Settings/TranslationServiceUsageView.swift": {
       "mode": "100644",
-      "sha256": "489533c5cc4ca3ccf625e849e94b5e988361d608316b9ba56657c44fcd6379e2"
+      "sha256": "0bfcfb2e24eb29d3bd4474390a07ca163fabe8f5e4d426e2f3918f2bae20ff4d"
     },
     "TranslateX/UI/Settings/TranslationServicesSettingsView.swift": {
       "mode": "100644",
-      "sha256": "6fa225980e52de2ac26aa29ac36fea1232dac8160cb53da3b252db970a7906b5"
+      "sha256": "6af2009ed45454c9e8fee26e426340a39316aae1dc83c004e534e2e49ee13a00"
     },
     "TranslateX/UI/Settings/UsageDashboardView.swift": {
       "mode": "100644",
-      "sha256": "54a684f3055b20b0568a7a4c6c7aa3b7ad394726e5b9ec10a836f08e2746f87c"
+      "sha256": "7e218664bde3817f23acf4aaf8c3b87cdd2d023d7b225caed416c7bc2cb6d897"
     },
     "TranslateX/UI/Settings/UsageDatePopoverLayout.swift": {
       "mode": "100644",
@@ -974,7 +1146,7 @@
     },
     "TranslateX/UI/Translation/QuickTranslationView.swift": {
       "mode": "100644",
-      "sha256": "137701a7a7ca15e1ca3f9c8e3e6ade52d161293e45ac22eec325c1d838790a4d"
+      "sha256": "f80593e37f04556fda375ebcd89a3f0ee1217fce9a776b73864a0422b1d30485"
     },
     "TranslateX/UI/Translation/ScreenshotTranslationWorkspace.swift": {
       "mode": "100644",
@@ -990,7 +1162,7 @@
     },
     "TranslateX/UI/Translation/TranslationServicePicker.swift": {
       "mode": "100644",
-      "sha256": "fb77372c5a49878384acfdedef77e01da77d542dd54c0f63c7a384a28d5c8c0e"
+      "sha256": "717a1d3bb2fcb043ff5b90add6d7c699843bec2977d25f72b0e4f00f52c12dd6"
     },
     "TranslateX/UI/Translation/TranslationStatusLight.swift": {
       "mode": "100644",
@@ -1018,7 +1190,7 @@
     },
     "TranslateX/Windows/WindowCoordinator.swift": {
       "mode": "100644",
-      "sha256": "bd53b348ae755c1daf5eb3400253f737e636294c4b7a6e9dea8aa3de0f020e0a"
+      "sha256": "a38745c7b51f994a9d1ae844780304e14d5c441b6d8a29fe763fb77c2480a988"
     },
     "TranslateX/Windows/WindowSurface.swift": {
       "mode": "100644",
@@ -1062,7 +1234,7 @@
     },
     "TranslateXTests/CodexAccountEditorTests.swift": {
       "mode": "100644",
-      "sha256": "61ebac05b441fd260efc5fa2a895af4d3c6241a9b958d1b081dd9ce11e570346"
+      "sha256": "a16d6aff156ffc683ab4944441eea19e4f2791afcf064317d9aab3327bdd5ad5"
     },
     "TranslateXTests/CodexRuntimeSessionTests.swift": {
       "mode": "100644",
@@ -1154,7 +1326,7 @@
     },
     "TranslateXTests/QuickWindowTests.swift": {
       "mode": "100644",
-      "sha256": "7d70674afd7665185af14316aba941665768235480fe5c7abd2e188afa907ddd"
+      "sha256": "6d970d216e4507836c180080e4a036860044a5522c8bf9f947f986024010bfc0"
     },
     "TranslateXTests/QwenMTTranslationProviderTests.swift": {
       "mode": "100644",
@@ -1163,6 +1335,10 @@
     "TranslateXTests/RegionSelectionTests.swift": {
       "mode": "100644",
       "sha256": "f0b0a0bbb09ba1995fd406dda122806aeef70990a11f1c3a461c4a330706ac7e"
+    },
+    "TranslateXTests/ReleaseNotesPresentationTests.swift": {
+      "mode": "100644",
+      "sha256": "89027b5bda8a0e9f2d22674e743a1d5d81fc420c4ec8521ef9edf0254b72115f"
     },
     "TranslateXTests/RemoteTranslationProviderTests.swift": {
       "mode": "100644",
@@ -1210,11 +1386,11 @@
     },
     "TranslateXTests/TranslateXScrollStyleTests.swift": {
       "mode": "100644",
-      "sha256": "bb438073f3e77f3397fa696810a589577169d0878aed29aaa0de5a9c8de080a9"
+      "sha256": "37edd8a2f5a042e610cf8ddc5306311ccdedd1a870978ed2caa7625d659a14d3"
     },
     "TranslateXTests/TranslationAccountUsageTests.swift": {
       "mode": "100644",
-      "sha256": "7f1f316fb27d5789e9920272374dc4d3a4306fe326ddb281cf2466198277e580"
+      "sha256": "046415ae0dbb3f508343bdf69bc15dc1a8681c943d9499eccba25d13865c5f44"
     },
     "TranslateXTests/TranslationFailureTests.swift": {
       "mode": "100644",
@@ -1242,15 +1418,23 @@
     },
     "TranslateXTests/TranslationServiceEditorTests.swift": {
       "mode": "100644",
-      "sha256": "144ae65074bfd11a0ecb03f7a812a77301b92052641dd78d9eb9ea43218f3213"
+      "sha256": "525afdb13bdb15cc97f4e5311d3c9d8b439d5593505bc5e01d2c95426bc6f2b3"
+    },
+    "TranslateXTests/TranslationServiceIconTests.swift": {
+      "mode": "100644",
+      "sha256": "34c742a61de2234220555c78142689bc5b2a07a330373ea37b94b38698974bea"
     },
     "TranslateXTests/TranslationServiceModelCatalogTests.swift": {
       "mode": "100644",
-      "sha256": "c0d0e1531d63ba853f4c13f6148872ee1c7b7930603a34808eacd2139f028ba1"
+      "sha256": "ebdd4539bb3d3233b774eaa5c77c1f450ad8f80c0632ca909d279653fe04d458"
     },
     "TranslateXTests/TranslationServiceNavigationTests.swift": {
       "mode": "100644",
       "sha256": "e866749ab93d2c6acfc13f827e75a849ed8a8e309cd25c847fef41049703c587"
+    },
+    "TranslateXTests/TranslationServicePresetTests.swift": {
+      "mode": "100644",
+      "sha256": "1ec5617530e8d823150541340b196865bac12524d57c1bc672e42aedeca1dbbe"
     },
     "TranslateXTests/TranslationServiceRoutingTests.swift": {
       "mode": "100644",
@@ -1262,7 +1446,7 @@
     },
     "TranslateXTests/TranslationServiceStoreTests.swift": {
       "mode": "100644",
-      "sha256": "ca848bc9d91d05f99967e6ffc87a3605208e2720a0ae89589ae379129b126ac7"
+      "sha256": "41c427d574d8481f08c051396045ed741fc248bc44de790aa7dccb28ff6e8611"
     },
     "TranslateXTests/TranslationTextEditorTests.swift": {
       "mode": "100644",
@@ -1270,7 +1454,7 @@
     },
     "TranslateXTests/TranslationToolbarTests.swift": {
       "mode": "100644",
-      "sha256": "bf36575dc94e8ec8c0c1f0517a2847e9b07c113fde9cdc48432ce121aab43ecb"
+      "sha256": "6ae656e5ca5bb5b3552e288065e489b972d876555fce12cda80ae826721e177a"
     },
     "TranslateXTests/TranslationUsageDashboardTests.swift": {
       "mode": "100644",
@@ -1306,7 +1490,7 @@
     },
     "project.yml": {
       "mode": "100644",
-      "sha256": "eb2fb64200c2482e8b3bda545bc8fb097eb49d4f03db2d848338966877d44446"
+      "sha256": "e3868be6424d79ea8fa270552443cbf6822db5c375fcc8bad0f3da9b29b12492"
     }
   },
   "version": 1

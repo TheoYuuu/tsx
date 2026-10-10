@@ -15,7 +15,9 @@ final class TranslationToolbarTests: XCTestCase {
         let visible = menu.items.filter { !$0.isHidden && !$0.isSeparatorItem }
         XCTAssertEqual(visible.count, 3)
         XCTAssertEqual(visible.filter { $0.state == .on }.map(\.title), [service.name])
-        XCTAssertTrue(visible.allSatisfy { $0.image == nil })
+        XCTAssertEqual(visible[0].image?.size, NSSize(width: 16, height: 16))
+        XCTAssertEqual(visible[1].image?.size, NSSize(width: 16, height: 16))
+        XCTAssertNil(visible[2].image)
         XCTAssertEqual(menu.font, NSFont.systemFont(ofSize: 13))
         XCTAssertTrue(control.pullsDown)
         XCTAssertEqual(menu.items.first?.isHidden, true)
@@ -112,6 +114,80 @@ final class TranslationToolbarTests: XCTestCase {
                 add(attachment)
             }
         }
+    }
+
+    func testSwitchTooltipStaysDismissedAfterTextChangeAndDelayedClickFocus() throws {
+        _ = NSApplication.shared
+        let window = QuickPanel(contentRect: NSRect(x: 220, y: 220, width: 180, height: 90),
+                                styleMask: [.titled, .nonactivatingPanel], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        let anchor = TooltipAnchorView(frame: NSRect(x: 20, y: 20, width: 28, height: 28))
+        window.contentView?.addSubview(anchor)
+        window.makeKeyAndOrderFront(nil)
+        defer { anchor.dismiss(); window.close() }
+        let entered = try XCTUnwrap(NSEvent.enterExitEvent(with: .mouseEntered, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil))
+        let exited = try XCTUnwrap(NSEvent.enterExitEvent(with: .mouseExited, location: .zero, modifierFlags: [], timestamp: 1,
+            windowNumber: window.windowNumber, context: nil, eventNumber: 1, trackingNumber: 0, userData: nil))
+        anchor.update(text: "Switch", dark: false, presented: false)
+        anchor.mouseEntered(with: entered)
+        XCTAssertEqual(window.childWindows?.count, 1)
+
+        // The click dismisses the old hint before selection changes its text
+        // and SwiftUI delivers the button's newly acquired focus.
+        anchor.dismissForInteraction()
+        anchor.update(text: "In use", dark: false, presented: false)
+        anchor.update(text: "In use", dark: false, presented: true)
+        XCTAssertTrue(window.childWindows?.isEmpty ?? true)
+        anchor.mouseExited(with: exited)
+        XCTAssertTrue(window.childWindows?.isEmpty ?? true, "Click focus must not keep the hint visible after the pointer leaves.")
+
+        // A fresh hover still describes the disabled selected button, but its
+        // old mouse focus must not hold that hint open after leaving again.
+        anchor.mouseEntered(with: entered)
+        XCTAssertEqual((window.childWindows?.first?.contentView?.subviews.first as? NSTextField)?.stringValue, "In use")
+        anchor.mouseExited(with: exited)
+        XCTAssertTrue(window.childWindows?.isEmpty ?? true)
+
+        // Keyboard users retain hints on a subsequent focus session.
+        anchor.update(text: "In use", dark: false, presented: false)
+        anchor.update(text: "In use", dark: false, presented: true)
+        XCTAssertEqual(window.childWindows?.count, 1)
+        anchor.dismissForInteraction()
+        anchor.update(text: "Switch", dark: true, presented: true)
+        XCTAssertTrue(window.childWindows?.isEmpty ?? true, "An action or Escape must stay dismissed through view updates until fresh interaction.")
+    }
+
+    func testTabCanFocusHoveredTooltipWithoutReopeningThePreviousFocus() throws {
+        _ = NSApplication.shared
+        let window = QuickPanel(contentRect: NSRect(x: 220, y: 220, width: 180, height: 90),
+                                styleMask: [.titled, .nonactivatingPanel], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        let anchor = TooltipAnchorView(frame: NSRect(x: 20, y: 20, width: 28, height: 28))
+        window.contentView?.addSubview(anchor)
+        window.makeKeyAndOrderFront(nil)
+        defer { anchor.dismiss(); window.close() }
+        let entered = try XCTUnwrap(NSEvent.enterExitEvent(with: .mouseEntered, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil))
+        anchor.update(text: "Switch", dark: false, presented: false)
+        anchor.mouseEntered(with: entered)
+        XCTAssertEqual(window.childWindows?.count, 1)
+
+        // Tab and Shift-Tab dismiss existing hover hints before SwiftUI moves
+        // keyboard focus. The hovered control may be the new focus target.
+        anchor.dismissForInteraction(isFocusTraversal: true)
+        anchor.update(text: "Switch", dark: false, presented: true)
+        XCTAssertEqual(window.childWindows?.count, 1, "A new keyboard focus must display its hint even if it was already hovered.")
+
+        // On the next Tab, this control is losing focus. A view update before
+        // the focus transition must not immediately recreate its old hint.
+        anchor.dismissForInteraction(isFocusTraversal: true)
+        anchor.update(text: "Switch", dark: true, presented: true)
+        XCTAssertTrue(window.childWindows?.isEmpty ?? true)
+        anchor.update(text: "Switch", dark: true, presented: false)
+        XCTAssertTrue(window.childWindows?.isEmpty ?? true)
+        anchor.update(text: "Switch", dark: true, presented: true)
+        XCTAssertEqual(window.childWindows?.count, 1)
     }
 
     func testDisabledButtonShowsImmediateNativeHoverHintWithoutTakingFocus() async throws {

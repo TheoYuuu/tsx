@@ -7,7 +7,7 @@ struct TranslationServiceEditorView: View {
     let saved: () -> Void
 
     var body: some View {
-        TranslationServiceEditorContent(editor: session.editor, changeKind: session.selectKind,
+        TranslationServiceEditorContent(editor: session.editor, changePreset: session.selectPreset,
                                         finish: finish, saved: saved)
             .id(session.editor.configuration.id)
     }
@@ -16,7 +16,7 @@ struct TranslationServiceEditorView: View {
 private struct TranslationServiceEditorContent: View {
     @Environment(\.translateXTheme) private var theme
     @Bindable var editor: TranslationServiceEditor
-    let changeKind: (TranslationServiceKind) -> Void
+    let changePreset: (TranslationServicePreset) -> Void
     let finish: () -> Void
     let saved: () -> Void
     @State private var advanced = false
@@ -24,16 +24,17 @@ private struct TranslationServiceEditorContent: View {
     @State private var popup: Popup?
     @State private var openCatalogWhenReady = false
     @State private var keyFocused = false
-    @State private var manualModelEntry = false
     @State private var popupHeight: CGFloat?
     @State private var requestedField: TranslationServiceEditor.Field?
     @State private var fieldFocusRevision = 0
     @FocusState private var focusedAction: Action?
-    private enum Popup: String { case providers, models }
-    private enum Action: Hashable { case provider, model, serviceOption(String) }
+    private enum Popup: String { case providers, models, icons }
+    private enum Action: Hashable { case provider, model, icon, serviceOption(String) }
     private var p: TranslationServicePalette { TranslationServicePalette(theme: theme) }
     private var kind: TranslationServiceKind { editor.configuration.kind }
     private var isAccount: Bool { kind == .codex }
+    private var preset: TranslationServicePreset { editor.configuration.providerPreset }
+    private var hasCustomConnection: Bool { preset == .custom || preset == .newAPI }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -61,7 +62,7 @@ private struct TranslationServiceEditorContent: View {
                     if message != nil { proxy.scrollTo("service-feedback", anchor: .bottom) }
                 }
                 .onChange(of: editor.fieldErrors) { _, errors in
-                    if let first = [TranslationServiceEditor.Field.name, .website, .key, .endpoint, .model, .region, .instructions, .outputLimit]
+                    if let first = [TranslationServiceEditor.Field.name, .website, .key, .endpoint, .modelsEndpoint, .model, .region, .instructions, .outputLimit]
                         .first(where: { errors[$0] != nil }) {
                         if first == .instructions || first == .outputLimit { advanced = true }
                         Task { @MainActor in
@@ -93,8 +94,11 @@ private struct TranslationServiceEditorContent: View {
             guard openCatalogWhenReady else { return }
             if state == .loaded {
                 openCatalogWhenReady = false
-                if !editor.models.isEmpty { popup = .models }
+                if editor.canChooseModel { popup = .models }
             } else if state == .failed || state == .empty { openCatalogWhenReady = false }
+        }
+        .onChange(of: editor.canChooseModel) { _, available in
+            if !available && popup == .models { popup = nil; focusedAction = nil }
         }
         .onChange(of: editor.codex.identityRevision) { _, _ in editor.codexIdentityChanged() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)) { _ in editor.hideKey() }
@@ -113,11 +117,11 @@ private struct TranslationServiceEditorContent: View {
             .accessibilityLabel(L10n.string("Back to services"))
             .serviceDesignMetric("button.back")
             .frame(width: 40, alignment: .leading)
-            Text(editor.isNew ? L10n.string("Add service") : editor.originalName)
+            Text(editor.isEditingExistingService ? editor.originalName : L10n.string("Add service"))
                 .font(.system(size: 14, weight: .semibold))
                 .lineLimit(1).truncationMode(.tail)
                 .frame(maxWidth: .infinity)
-                .help(editor.isNew ? L10n.string("Add service") : editor.originalName)
+                .help(editor.isEditingExistingService ? editor.originalName : L10n.string("Add service"))
                 .accessibilityAddTraits(.isHeader)
             Color.clear.frame(width: 40, height: 1).accessibilityHidden(true)
         }
@@ -126,18 +130,29 @@ private struct TranslationServiceEditorContent: View {
 
     private var identityCard: some View {
         TranslationServiceCard {
-            TranslationServiceFormRow(title: "Provider") {
-                if editor.isNew {
-                    Button { editor.hideKey(); popup = .providers } label: { providerIdentity }
-                        .buttonStyle(TranslateXHoverButtonStyle()).focusable().focused($focusedAction, equals: .provider)
-                        .translationServicePopupAnchor(Popup.providers.rawValue)
-                        .accessibilityLabel(L10n.string("Choose a provider"))
-                } else {
-                    providerIdentity.accessibilityLabel(kind.settingsName + ", " + L10n.string("Provider cannot be changed while editing"))
+            TranslationServiceFormRow(title: "Provider", required: editor.canChangeProvider) {
+                HStack(spacing: 8) {
+                    Button { editor.hideKey(); focusedAction = nil; popup = .icons } label: {
+                        TranslationServiceProviderMark(configuration: editor.configuration, size: 32)
+                    }
+                    .buttonStyle(TranslateXHoverButtonStyle()).focusable().focused($focusedAction, equals: .icon)
+                    .translationServicePopupAnchor(Popup.icons.rawValue)
+                    .accessibilityLabel(L10n.string("Change service icon"))
+                    .accessibilityValue(editor.configuration.serviceIcon.displayName)
+                    .help(L10n.string("Change service icon"))
+                    if editor.canChangeProvider {
+                        Button { editor.hideKey(); focusedAction = nil; popup = .providers } label: { providerIdentity }
+                            .buttonStyle(TranslateXHoverButtonStyle()).focusable().focused($focusedAction, equals: .provider)
+                            .translationServicePopupAnchor(Popup.providers.rawValue)
+                            .accessibilityLabel(L10n.string("Choose a provider"))
+                            .accessibilityValue(editor.configuration.providerName)
+                    } else {
+                        providerIdentity.accessibilityLabel(editor.configuration.providerName)
+                    }
                 }
             }
             TranslationServiceDivider()
-            TranslationServiceFormRow(title: "Service name") {
+            TranslationServiceFormRow(title: "Service name", required: true) {
                 TranslationServiceField(title: "Service name", text: $editor.configuration.name,
                                         placeholder: "Name this configuration", invalid: editor.fieldErrors[.name] != nil,
                                         onFocusChanged: { if $0 { editor.hideKey() } }, focusRequest: focusRequest(for: .name))
@@ -145,7 +160,7 @@ private struct TranslationServiceEditorContent: View {
                 fieldError(.name)
             }.id(TranslationServiceEditor.Field.name)
             TranslationServiceDivider()
-            TranslationServiceFormRow(title: "Service website", optional: true) {
+            TranslationServiceFormRow(title: "Service website") {
                 TranslationServiceField(title: "Service website", text: $editor.configuration.website,
                                         placeholder: "https://example.com", invalid: editor.fieldErrors[.website] != nil,
                                         onFocusChanged: { if $0 { editor.hideKey() } }, focusRequest: focusRequest(for: .website))
@@ -159,17 +174,16 @@ private struct TranslationServiceEditorContent: View {
 
     private var providerIdentity: some View {
         HStack(spacing: 9) {
-            TranslationServiceProviderMark(kind: kind, size: 23)
-            Text(kind.settingsName).font(.system(size: 12, weight: .medium)).lineLimit(1)
+            Text(editor.configuration.providerName).font(.system(size: 12, weight: .medium)).lineLimit(1)
             Spacer(minLength: 2)
             Text(kind.connectionLabel).font(.system(size: 10)).foregroundStyle(p.muted).fixedSize()
             if isAccount { TranslationServiceExperimentalBadge() }
-            Image(systemName: editor.isNew ? "chevron.down" : "lock")
+            Image(systemName: editor.canChangeProvider ? "chevron.down" : "lock")
                 .font(.system(size: 12)).foregroundStyle(p.muted).padding(.leading, 4)
         }
         .padding(.horizontal, 8).frame(height: 34)
-        .background(editor.isNew ? p.fill : .clear, in: RoundedRectangle(cornerRadius: 6))
-        .overlay { RoundedRectangle(cornerRadius: 6).strokeBorder(editor.isNew ? p.line.opacity(0.34) : .clear, lineWidth: 1) }
+        .background(editor.canChangeProvider ? p.fill : .clear, in: RoundedRectangle(cornerRadius: 6))
+        .overlay { RoundedRectangle(cornerRadius: 6).strokeBorder(editor.canChangeProvider ? p.line.opacity(0.34) : .clear, lineWidth: 1) }
         .contentShape(Rectangle())
     }
 
@@ -177,12 +191,16 @@ private struct TranslationServiceEditorContent: View {
         TranslationServiceCard {
             if !isAccount {
                 keyRow
+                if hasCustomConnection {
+                    TranslationServiceDivider()
+                    customConnectionSettings
+                }
                 if kind == .deepL || kind == .qwenMT || kind == .tencentTranslation || kind == .azureTranslator {
                     TranslationServiceDivider()
                     specificRow
                 }
                 TranslationServiceDivider()
-                TranslationServiceFormRow(title: kind == .googleCloud ? "Translation URL" : "API URL") {
+                TranslationServiceFormRow(title: kind == .googleCloud ? "Translation URL" : hasCustomConnection && editor.configuration.endpointMode == .requestURL ? "Request URL" : "API URL", required: true) {
                     TranslationServiceField(title: "API URL", text: $editor.configuration.endpoint,
                                             placeholder: "https://api.example.com/v1", invalid: editor.fieldErrors[.endpoint] != nil,
                                             onFocusChanged: { if $0 { editor.hideKey() } }, focusRequest: focusRequest(for: .endpoint))
@@ -190,8 +208,16 @@ private struct TranslationServiceEditorContent: View {
                     if let message = editor.fieldErrors[.endpoint] { TranslationServiceHint(text: message, error: true) }
                     else if editor.keyState == .addressChanged && editor.replacementKey.isEmpty {
                         TranslationServiceHint(text: L10n.string("The old address’s key will not be sent here."), error: true)
+                    } else if hasCustomConnection {
+                        TranslationServiceHint(text: L10n.string(editor.configuration.endpointMode == .requestURL
+                            ? "Translation requests use this URL exactly as entered."
+                            : "Use the API base URL, including its version path."))
                     }
                 }.id(TranslationServiceEditor.Field.endpoint)
+                if hasCustomConnection && editor.configuration.effectiveEndpointMode == .requestURL {
+                    TranslationServiceDivider()
+                    modelListURLRow
+                }
                 if kind.requiresModel { TranslationServiceDivider() }
             }
             if kind.requiresModel { modelRow }
@@ -200,7 +226,7 @@ private struct TranslationServiceEditorContent: View {
     }
 
     private var keyRow: some View {
-        TranslationServiceFormRow(title: "API Key", optional: !kind.requiresAPIKey) {
+        TranslationServiceFormRow(title: "API Key", required: editor.configuration.requiresAPIKey) {
             ZStack(alignment: .trailing) {
                 TranslationServiceSecretInput(text: $editor.keyFieldText, visible: editor.isKeyVisible,
                                               placeholder: keyPlaceholder, ink: p.ink, muted: p.muted,
@@ -227,7 +253,7 @@ private struct TranslationServiceEditorContent: View {
             }
             .serviceDesignMetric("field.key")
             TranslationServiceHint(text: keyHint, error: editor.fieldErrors[.key] != nil || editor.keyErrorMessage != nil || editor.keyState == .addressChanged)
-            if !kind.requiresAPIKey && !editor.isNew && (editor.keyState == .stored || editor.removeSavedKey) {
+            if !editor.configuration.requiresAPIKey && !editor.isNew && (editor.keyState == .stored || editor.removeSavedKey) {
                 Button(L10n.string(editor.removeSavedKey ? "Keep saved key" : "Remove saved key")) { editor.removeSavedKey.toggle() }
                     .font(.system(size: 10)).buttonStyle(TranslateXHoverButtonStyle()).foregroundStyle(p.accent)
             }
@@ -237,7 +263,7 @@ private struct TranslationServiceEditorContent: View {
     private var keyPlaceholder: String {
         if editor.keyState == .stored { return "Saved key" }
         if editor.keyState == .unconfirmed || editor.keyState == .unavailable { return "Key status unconfirmed" }
-        return kind.requiresAPIKey ? "Paste API key" : "Optional, if required by the service"
+        return "Paste API key"
     }
     private var canRevealKey: Bool {
         !editor.replacementKey.isEmpty || !editor.isNew && !editor.removeSavedKey
@@ -254,8 +280,8 @@ private struct TranslationServiceEditorContent: View {
         case .unavailable: return L10n.string("The saved key cannot be read right now. Try again or enter a new key.")
         case .unconfirmed: return L10n.string("The saved key’s status is not confirmed. Enter a key if needed.")
         case .missing:
-            if !editor.isNew && kind.requiresAPIKey { return L10n.string("No saved key was found. Enter it again.") }
-            return L10n.string(kind.requiresAPIKey ? "Saved only in this Mac’s Keychain" : "A key is unnecessary if the service allows anonymous access")
+            if !editor.isNew && editor.configuration.requiresAPIKey { return L10n.string("No saved key was found. Enter it again.") }
+            return L10n.string(editor.configuration.requiresAPIKey ? "Saved only in this Mac’s Keychain" : "A key is unnecessary if the service allows anonymous access")
         }
     }
 
@@ -296,7 +322,7 @@ private struct TranslationServiceEditorContent: View {
     }
 
     private var modelRow: some View {
-        TranslationServiceFormRow(title: "Model") {
+        TranslationServiceFormRow(title: "Model", required: kind.allowsCustomModel || isAccount) {
             if !kind.allowsCustomModel && !isAccount {
                 HStack(spacing: 7) {
                     Image(systemName: "lock").font(.system(size: 11))
@@ -307,33 +333,28 @@ private struct TranslationServiceEditorContent: View {
                 .foregroundStyle(p.muted).frame(height: 32).serviceDesignMetric("field.model")
             } else {
                 HStack(spacing: 7) {
-                    if manualModelEntry && !isAccount {
-                        TranslationServiceField(title: "Model ID", text: $editor.configuration.model,
-                                                placeholder: "Enter the exact model ID", invalid: editor.fieldErrors[.model] != nil,
-                                                onFocusChanged: { if $0 { editor.hideKey() } }, focusRequest: focusRequest(for: .model))
-                            .disabled(!editor.canConfigureModel)
-                            .serviceDesignMetric("field.model")
-                    } else {
-                        Button { editor.hideKey(); popup = .models } label: {
-                            HStack(spacing: 8) {
-                                Text(isAccount ? accountModelName : editor.configuration.model.isEmpty
-                                     ? L10n.string("Choose a model") : editor.configuration.model)
-                                    .font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
-                                    .foregroundStyle(editor.configuration.model.isEmpty ? p.muted : p.ink)
-                                Spacer(minLength: 3)
-                                Image(systemName: "chevron.down").font(.system(size: 11)).foregroundStyle(p.muted)
-                            }
-                            .padding(.horizontal, 10).frame(height: 32)
-                            .background(p.fill, in: RoundedRectangle(cornerRadius: 6))
-                            .overlay { RoundedRectangle(cornerRadius: 6).strokeBorder(p.line.opacity(0.34), lineWidth: 1) }
+                    Button {
+                        guard editor.canChooseModel else { return }
+                        editor.hideKey(); popup = .models
+                    } label: {
+                        HStack(spacing: 8) {
+                            Text(isAccount ? accountModelName : editor.configuration.model.isEmpty
+                                 ? L10n.string("Choose a model") : editor.configuration.model)
+                                .font(.system(size: 12)).lineLimit(1).truncationMode(.middle)
+                                .foregroundStyle(editor.configuration.model.isEmpty ? p.muted : p.ink)
+                            Spacer(minLength: 3)
+                            Image(systemName: "chevron.down").font(.system(size: 11)).foregroundStyle(p.muted)
                         }
-                        .buttonStyle(TranslateXHoverButtonStyle())
-                        .disabled(isAccount ? editor.models.isEmpty : !editor.canConfigureModel)
-                        .focusable().focused($focusedAction, equals: .model)
-                        .accessibilityLabel(L10n.string("Show model list"))
-                        .accessibilityValue(editor.configuration.model)
-                        .translationServicePopupAnchor(Popup.models.rawValue).serviceDesignMetric("field.model")
+                        .padding(.horizontal, 10).frame(height: 32)
+                        .background(p.fill, in: RoundedRectangle(cornerRadius: 6))
+                        .overlay { RoundedRectangle(cornerRadius: 6).strokeBorder(p.line.opacity(0.34), lineWidth: 1) }
                     }
+                    .buttonStyle(TranslateXHoverButtonStyle())
+                    .disabled(!editor.canChooseModel)
+                    .focusable(editor.canChooseModel).focused($focusedAction, equals: .model)
+                    .accessibilityLabel(L10n.string("Show model list"))
+                    .accessibilityValue(editor.configuration.model)
+                    .translationServicePopupAnchor(Popup.models.rawValue).serviceDesignMetric("field.model")
                     Button {
                         if editor.catalogState == .loading {
                             openCatalogWhenReady = false; editor.cancelModelLoading()
@@ -349,20 +370,8 @@ private struct TranslationServiceEditorContent: View {
                     .disabled(isAccount ? (editor.catalogState != .loading && (editor.codex.status != .signedIn || editor.codex.isBusy)) : !editor.canConfigureModel)
                     .accessibilityLabel(L10n.string(editor.catalogState == .loading ? "Cancel model loading" : "Get models"))
                 }
-                HStack(alignment: .top, spacing: 10) {
-                    TranslationServiceHint(text: modelHint, error: editor.fieldErrors[.model] != nil || editor.catalogState == .failed || editor.catalogState == .empty)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    if !isAccount && editor.canConfigureModel {
-                        Button(L10n.string(manualModelEntry ? "Choose from model list" : "Enter model ID manually")) {
-                            editor.hideKey(); focusedAction = nil
-                            manualModelEntry.toggle()
-                            if manualModelEntry { requestedField = .model; fieldFocusRevision &+= 1 }
-                            else { popup = .models }
-                        }
-                        .font(.system(size: 10)).foregroundStyle(p.accent).fixedSize()
-                        .buttonStyle(TranslateXHoverButtonStyle())
-                    }
-                }
+                TranslationServiceHint(text: modelHint, error: editor.fieldErrors[.model] != nil || editor.catalogState == .failed || editor.catalogState == .empty)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }.id(TranslationServiceEditor.Field.model)
     }
@@ -379,9 +388,9 @@ private struct TranslationServiceEditorContent: View {
                 return String(format: L10n.string(editor.codexModelSelectionIsValid ? "%d models loaded · Current account model selected" : "%d models loaded · Choose a model"), editor.models.count)
             }
             return String(format: L10n.string("%d models loaded · Choose from the list"), editor.models.count)
-        case .empty: return L10n.string(isAccount ? "This account returned no available models. Check your account eligibility." : "No models returned. You can enter a model ID.")
-        case .failed: return L10n.string(isAccount ? "Couldn’t load models. Refresh this account’s model list." : "Couldn’t get models. Check the address and permissions, or enter an ID.")
-        default: return L10n.string(isAccount ? "Sign in, load available models, then choose from the list." : "Get models to browse available IDs, or choose manual entry.")
+        case .empty: return L10n.string(isAccount ? "This account returned no available models. Check your account eligibility." : "No models returned. Check the service and try again.")
+        case .failed: return L10n.string(isAccount ? "Couldn’t load models. Refresh this account’s model list." : "Couldn’t get models. Check the address and permissions, then try again.")
+        default: return L10n.string(isAccount ? "Sign in, load available models, then choose from the list." : "Get models, then choose from the list.")
         }
     }
 
@@ -436,7 +445,7 @@ private struct TranslationServiceEditorContent: View {
                                 .overlay { RoundedRectangle(cornerRadius: 6).strokeBorder(p.line.opacity(0.34), lineWidth: 1) }
                                 .overlay(alignment: .topLeading) {
                                     if editor.configuration.additionalInstructions.isEmpty {
-                                        Text(L10n.string("Optional: keep technical terms in English and use a concise tone."))
+                                        Text(L10n.string("For example: keep technical terms in English and use a concise tone."))
                                             .font(.system(size: 11)).foregroundStyle(p.muted)
                                             .padding(.horizontal, 10).padding(.top, 8).allowsHitTesting(false)
                                     }
@@ -446,26 +455,19 @@ private struct TranslationServiceEditorContent: View {
                             fieldError(.instructions)
                         }.id(TranslationServiceEditor.Field.instructions)
                     }
-                    if kind == .claude {
+                    if editor.configuration.effectiveAPIFormat == .claudeMessages {
                         TranslationServiceDivider()
-                        TranslationServiceFormRow(title: "Output limit") {
-                            Menu {
-                                ForEach(outputTokenChoices, id: \.self) { limit in
-                                    Button(String(limit)) { editor.configuration.maximumOutputTokens = limit }
-                                }
-                            } label: {
-                                HStack {
-                                    Text(String(editor.configuration.maximumOutputTokens))
-                                    Spacer()
-                                    Image(systemName: "chevron.down").font(.system(size: 11))
-                                }
-                                .font(.system(size: 12)).padding(.horizontal, 10).frame(height: 32)
-                                .background(p.fill, in: RoundedRectangle(cornerRadius: 6))
-                            }
-                            .menuStyle(.borderlessButton).menuIndicator(.hidden).translateXControlCursor()
-                            .accessibilityLabel(L10n.string("Maximum response tokens"))
+                        TranslationServiceFormRow(title: "Output limit", required: true) {
+                            LanguageMenu(label: L10n.string("Maximum response tokens"), selection: Binding(
+                                get: { String(editor.configuration.maximumOutputTokens) },
+                                set: { if let value = Int($0) { editor.configuration.maximumOutputTokens = value } }
+                            ), languages: outputTokenChoices.map { limit in
+                                TranslationLanguage(id: String(limit), name: String(format: L10n.string("%@ tokens"),
+                                    limit.formatted(.number.locale(L10n.currentLocale))))
+                            }, prominent: false, minimumWidth: 176)
+                            .serviceDesignMetric("field.outputLimit.control")
                             if let message = editor.fieldErrors[.outputLimit] { TranslationServiceHint(text: message, error: true) }
-                            else { TranslationServiceHint(text: L10n.string("Overlong results are reported as incomplete and never continued automatically.")) }
+                            else { TranslationServiceHint(text: L10n.string("Claude Messages requires an output limit supported by your model. Overlong results are reported as incomplete.")) }
                         }.id(TranslationServiceEditor.Field.outputLimit)
                     }
                 }.padding(.bottom, 7)
@@ -473,9 +475,44 @@ private struct TranslationServiceEditorContent: View {
         }
     }
     private var advancedSummary: String {
-        let status = L10n.string(editor.configuration.automaticallyTranslates ? "Automatic translation on" : "Automatic translation off")
-        return status + (kind.supportsAdditionalInstructions ? " · " + L10n.string("Translation guidelines optional") : "")
+        L10n.string(editor.configuration.automaticallyTranslates ? "Automatic translation on" : "Automatic translation off")
     }
+
+    @ViewBuilder private var customConnectionSettings: some View {
+        TranslationServiceFormRow(title: "API format", required: true) {
+            LanguageMenu(label: L10n.string("API format"), selection: Binding(
+                get: { editor.configuration.effectiveAPIFormat.rawValue },
+                set: { if let value = TranslationServiceAPIFormat(rawValue: $0) { editor.configuration.apiFormat = value } }
+            ), languages: TranslationServiceAPIFormat.allCases.map {
+                TranslationLanguage(id: $0.rawValue, name: $0.displayName)
+            }, prominent: false, minimumWidth: 176)
+            .serviceDesignMetric("field.apiFormat.control")
+        }
+        TranslationServiceDivider()
+        TranslationServiceFormRow(title: "Address mode", required: true) {
+            LanguageMenu(label: L10n.string("Address mode"), selection: Binding(
+                get: { editor.configuration.effectiveEndpointMode.rawValue },
+                set: { if let value = TranslationServiceEndpointMode(rawValue: $0) { editor.configuration.endpointMode = value } }
+            ), languages: TranslationServiceEndpointMode.allCases.map {
+                TranslationLanguage(id: $0.rawValue, name: $0.displayName)
+            }, prominent: false, minimumWidth: 176)
+            .serviceDesignMetric("field.endpointMode.control")
+        }
+    }
+
+    private var modelListURLRow: some View {
+        TranslationServiceFormRow(title: "Model list URL", required: true) {
+            TranslationServiceField(title: "Model list URL", text: Binding(
+                get: { editor.configuration.modelsEndpoint ?? "" },
+                set: { editor.configuration.modelsEndpoint = $0 }),
+                placeholder: "https://api.example.com/v1/models",
+                invalid: editor.fieldErrors[.modelsEndpoint] != nil,
+                onFocusChanged: { if $0 { editor.hideKey() } }, focusRequest: focusRequest(for: .modelsEndpoint))
+            if editor.fieldErrors[.modelsEndpoint] != nil { fieldError(.modelsEndpoint) }
+            else { TranslationServiceHint(text: L10n.string("Use a model list URL on the same server as the request URL.")) }
+        }.id(TranslationServiceEditor.Field.modelsEndpoint)
+    }
+
     private var outputTokenChoices: [Int] {
         Array(Set([1_024, 2_048, 4_096, 8_192, 16_384, 32_768, 65_536, 131_072, editor.configuration.maximumOutputTokens])).sorted()
     }
@@ -604,22 +641,23 @@ private struct TranslationServiceEditorContent: View {
     }
 
     @ViewBuilder private func popupOverlay(_ type: Popup, anchor: CGRect, size: CGSize) -> some View {
-        let width = min(type == .providers ? max(anchor.width, 440) : max(anchor.width, 310), size.width - 48)
-        let height = popupHeight ?? (type == .providers ? 374 : min(CGFloat(editor.models.count) * (isAccount ? 46 : 33), 139) + 156)
+        let width = min(type == .icons ? 420 : type == .providers ? max(anchor.width, 440) : max(anchor.width, 310), size.width - 48)
+        let modelListHeight = editor.models.isEmpty ? 43 : min(CGFloat(editor.models.count) * (isAccount ? 46 : 33), 139)
+        let height = popupHeight ?? (type == .providers ? 354 : type == .icons ? 352 : modelListHeight + 52)
         let left = max(24, min(anchor.minX, size.width - width - 24))
         let top = anchor.maxY + 6 + height <= size.height - 14 ? anchor.maxY + 6 : max(8, min(anchor.minY - height - 6, size.height - height - 8))
         ZStack(alignment: .topLeading) {
             Color.clear.contentShape(Rectangle()).onTapGesture { closePopup() }
             Group {
                 if type == .providers {
-                    TranslationServiceProviderPicker(selected: kind, choose: { value in popup = nil; changeKind(value) }, dismiss: closePopup)
+                    TranslationServiceProviderPicker(selected: preset, includesAccount: !editor.isEditingExistingService,
+                                                     choose: { value in popup = nil; changePreset(value) }, dismiss: closePopup)
+                } else if type == .icons {
+                    TranslationServiceIconPicker(configuration: editor.configuration,
+                                                 choose: { value in editor.configuration.iconID = value; closePopup() }, dismiss: closePopup)
                 } else {
                     TranslationServiceModelPicker(models: editor.models, selected: editor.configuration.model,
-                                                  account: isAccount, choose: { value in editor.chooseModel(value); manualModelEntry = false; closePopup() }, dismiss: closePopup,
-                                                  manualEntry: isAccount ? nil : {
-                        popup = nil; focusedAction = nil; manualModelEntry = true
-                        requestedField = .model; fieldFocusRevision &+= 1
-                    }, loadModels: isAccount ? nil : { loadModels() })
+                                                  account: isAccount, choose: { value in editor.chooseModel(value); closePopup() }, dismiss: closePopup)
                 }
             }
             .frame(width: width)
@@ -630,13 +668,13 @@ private struct TranslationServiceEditorContent: View {
     }
     private func loadModels() {
         editor.hideKey(); popup = nil; focusedAction = nil
-        manualModelEntry = false; openCatalogWhenReady = true
+        openCatalogWhenReady = true
         editor.fetchModels()
     }
     private func closePopup() {
         let previous = popup
         popup = nil
-        focusedAction = previous == .providers ? .provider : .model
+        focusedAction = previous == .providers ? .provider : previous == .icons ? .icon : .model
     }
     private func focusRequest(for field: TranslationServiceEditor.Field) -> Int {
         requestedField == field ? fieldFocusRevision : 0

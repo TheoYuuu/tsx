@@ -4,6 +4,8 @@
 
 本说明对应当前源码，正式安装包见 Releases。需要 macOS 15 或更新版本；从 [GitHub Releases](https://github.com/TheoYuuu/tsx/releases/latest) 下载 DMG，打开后将 TSX 拖入 Applications。
 
+下载时选择 Release 附件中的 `TSX-版本-macOS-universal.dmg`，同时包含 Apple silicon 与 Intel 架构；自动生成的 Source code 归档不是安装包。如需核对完整性，将同一版本的 DMG 和 `SHA256SUMS.txt` 放在同一目录，在该目录运行 `shasum -a 256 -c SHA256SUMS.txt`。摘要匹配不替代系统的开发者签名与公证检查。
+
 ## 三种翻译入口
 
 | 操作 | 默认快捷键 | 使用方式 |
@@ -32,6 +34,8 @@
 
 默认使用 Apple 本地翻译。可在设置中自行添加其他服务，再选择要使用的配置；账号资格、网络、额度和服务质量由相应服务决定。
 
+API 服务使用自己的 API Key。选择预设厂商，或使用 New API／自定义服务填写兼容接口地址，再获取模型列表并选择模型；不提供手填模型入口，已有服务保留已保存模型。完整请求地址模式还需配置同源的模型列表地址；接口未提供可用目录时无法选择新模型。具体协议与厂商默认地址见[模型服务连接约定](ProviderAPIs.md)。添加或编辑时可更换厂商与图标；切换到新连接后需重新配置其凭据。
+
 翻译正文和截图仅在当前运行期间保留，退出应用后不会恢复。需要保留的内容请先复制到自己的文档。具体数据行为见[隐私与数据说明](PRIVACY.md)。
 
 ## 用量统计
@@ -53,6 +57,8 @@
 [Back to overview](../README.en.md)
 
 This guide covers the current source. Published installers require macOS 15 or later. Download the DMG from [GitHub Releases](https://github.com/TheoYuuu/tsx/releases/latest), open it, and drag TSX into Applications.
+
+Choose the `TSX-version-macOS-universal.dmg` release asset for Apple silicon or Intel. Automatically generated source-code archives are not installers. To check integrity, place the DMG and `SHA256SUMS.txt` from the same release in one directory and run `shasum -a 256 -c SHA256SUMS.txt` there. Matching checksums do not replace system checks of developer signatures and notarization.
 
 ## Translation entry points
 
@@ -81,6 +87,8 @@ Screenshot translation offers text and original-image views. Correct recognized 
 ## Services and session content
 
 Apple local translation is the default. Add other services in Settings and select the configuration you want to use. Account eligibility, connectivity, allowances, and translation quality depend on that service.
+
+API services use your own API key. Choose a provider preset or configure a compatible endpoint through New API or Custom service, then fetch and select a model. Manual model entry is unavailable; existing services keep their saved models. Full request URL mode also requires a model-list URL on the same origin. An endpoint without a usable model directory cannot supply new model selections. See [provider connection details](ProviderAPIs.md). Providers and icons can be changed while adding or editing a service; a new connection requires its own credentials.
 
 Translation text and screenshots remain available only during the current app session and are not restored after quitting. Copy anything you need to keep into your own document. See [Privacy and data](PRIVACY.md#english) for details.
 

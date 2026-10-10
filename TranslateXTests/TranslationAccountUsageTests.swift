@@ -433,6 +433,69 @@ final class TranslationAccountUsageTests: XCTestCase {
         XCTAssertEqual(requests, 0)
     }
 
+    func testDisplayMetadataDoesNotRestartScheduledQueriesOrTouchCredentials() async throws {
+        let fixture = try StoreFixture()
+        defer { fixture.cleanup() }
+        let id = fixture.configuration.id
+        fixture.services.accountQueryPreferences.set(.init(intervalSeconds: 300, timeoutSeconds: 10), for: id)
+        let loader = ImmediateQuotaLoader()
+        let controller = TranslationAccountUsageController(services: fixture.services, loader: loader)
+        defer { controller.stopAutomaticRefresh() }
+        controller.startAutomaticRefresh()
+        try await waitUntil { controller.state(for: id).snapshot != nil }
+        let snapshot = controller.state(for: id).snapshot
+        let reads = fixture.credentials.reads
+        let writes = fixture.credentials.writes
+        let removals = fixture.credentials.removals
+        var configuration = fixture.configuration
+        let changes: [(inout TranslationServiceConfiguration) -> Void] = [
+            { $0.name = "Constructed display name" },
+            { $0.website = "https://constructed.example/console" },
+            { $0.iconID = "cloud" }
+        ]
+        for change in changes {
+            change(&configuration)
+            try fixture.services.save(configuration, apiKey: nil)
+            controller.configurationDidChange()
+            try await Task.sleep(for: .milliseconds(30))
+            let calls = await loader.configurations.count
+            XCTAssertEqual(calls, 1, "Display changes must retain the existing automatic query schedule")
+            XCTAssertEqual(controller.state(for: id).snapshot, snapshot)
+            XCTAssertEqual(fixture.credentials.reads, reads)
+            XCTAssertEqual(fixture.credentials.writes, writes)
+            XCTAssertEqual(fixture.credentials.removals, removals)
+        }
+    }
+
+    func testConnectionAndKeyChangesRestartScheduledQueriesWithCurrentConfiguration() async throws {
+        let fixture = try StoreFixture()
+        defer { fixture.cleanup() }
+        let id = fixture.configuration.id
+        fixture.services.accountQueryPreferences.set(.init(intervalSeconds: 300, timeoutSeconds: 10), for: id)
+        let loader = ImmediateQuotaLoader()
+        let controller = TranslationAccountUsageController(services: fixture.services, loader: loader)
+        defer { controller.stopAutomaticRefresh() }
+        controller.startAutomaticRefresh()
+        try await waitUntil { controller.state(for: id).snapshot != nil }
+        let silentReads = fixture.credentials.silentReads
+        var configuration = fixture.configuration
+        configuration.endpoint = "https://api.deepseek.com/v1"
+        try fixture.services.save(configuration, apiKey: "fixture-new-destination-key")
+        controller.configurationDidChange()
+        try await waitUntil { controller.state(for: id).snapshot?.balances.first?.total == 2 }
+        let configurations = await loader.configurations
+        XCTAssertEqual(configurations.count, 2)
+        XCTAssertEqual(configurations.last?.endpoint, configuration.endpoint)
+        XCTAssertEqual(fixture.credentials.silentReads, silentReads + 1)
+
+        try fixture.services.save(configuration, apiKey: "fixture-rotated-key")
+        controller.configurationDidChange()
+        try await waitUntil { controller.state(for: id).snapshot?.balances.first?.total == 3 }
+        let keys = await loader.keys
+        XCTAssertEqual(keys, ["fixture-key", "fixture-new-destination-key", "fixture-rotated-key"])
+        XCTAssertEqual(fixture.credentials.silentReads, silentReads + 2)
+    }
+
     func testAutomaticRefreshRepeatsWithoutOverlappingAndStopsAtManualInterval() async throws {
         let fixture = try StoreFixture()
         defer { fixture.cleanup() }
@@ -563,6 +626,8 @@ private final class QuotaCredentials: TranslationCredentialStore {
     private var values: [UUID: TranslationServiceCredential] = [:]
     private(set) var interactiveReads = 0
     private(set) var silentReads = 0
+    private(set) var writes = 0
+    private(set) var removals = 0
     var rejectSilentReads = false
     var reads: Int { interactiveReads + silentReads }
     func credential(for id: UUID) throws -> TranslationServiceCredential? { interactiveReads += 1; return values[id] }
@@ -571,8 +636,20 @@ private final class QuotaCredentials: TranslationCredentialStore {
         if rejectSilentReads { throw TranslationServiceConfigurationError.credentialUnavailable }
         return values[id]
     }
-    func setCredential(_ credential: TranslationServiceCredential, for id: UUID) throws { values[id] = credential }
-    func removeCredential(for id: UUID) throws { values[id] = nil }
+    func setCredential(_ credential: TranslationServiceCredential, for id: UUID) throws { writes += 1; values[id] = credential }
+    func removeCredential(for id: UUID) throws { removals += 1; values[id] = nil }
+}
+
+private actor ImmediateQuotaLoader: TranslationAccountUsageLoading {
+    private(set) var configurations: [TranslationServiceConfiguration] = []
+    private(set) var keys: [String?] = []
+
+    func usage(configuration: TranslationServiceConfiguration, apiKey: String?) async throws -> TranslationAccountUsageSnapshot {
+        configurations.append(configuration)
+        keys.append(apiKey)
+        return .init(fetchedAt: Date(timeIntervalSince1970: 1_800_000_000),
+                     balances: [.init(currency: "CNY", total: Decimal(configurations.count), granted: nil, toppedUp: nil)])
+    }
 }
 
 private actor HeldQuotaLoader: TranslationAccountUsageLoading {

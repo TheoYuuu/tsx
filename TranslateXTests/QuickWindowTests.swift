@@ -4,18 +4,21 @@ import XCTest
 
 @MainActor
 final class QuickWindowTests: XCTestCase {
-    func testPermissionContentDoesNotExpandPanelBeyondItsRequestedHeight() async throws {
+    func testBothPermissionPromptsUseTheCompactPanelWithoutExpandingIt() async throws {
         _ = NSApplication.shared
         let windows = try isolatedWindows()
         defer { windows.shutdown() }
-        windows.showQuick(source: nil, permission: .screenCapture)
-        try await Task.sleep(for: .milliseconds(200))
-        let panel = try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.quick" && $0.isVisible })
-        XCTAssertEqual(panel.title, "TSX")
-        XCTAssertEqual(panel.accessibilityTitle(), "TSX")
-        XCTAssertEqual(panel.titleVisibility, .hidden)
-        XCTAssertLessThanOrEqual(panel.frame.height, 365, "SwiftUI content must not expand a permission panel beyond the designed size")
-        XCTAssertGreaterThanOrEqual(panel.frame.height, panel.minSize.height)
+        for permission in [SystemPermission.accessibility, .screenCapture] {
+            windows.showQuick(source: nil, permission: permission)
+            let panel = try quickPanel()
+            try await Task.sleep(for: .milliseconds(200))
+            XCTAssertEqual(panel.title, "TSX")
+            XCTAssertEqual(panel.accessibilityTitle(), "TSX")
+            XCTAssertEqual(panel.titleVisibility, .hidden)
+            XCTAssertEqual(panel.frame.size, NSSize(width: 440, height: 320),
+                           "Hosted content must retain the compact permission size")
+            XCTAssertGreaterThanOrEqual(panel.frame.height, panel.minSize.height)
+        }
     }
 
     func testReplacingHostedContentPreservesPanelResizeMinimum() async throws {
@@ -128,7 +131,7 @@ final class QuickWindowTests: XCTestCase {
         windows.showQuick(source: nil, permission: .accessibility)
         let panel = try quickPanel()
         let permissionFrame = panel.frame
-        XCTAssertEqual(permissionFrame.size, NSSize(width: 430, height: 365))
+        XCTAssertEqual(permissionFrame.size, NSSize(width: 440, height: 320))
         try await Task.sleep(for: .milliseconds(200))
 
         XCTAssertEqual(windows.quickModel.phase, .completed)

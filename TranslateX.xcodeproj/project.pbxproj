@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		02027ADB9A2D2EFCA0157A72 /* UsageDateRangeSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6F26D8BD10E058C174981F6 /* UsageDateRangeSelection.swift */; };
+		06E2BBCEB72D0446C30B4DDA /* CompactUpdateDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = E68AB3043905E700D0430C2A /* CompactUpdateDialog.swift */; };
 		084FF3C151D9AF4A80FFBE97 /* TranslationServicePickers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EE333A5B5CF898CAF4F0BE8 /* TranslationServicePickers.swift */; };
 		08CA1B688D51B79A2328ECB6 /* CodexTranslationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7CB494726329CE4E0DD136D /* CodexTranslationProvider.swift */; };
 		0BA0F4A37C05C6E32EA81F3D /* TranslationServicePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7876D8F3D0934BEB360F1149 /* TranslationServicePicker.swift */; };
@@ -53,6 +54,7 @@
 		4B4C050121069FC88410FE37 /* TranslationServiceChecksControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2092D90BFF59932C9DBCA28E /* TranslationServiceChecksControllerTests.swift */; };
 		4B68269EAAD0C1FF3B482AE0 /* QwenMTTranslationProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFF8E341E47E581EBD9A5E95 /* QwenMTTranslationProviderTests.swift */; };
 		4D73883D93FD992FAC634088 /* QwenMTTranslationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E9CD449267DC63F75C87D90 /* QwenMTTranslationProvider.swift */; };
+		4D9973932EFF3CBE1FF124A3 /* TranslationServiceIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5A9DF54CE975BCA8CD080E6 /* TranslationServiceIcon.swift */; };
 		4F0D7792B82A7C3B924505AC /* TranslationProviderFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8213685E9A902100519EDF7E /* TranslationProviderFactory.swift */; };
 		503515A7F446D99C1E647A98 /* PanelPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E82D9A4799CC7769ADEC038A /* PanelPlacementTests.swift */; };
 		520C05D6671F4544B97B2C91 /* OCRServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AD407C721477AAEC4F425BC /* OCRServiceTests.swift */; };
@@ -91,9 +93,11 @@
 		7BAC4128D140AD3054FFF4C4 /* RemoteTranslationError.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBDEDAE29D7BCB1586F3006F /* RemoteTranslationError.swift */; };
 		7E24A1893A0A05E0E8933C3F /* TranslationServiceLayoutProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE46B629FE3C50ED0A5DE81B /* TranslationServiceLayoutProbe.swift */; };
 		8054C4137FECECB8F4581075 /* CodexAccountSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B47B3115B81FEF7A4D84D91 /* CodexAccountSettingsView.swift */; };
+		8202EC0FB81955A8C3520139 /* TranslationServicePresetTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C36A8E8397E83E148CE1BFD8 /* TranslationServicePresetTests.swift */; };
 		85B472915A0C1C32AA581934 /* AppReleaseNotesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BC0EF58641114B4D802C9CA /* AppReleaseNotesTests.swift */; };
 		87C73125D4DC25972409549F /* TranslateXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B2D7B36960D56D3AA18E49B /* TranslateXTheme.swift */; };
 		8897A9E00ED6D05F53172001 /* AppPreferencesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65E3C89413076A3CE85D577B /* AppPreferencesTests.swift */; };
+		8C37E291FCFA6D3E5E2BBDA9 /* ReleaseNotesPresentationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 688D26BF6D13A19DFAEAEEC8 /* ReleaseNotesPresentationTests.swift */; };
 		8CDAB62580D833EE32FE5109 /* RegionSelectionGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2A3D71AD1098770DFAB1A57 /* RegionSelectionGeometry.swift */; };
 		8EB7A2FC0A478522EE57C6B6 /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E69470978FC139B52EC4614 /* OCRService.swift */; };
 		8F7650C457AE32CF98E8C999 /* AppUpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10D616F53F9ABAE617A8A121 /* AppUpdateController.swift */; };
@@ -137,6 +141,7 @@
 		BF865699289DE04B2725C8DE /* TranslationModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFED2D539D33CDE3833B3363 /* TranslationModelTests.swift */; };
 		BF957F59C36C0937E8B1C12D /* WindowSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AA4E185A85D32748BE0EEB6 /* WindowSurface.swift */; };
 		C00AE5340DE7CBB8A0757517 /* LocalizationMessageTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C196E40C9F55494B2D753F36 /* LocalizationMessageTests.swift */; };
+		C067589ABFEC62783516CBA0 /* ReleaseNotesPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62018D27C80B2EB27A788544 /* ReleaseNotesPresentation.swift */; };
 		C17FF609FD7FE2858D0D8CE1 /* ShortcutRecorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01BBCA8761F68B22FBF6761B /* ShortcutRecorderTests.swift */; };
 		C527FD7C74C659BA22D515C6 /* ScreenshotDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF37E0F15A541C694F26370B /* ScreenshotDocumentTests.swift */; };
 		C5F577C0BF8B753FBEC4485D /* TranslateXTooltip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DC78E84B857C4A2FC305202 /* TranslateXTooltip.swift */; };
@@ -148,6 +153,7 @@
 		D60DE703FCD888FC66A6FDFC /* AppReleaseNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA6226CC20579F3FD64DF9F8 /* AppReleaseNotes.swift */; };
 		D668EF367EB30FD12A1E6E99 /* TranslationServiceChecksController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A2FD9B5CD4A89865BC49B6B /* TranslationServiceChecksController.swift */; };
 		D6690CC873728DA4ECC35619 /* ShortcutRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5F1CE3AACD5DD502C5F678 /* ShortcutRecorder.swift */; };
+		D8696C61786A53A4C670E83E /* TranslationServiceIconTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4EBBBC9818ECD3BD6C3F7F9 /* TranslationServiceIconTests.swift */; };
 		DBDE2C30CAE309D0218516AF /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46B551D9BDBAC89914CAE180 /* AboutView.swift */; };
 		DE981858F6F0AAB1856193A5 /* NativeControlDisableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E068ECC82C052835AF2F28C5 /* NativeControlDisableTests.swift */; };
 		E0576C9F415A3EC132BA886D /* TranslationServiceEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0182656FDAC8E6250DCEB55 /* TranslationServiceEditorTests.swift */; };
@@ -178,6 +184,7 @@
 		FAE5FA8080A591441C45ABF7 /* CaptureLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1BA9969B6F86E777D1C0892 /* CaptureLayoutTests.swift */; };
 		FB9BEC3EDB35BF5B1DC299A6 /* BuildConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9583D495695DB64A3F5192 /* BuildConfigurationTests.swift */; };
 		FC0FF20B7CCA2A86B9AD086C /* ShortcutSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19C0839821B53A61404E476 /* ShortcutSettings.swift */; };
+		FC1F7B9194944DC7C15446BA /* TranslationServicePreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3502641D7802B97231E2D96C /* TranslationServicePreset.swift */; };
 		FCABA81706171B9CA0502938 /* ScreenshotTranslationController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7083FBF728935914C648516 /* ScreenshotTranslationController.swift */; };
 		FFF5BC107EB356AB2D313530 /* TranslationSplitLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9EA3CF1C426D206F9D39F8A /* TranslationSplitLayout.swift */; };
 /* End PBXBuildFile section */
@@ -235,6 +242,7 @@
 		337AD900578540983A71B59E /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		342789ED0D5F33920DB725ED /* TranslationServiceUsageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceUsageView.swift; sourceTree = "<group>"; };
 		34A58E4F4F4186054C75D5DA /* TranslationAccountQueryPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationAccountQueryPreferences.swift; sourceTree = "<group>"; };
+		3502641D7802B97231E2D96C /* TranslationServicePreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServicePreset.swift; sourceTree = "<group>"; };
 		351E9D25A1068BEB0C04D69B /* ReleaseNotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotesView.swift; sourceTree = "<group>"; };
 		3720B655BA4C177E528260C8 /* TranslationServiceSecretInputTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceSecretInputTests.swift; sourceTree = "<group>"; };
 		3A0FE5A9B01A31225814301B /* TranslationTextEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationTextEditorTests.swift; sourceTree = "<group>"; };
@@ -264,8 +272,10 @@
 		5EC07F3E3B7CA327D5CE38D3 /* TranslationServiceNavigationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceNavigationCoordinator.swift; sourceTree = "<group>"; };
 		61A0678E3C9B4FF7BDF2CEDA /* RegionSelectionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSelectionController.swift; sourceTree = "<group>"; };
 		61D8306DC5AFF62065B1C913 /* LanguageMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageMenu.swift; sourceTree = "<group>"; };
+		62018D27C80B2EB27A788544 /* ReleaseNotesPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotesPresentation.swift; sourceTree = "<group>"; };
 		65E3C89413076A3CE85D577B /* AppPreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferencesTests.swift; sourceTree = "<group>"; };
 		68217701F236895FB350AEE5 /* MaterialPreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialPreferencesTests.swift; sourceTree = "<group>"; };
+		688D26BF6D13A19DFAEAEEC8 /* ReleaseNotesPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotesPresentationTests.swift; sourceTree = "<group>"; };
 		6A2FD9B5CD4A89865BC49B6B /* TranslationServiceChecksController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceChecksController.swift; sourceTree = "<group>"; };
 		6AA4E185A85D32748BE0EEB6 /* WindowSurface.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSurface.swift; sourceTree = "<group>"; };
 		6B49DF744D3C56854A08ED06 /* QuickEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickEditorTests.swift; sourceTree = "<group>"; };
@@ -302,6 +312,7 @@
 		996BF8A26FEF5C8F73EC2A72 /* TranslationServiceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceStore.swift; sourceTree = "<group>"; };
 		A26370913F17F7BA22AC1B75 /* TranslateXScrollStyleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslateXScrollStyleTests.swift; sourceTree = "<group>"; };
 		A36965475648C068E86959A4 /* QwenMTTranslationLanguages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QwenMTTranslationLanguages.swift; sourceTree = "<group>"; };
+		A4EBBBC9818ECD3BD6C3F7F9 /* TranslationServiceIconTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceIconTests.swift; sourceTree = "<group>"; };
 		A66D528766958E2BBB54F8C9 /* ShortcutSettingsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortcutSettingsTests.swift; sourceTree = "<group>"; };
 		A991FE8123B7A8DEF86A5A76 /* ProviderLogoNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ProviderLogoNotices.txt; sourceTree = "<group>"; };
 		ACD75235C0A5E857BFD91D9E /* ScreenCaptureService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureService.swift; sourceTree = "<group>"; };
@@ -321,6 +332,7 @@
 		C0182656FDAC8E6250DCEB55 /* TranslationServiceEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceEditorTests.swift; sourceTree = "<group>"; };
 		C0C1D127B73F21173AE01427 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
 		C196E40C9F55494B2D753F36 /* LocalizationMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationMessageTests.swift; sourceTree = "<group>"; };
+		C36A8E8397E83E148CE1BFD8 /* TranslationServicePresetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServicePresetTests.swift; sourceTree = "<group>"; };
 		C3861379407D3FF1BE051FCB /* TranslationStatusLight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationStatusLight.swift; sourceTree = "<group>"; };
 		C78B909A4315204683FF2C2C /* DedicatedTranslationProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DedicatedTranslationProviderTests.swift; sourceTree = "<group>"; };
 		C9EA3CF1C426D206F9D39F8A /* TranslationSplitLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationSplitLayout.swift; sourceTree = "<group>"; };
@@ -350,7 +362,9 @@
 		E03EEF57A0F712A460862C08 /* KeychainInteraction.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = KeychainInteraction.h; sourceTree = "<group>"; };
 		E068ECC82C052835AF2F28C5 /* NativeControlDisableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NativeControlDisableTests.swift; sourceTree = "<group>"; };
 		E237541B8970C067EE2903F5 /* TranslationServiceConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceConfigurationTests.swift; sourceTree = "<group>"; };
+		E5A9DF54CE975BCA8CD080E6 /* TranslationServiceIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceIcon.swift; sourceTree = "<group>"; };
 		E6159F708B9FCAF702EF2083 /* RegionSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSelectionTests.swift; sourceTree = "<group>"; };
+		E68AB3043905E700D0430C2A /* CompactUpdateDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompactUpdateDialog.swift; sourceTree = "<group>"; };
 		E7CB494726329CE4E0DD136D /* CodexTranslationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexTranslationProvider.swift; sourceTree = "<group>"; };
 		E82D9A4799CC7769ADEC038A /* PanelPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelPlacementTests.swift; sourceTree = "<group>"; };
 		E93A1409588A6E90007E1DBB /* TranslationWorkspace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationWorkspace.swift; sourceTree = "<group>"; };
@@ -479,6 +493,7 @@
 				D23F6D67BCD42317E7A6C392 /* QuickWindowTests.swift */,
 				CFF8E341E47E581EBD9A5E95 /* QwenMTTranslationProviderTests.swift */,
 				E6159F708B9FCAF702EF2083 /* RegionSelectionTests.swift */,
+				688D26BF6D13A19DFAEAEEC8 /* ReleaseNotesPresentationTests.swift */,
 				7B56D1ADFBD85CB88038AFC7 /* RemoteTranslationProviderTests.swift */,
 				B6A18DB93F31CABF7FF04F94 /* ScreenCaptureTests.swift */,
 				BF37E0F15A541C694F26370B /* ScreenshotDocumentTests.swift */,
@@ -499,8 +514,10 @@
 				2092D90BFF59932C9DBCA28E /* TranslationServiceChecksControllerTests.swift */,
 				E237541B8970C067EE2903F5 /* TranslationServiceConfigurationTests.swift */,
 				C0182656FDAC8E6250DCEB55 /* TranslationServiceEditorTests.swift */,
+				A4EBBBC9818ECD3BD6C3F7F9 /* TranslationServiceIconTests.swift */,
 				81E989132F5B782B4C73591A /* TranslationServiceModelCatalogTests.swift */,
 				2EB47DBE2031A54CEF5D3397 /* TranslationServiceNavigationTests.swift */,
+				C36A8E8397E83E148CE1BFD8 /* TranslationServicePresetTests.swift */,
 				D3271C9634B86716205FC6A9 /* TranslationServiceRoutingTests.swift */,
 				3720B655BA4C177E528260C8 /* TranslationServiceSecretInputTests.swift */,
 				82C2A2CBAACBD966547F52B6 /* TranslationServiceStoreTests.swift */,
@@ -583,6 +600,7 @@
 				B1CDFEB49589770E9644B760 /* TranslationServiceConfiguration.swift */,
 				58ED38C92114F1685C771E26 /* TranslationServiceEditor.swift */,
 				CFFC7440BA4E6ED6B72BD140 /* TranslationServiceModelCatalog.swift */,
+				3502641D7802B97231E2D96C /* TranslationServicePreset.swift */,
 				996BF8A26FEF5C8F73EC2A72 /* TranslationServiceStore.swift */,
 				7224FA5075E19B45AB562577 /* TranslationUsageDashboard.swift */,
 				4EF5BC9A1178641A75B3B9C3 /* TranslationUsagePricing.swift */,
@@ -703,12 +721,14 @@
 			children = (
 				20D809E0C9999B4BD98EBF0A /* AboutSettingsView.swift */,
 				2B47B3115B81FEF7A4D84D91 /* CodexAccountSettingsView.swift */,
+				E68AB3043905E700D0430C2A /* CompactUpdateDialog.swift */,
 				351E9D25A1068BEB0C04D69B /* ReleaseNotesView.swift */,
 				455FE2E732BC63FE840F0147 /* SettingsView.swift */,
 				DD5F1CE3AACD5DD502C5F678 /* ShortcutRecorder.swift */,
 				6A2FD9B5CD4A89865BC49B6B /* TranslationServiceChecksController.swift */,
 				42290BB358A1414913F12200 /* TranslationServiceComponents.swift */,
 				8EAA0652F1C605D0A102084D /* TranslationServiceEditorView.swift */,
+				E5A9DF54CE975BCA8CD080E6 /* TranslationServiceIcon.swift */,
 				CE46B629FE3C50ED0A5DE81B /* TranslationServiceLayoutProbe.swift */,
 				5EC07F3E3B7CA327D5CE38D3 /* TranslationServiceNavigationCoordinator.swift */,
 				1EE333A5B5CF898CAF4F0BE8 /* TranslationServicePickers.swift */,
@@ -726,6 +746,7 @@
 			children = (
 				FA6226CC20579F3FD64DF9F8 /* AppReleaseNotes.swift */,
 				10D616F53F9ABAE617A8A121 /* AppUpdateController.swift */,
+				62018D27C80B2EB27A788544 /* ReleaseNotesPresentation.swift */,
 				5499AB41698A314C69187747 /* SparkleAppUpdater.swift */,
 			);
 			path = Updates;
@@ -893,6 +914,7 @@
 				8054C4137FECECB8F4581075 /* CodexAccountSettingsView.swift in Sources */,
 				BE30938AA3D7C6D01AC78EF6 /* CodexRuntimeSession.swift in Sources */,
 				08CA1B688D51B79A2328ECB6 /* CodexTranslationProvider.swift in Sources */,
+				06E2BBCEB72D0446C30B4DDA /* CompactUpdateDialog.swift in Sources */,
 				EAD74A4AE4795DA342972C9D /* DedicatedTranslationLanguages.swift in Sources */,
 				A0A8B9E7D5B7AA9084542DAA /* DedicatedTranslationProvider.swift in Sources */,
 				490775D3A6C822E1874C92E8 /* GlobalShortcut.swift in Sources */,
@@ -914,6 +936,7 @@
 				4D73883D93FD992FAC634088 /* QwenMTTranslationProvider.swift in Sources */,
 				25CADC2E6DC05848591E7B68 /* RegionSelectionController.swift in Sources */,
 				8CDAB62580D833EE32FE5109 /* RegionSelectionGeometry.swift in Sources */,
+				C067589ABFEC62783516CBA0 /* ReleaseNotesPresentation.swift in Sources */,
 				BC84AE95D4C0B688F300EC60 /* ReleaseNotesView.swift in Sources */,
 				7BAC4128D140AD3054FFF4C4 /* RemoteTranslationError.swift in Sources */,
 				0BE5CBFA8F4697FE62598A9F /* RemoteTranslationProvider.swift in Sources */,
@@ -954,11 +977,13 @@
 				7AC9EEAD1B0A3A1AAFBFA37C /* TranslationServiceConfiguration.swift in Sources */,
 				9D3E015CA4EFFC98E220B5C0 /* TranslationServiceEditor.swift in Sources */,
 				ECD7BB84B8CC4608D8A9F38B /* TranslationServiceEditorView.swift in Sources */,
+				4D9973932EFF3CBE1FF124A3 /* TranslationServiceIcon.swift in Sources */,
 				7E24A1893A0A05E0E8933C3F /* TranslationServiceLayoutProbe.swift in Sources */,
 				A3ED422FC8E99085BF12A56B /* TranslationServiceModelCatalog.swift in Sources */,
 				F9BE9A084E533BFE6B624576 /* TranslationServiceNavigationCoordinator.swift in Sources */,
 				0BA0F4A37C05C6E32EA81F3D /* TranslationServicePicker.swift in Sources */,
 				084FF3C151D9AF4A80FFBE97 /* TranslationServicePickers.swift in Sources */,
+				FC1F7B9194944DC7C15446BA /* TranslationServicePreset.swift in Sources */,
 				EE79DC57D1AC122BDBCA7E63 /* TranslationServiceStore.swift in Sources */,
 				A4D27CD8DA54FF464A67CBBF /* TranslationServiceUsageView.swift in Sources */,
 				370F5F78388F6DFF88C88257 /* TranslationServicesSettingsView.swift in Sources */,
@@ -1016,6 +1041,7 @@
 				A7D302A025C59D8CB05C3A2F /* QuickWindowTests.swift in Sources */,
 				4B68269EAAD0C1FF3B482AE0 /* QwenMTTranslationProviderTests.swift in Sources */,
 				C9358143E3662BC5D3D4F15E /* RegionSelectionTests.swift in Sources */,
+				8C37E291FCFA6D3E5E2BBDA9 /* ReleaseNotesPresentationTests.swift in Sources */,
 				0CA77A0CC11F7C9F4F68449F /* RemoteTranslationProviderTests.swift in Sources */,
 				B509BD115006226FD5EC3E5A /* ScreenCaptureTests.swift in Sources */,
 				C527FD7C74C659BA22D515C6 /* ScreenshotDocumentTests.swift in Sources */,
@@ -1036,8 +1062,10 @@
 				4B4C050121069FC88410FE37 /* TranslationServiceChecksControllerTests.swift in Sources */,
 				7A0B2AD7F08C5FEB1BE30CDD /* TranslationServiceConfigurationTests.swift in Sources */,
 				E0576C9F415A3EC132BA886D /* TranslationServiceEditorTests.swift in Sources */,
+				D8696C61786A53A4C670E83E /* TranslationServiceIconTests.swift in Sources */,
 				90A3B1761EBAF7B5604B058A /* TranslationServiceModelCatalogTests.swift in Sources */,
 				15ABFCA670781C56C38375F7 /* TranslationServiceNavigationTests.swift in Sources */,
+				8202EC0FB81955A8C3520139 /* TranslationServicePresetTests.swift in Sources */,
 				3E4982B989A6E8A0A13EF838 /* TranslationServiceRoutingTests.swift in Sources */,
 				65963BC178C2D7EB2A1B7B1E /* TranslationServiceSecretInputTests.swift in Sources */,
 				A7CA53839F9E7E26B5F0E5C8 /* TranslationServiceStoreTests.swift in Sources */,
@@ -1256,7 +1284,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Config/TranslateX.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 97K37J92QD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1267,7 +1295,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 1.2.0;
 				OTHER_CODE_SIGN_FLAGS = "$(inherited) --options runtime";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TRANSLATEX_APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = TranslateX;
@@ -1286,7 +1314,7 @@
 				CODE_SIGN_ENTITLEMENTS = Config/TranslateX.entitlements;
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 97K37J92QD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1297,7 +1325,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.2;
+				MARKETING_VERSION = 1.2.0;
 				OTHER_CODE_SIGN_FLAGS = "$(inherited) --options runtime";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TRANSLATEX_APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = TranslateX;

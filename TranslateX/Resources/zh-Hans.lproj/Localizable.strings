@@ -2,7 +2,7 @@
 "A little clarity." = "让理解，更进一步。";
 "About TSX" = "关于 TSX";
 "Allow Accessibility" = "允许辅助功能访问";
-"Allow Accessibility so TSX can read selected text when you use the shortcut. Your text isn’t collected in the background." = "允许辅助功能访问后，TSX 会在你按下快捷键时读取选中的文字，不会在后台采集内容。";
+"Allow TSX in System Settings → Accessibility to translate selected text with your shortcut." = "在系统设置中允许 TSX 访问辅助功能，即可通过快捷键翻译选中的文字。";
 "Apple may ask to download language files. Keep this window open." = "Apple 可能会请求下载语言文件，请保持此窗口打开。";
 "Cancel" = "取消";
 "Clear" = "清空";
@@ -48,7 +48,7 @@
 "This shortcut is already in use. Choose another combination." = "此快捷键已被占用，请选择其他组合。";
 "Translate" = "翻译";
 "Translate selection" = "翻译选中文字";
-"Translate your selection" = "翻译选中的文字";
+"Enable selection translation" = "开启选词翻译";
 "Translating…" = "正在翻译…";
 "Translation" = "译文";
 "Translation cancelled" = "已取消翻译";
@@ -74,9 +74,9 @@
 "Swap languages" = "互换语言";
 "Screenshot Translation" = "截图翻译";
 "Screenshot" = "截图";
-"Translate a screenshot" = "翻译屏幕中的文字";
+"Enable screenshot translation" = "开启截图翻译";
 "Allow Screen Recording" = "允许屏幕录制访问";
-"Allow Screen Recording to recognize text in an area you select. Screenshots stay in memory on your Mac. After enabling access, start Screenshot Translation again." = "允许屏幕录制访问后，TSX 可以识别你选定区域内的文字。截图仅保留在本机内存中。开启权限后，请重新开始截图翻译。";
+"Allow TSX in System Settings → Screen Recording, then start Screenshot Translation again." = "在系统设置中允许 TSX 录制屏幕，开启权限后请重新开始截图翻译。";
 "Recognizing text…" = "正在识别文字…";
 "Text recognition stays on your Mac. The first scan may take longer." = "文字识别仅在本机进行，首次识别可能需要较长时间。";
 "Drag to select an area · Esc to cancel" = "拖动以选择区域 · 按 Esc 取消";
@@ -195,7 +195,6 @@
 "API base URL" = "API 基础地址";
 "Model" = "模型";
 "API key" = "API 密钥";
-"API key (optional)" = "API 密钥（可选）";
 "Enter API key" = "输入 API 密钥";
 "Leave blank to keep the saved key" = "留空以保留已保存的密钥";
 "Remove saved API key" = "移除已保存的 API 密钥";
@@ -225,7 +224,7 @@
 "Unable to read this service’s API key. Open Translation services to update it." = "无法读取此服务的 API 密钥，请前往“翻译服务”更新密钥。";
 "The translation service changed. Translate again to use the selected service." = "翻译服务已更改，请重新翻译以使用当前所选服务。";
 "Enter a service name of 1–120 characters." = "请输入 1–120 个字符的服务名称。";
-"Enter a model identifier without spaces, up to 256 characters." = "请输入不含空格的模型标识，最多 256 个字符。";
+"Choose a valid model from the model list." = "请从模型列表中选择有效模型。";
 "Enter an API base URL without a username, password, query, or fragment." = "请输入 API 基础地址，不要包含用户名、密码、查询参数或片段标识。";
 "Remote services require HTTPS. HTTP is allowed only for a loopback address." = "远程服务必须使用 HTTPS，仅本机回环地址可使用 HTTP。";
 "Additional translation instructions must be no longer than 8,000 characters." = "翻译规范不能超过 8,000 个字符。";
@@ -348,11 +347,9 @@
 /* Translation service settings */
 "%.1f s" = "%.1f 秒";
 "%d models loaded · Choose a model" = "已获取 %d 个模型 · 请选择一个";
-"%d models loaded · Choose one or enter an ID" = "已获取 %d 个模型 · 可选择或手动输入";
 "%d models loaded · Current account model selected" = "已获取 %d 个模型 · 已选择当前账号模型";
 "%d services" = "%d 项服务";
 "A key is unnecessary if the service allows anonymous access" = "服务允许匿名访问时，无需填写密钥";
-"A model list does not guarantee translation suitability. Check with a sample test." = "模型列表不代表适合翻译，建议通过样例测试确认。";
 "AI models" = "AI 模型";
 "API Key" = "API 密钥";
 "API URL" = "API 地址";
@@ -372,12 +369,11 @@
 "Choose a provider" = "选择服务商";
 "Choose a service for typing, selection and screenshot translation." = "为输入、划词与截图翻译选择使用的服务。";
 "Choose an account model" = "选择账号模型";
-"Choose or enter a model ID" = "选择或输入模型 ID";
 "Collapse" = "收起";
 "Collapsed" = "已收起";
 "Configuration saved · Current service unchanged" = "配置已保存 · 当前服务未改变";
 "Connect your preferred translation service" = "接入你喜欢的翻译服务";
-"Couldn’t get models. Check the address and permissions, or enter an ID." = "获取失败，请检查地址与权限，或手动输入模型 ID。";
+"Couldn’t get models. Check the address and permissions, then try again." = "获取失败，请检查地址与权限后重试。";
 "Couldn’t load models. Refresh this account’s model list." = "模型获取失败，请刷新当前账号的模型列表。";
 "Couldn’t save right now" = "暂时无法保存";
 "Dedicated translation" = "专用翻译";
@@ -393,12 +389,10 @@
 "Fixed model" = "固定模型";
 "For example eastus; leave blank for Global" = "例如 eastus；Global 资源留空";
 "Get models" = "获取模型";
-"Get the model list, or enter a model ID directly." = "可获取模型列表，也可以直接输入模型 ID。";
 "Google Cloud" = "Google Cloud";
 "Hidden automatically after 30 seconds or when you leave this field." = "离开输入框或 30 秒后自动隐藏。";
 "Hide API key" = "隐藏密钥";
 "In use" = "正在使用";
-"Instructions optional" = "补充要求可选";
 "Keep editing" = "继续编辑";
 "Keep saved key" = "保留已保存的密钥";
 "Key status unconfirmed" = "密钥状态待确认";
@@ -409,7 +403,7 @@
 "More options for %@" = "%@ 的更多操作";
 "Name this configuration" = "为这份配置命名";
 "No matching models." = "没有匹配的模型。";
-"No models returned. You can enter a model ID." = "服务未返回模型，可以手动输入模型 ID。";
+"No models returned. Check the service and try again." = "服务未返回模型，请检查服务后重试。";
 "No saved key was found. Enter it again." = "未找到已保存的密钥，请重新输入。";
 "Not tested" = "未测试";
 "Last sample test failed" = "上次样例测试未通过";
@@ -422,12 +416,9 @@
 "Open sign-in page" = "打开登录页面";
 "Open the sign-in page and enter the device code below." = "打开登录页面并输入下方设备码。";
 "OpenAI-compatible" = "OpenAI 兼容";
-"Optional" = "可选";
-"Optional, for example: Keep technical terms in English" = "可选，例如：专业术语保留英文";
-"Optional, if required by the service" = "可选，仅在服务要求时填写";
 "Other apps’ sign-ins are not read. OpenAI determines account eligibility and available models." = "不会读取其他应用的登录信息。账号资格与可用模型由 OpenAI 决定。";
 "Output limit" = "输出上限";
-"Overlong results are reported as incomplete and never continued automatically." = "结果过长会提示未完成，不会自动续写。";
+"Claude Messages requires an output limit supported by your model. Overlong results are reported as incomplete." = "Claude Messages 需要设置模型支持的输出上限；超限时会提示结果不完整。";
 "Paste API key" = "粘贴 API 密钥";
 "Provider" = "服务商";
 "Provider cannot be changed while editing" = "编辑时不能更换服务商";
@@ -478,9 +469,9 @@
 "Use your API key, local model or ChatGPT account. Apple Translation is always available." = "使用自己的 API 密钥、本地模型或 ChatGPT 账号。Apple 翻译始终可用。";
 "Use your ChatGPT account" = "使用 ChatGPT 账号";
 "translationService.catalogError.unsupportedService" = "此服务暂不提供模型列表。";
-"translationService.catalogError.catalogUnavailable" = "此地址未提供模型列表，请检查地址或手动输入模型 ID。";
-"translationService.catalogError.invalidCatalog" = "服务返回的模型列表无效，请重试或手动输入模型 ID。";
-"translationService.catalogError.catalogTooLarge" = "模型列表超出支持范围，请手动输入模型 ID。";
+"translationService.catalogError.catalogUnavailable" = "此地址未提供模型列表，请检查地址及服务是否支持模型查询。";
+"translationService.catalogError.invalidCatalog" = "服务返回的模型列表无效，请重试。";
+"translationService.catalogError.catalogTooLarge" = "模型列表超出支持范围，请检查服务的模型目录。";
 
 "Hover cursor" = "悬停光标";
 
@@ -490,23 +481,19 @@
 
 "Enter a valid API URL before choosing a model." = "请先填写有效的 API 地址，再选择模型。";
 
-"Add an API key first, then get models or enter a model ID." = "先填写 API 密钥，再获取模型列表或手动填写模型 ID。";
+"Add an API key first, then get models." = "先填写 API 密钥，再获取模型列表。";
 
-"Model ID" = "模型 ID";
 
-"Enter the exact model ID" = "填写完整的模型 ID";
 
 "Cancel model loading" = "取消获取模型";
 
-"Choose from model list" = "从列表选择模型";
 
-"Enter model ID manually" = "手动填写模型 ID";
 
 "%d models loaded · Choose from the list" = "已获取 %d 个模型 · 请从列表选择";
 
-"Get models to browse available IDs, or choose manual entry." = "获取此服务的模型列表，也可以手动填写模型 ID。";
+"Get models, then choose from the list." = "获取模型后，从列表中选择。";
 
-"Get models to browse this service’s directory, or enter an ID manually." = "尚未获取模型列表。请先获取模型，或手动填写模型 ID。";
+"No model list yet. Get models to choose from this service’s directory." = "尚未获取模型列表，请先获取模型再选择。";
 
 "Quick translation" = "快捷翻译";
 
@@ -983,11 +970,10 @@
 
 "Translation guidelines" = "翻译规范";
 
-"Optional: keep technical terms in English and use a concise tone." = "可选，例如：术语保留英文，译文简洁自然";
+"For example: keep technical terms in English and use a concise tone." = "例如：术语保留英文，译文简洁自然";
 
 "Adds preferences to this service’s translation tasks; built-in translation rules stay in place." = "仅为此服务的翻译任务补充要求，不替换内置翻译规则。";
 
-"Translation guidelines optional" = "翻译规范可选";
 
 
 
@@ -1050,3 +1036,64 @@
 "Bar chart" = "柱状图";
 
 "Estimated cost" = "预估成本";
+
+"Required" = "必填";
+"Change service icon" = "更换服务图标";
+"Default provider icon" = "跟随服务商";
+"Brand icons" = "品牌图标";
+"General icons" = "通用图标";
+"Network icon" = "网络";
+"Cloud icon" = "云";
+"Server icon" = "服务器";
+"Chip icon" = "芯片";
+"Search providers…" = "搜索服务商…";
+"No matching providers." = "没有匹配的服务商。";
+"Gateways and custom services" = "聚合网关与自定义";
+"Local models" = "本地模型";
+"API format" = "接口格式";
+"Address mode" = "地址类型";
+"Base URL" = "基础地址";
+"Full request URL" = "完整请求地址";
+"Request URL" = "请求地址";
+"Model list URL" = "模型列表地址";
+"https://api.example.com/v1/models" = "https://api.example.com/v1/models";
+"Translation requests use this URL exactly as entered." = "翻译请求将直接使用此完整地址，不再追加路径。";
+"Use the API base URL, including its version path." = "填写 API 基础地址，保留版本路径。";
+"Use a model list URL on the same server as the request URL." = "模型列表地址须与请求地址使用相同的协议、域名和端口。";
+"Enter a model list URL on the same origin as the request URL." = "请填写与请求地址使用相同协议、域名和端口的模型列表地址。";
+"Custom service" = "自定义服务";
+"Accessibility permission" = "辅助功能权限";
+"Screen Recording permission" = "屏幕录制权限";
+"Reads only when you use the shortcut. No background collection." = "仅在按下快捷键时读取，不在后台采集。";
+"Captures only the area you select. Screenshots stay in memory on your Mac." = "仅截取你选定的区域，截图只保留在本机内存中。";
+"Go to System Settings" = "前往系统设置";
+
+"Update complete" = "更新完成";
+
+"New version" = "新版本";
+
+"Current version v%@" = "当前版本 v%@";
+
+"Full release history" = "完整更新记录";
+
+"Version details" = "版本详情";
+
+"Just published" = "刚刚发布";
+
+"Published 1 minute ago" = "1 分钟前发布";
+
+"Published %d minutes ago" = "%d 分钟前发布";
+
+"Published 1 hour ago" = "1 小时前发布";
+
+"Published %d hours ago" = "%d 小时前发布";
+
+"Published yesterday" = "昨天发布";
+
+"Published %d days ago" = "%d 天前发布";
+
+"Published %@" = "%@发布";
+
+"Downloading the update" = "正在下载更新";
+
+"Installing the update" = "正在安装更新";

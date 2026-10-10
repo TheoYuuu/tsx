@@ -47,5 +47,7 @@
 - 提交格式为 `<type>(<scope>): <简体中文摘要>` 或 `<type>: <简体中文摘要>`。允许 feat/fix/refactor/perf/style/docs/test/build/ci/chore/revert；style 仅用于代码格式，UI 功能用 feat、UI 缺陷用 fix。
 - 摘要准确具体、末尾无句号，不含 emoji、软件版本或 AI 署名。破坏性修改使用 `!` 和 `BREAKING CHANGE:` 迁移说明，不因此自行升级版本。
 - 普通开发不修改软件版本、Build Number、CHANGELOG、Tag、Release 或发布配置。实际发布元数据变更使用 `chore(release): 发布 vX.Y.Z`，不制造空提交。
+- 官网版发布必须使用真实 Xcode Archive，并在 Organizer 中完成 App 的分发上传、公证及成功导出；登录或 Xcode 流程受阻时保留候选并报告，不改用 App 命令行公证。DMG 仍须独立公证，不会作为 DMG 公证记录出现在 Organizer。
+- 真实归档保留在 Xcode 默认 Archives 目录；完成后将含 `Submissions`／`Distributions` 的完整归档、导出 App、最终 DMG、摘要、appcast、公证日志及源码 commit／版本／Build 记录备份到仓库外持久目录。DerivedData 和 `.build` 仅作缓存或临时验证目录，不得成为发行证据的唯一副本。不得伪造历史归档、补写 Xcode 分发状态或改写已发布包。
 - 无明确授权，不 push、force-push、amend、rebase、reset --hard、clean、删除分支或 Tag、重写历史、修改 Git 身份/凭据/签名设置。
 - 提交后报告短 SHA、完整标题、实际验证结果和工作区剩余修改。只有实际修改发布版本时说明版本变化。

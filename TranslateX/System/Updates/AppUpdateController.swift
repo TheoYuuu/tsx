@@ -19,9 +19,10 @@ struct AppUpdatePresentation: Equatable {
     var progress: Double?
     var informationURL: URL?
     var informationOnly = false
+    var publishedAt: Date?
 }
 
-enum AppReleaseNotesMode: Equatable {
+enum AppReleaseNotesMode: Hashable {
     case recent
     case installed(version: String)
 }
@@ -38,6 +39,7 @@ final class AppUpdateController {
     private(set) var automaticallyDownloadsUpdates = false
     private(set) var started = false
     private(set) var availableVersion: String?
+    private var availablePublishedAt: Date?
     private(set) var hasChecked = false
     private(set) var isChecking = false
     private(set) var lastCheckFailed = false
@@ -174,10 +176,12 @@ final class AppUpdateController {
     func setAutomaticChecks(_ enabled: Bool) { setAutomaticUpdates(enabled) }
     func setAutomaticDownloads(_ enabled: Bool) { setAutomaticUpdates(enabled) }
 
-    func foundUpdate(_ version: String) {
+    func foundUpdate(_ version: String, publishedAt: Date? = nil) {
+        availablePublishedAt = publishedAt ?? (availableVersion == version ? availablePublishedAt : nil)
         availableVersion = version; hasChecked = true; lastCheckFailed = false
     }
     func foundNoUpdate() {
+        availablePublishedAt = nil
         availableVersion = nil; hasChecked = true; lastCheckFailed = false; isChecking = false
     }
     func checkFailed() { lastCheckFailed = true; isChecking = false }
@@ -233,15 +237,16 @@ final class AppUpdateController {
         if !automaticSession { present(.init(phase: .checking)) }
     }
 
-    func offerUpdate(version: String, informationOnly: Bool, informationURL: URL?,
+    func offerUpdate(version: String, informationOnly: Bool, informationURL: URL?, publishedAt: Date? = nil,
                      userInitiated: Bool, reply: @escaping (SPUUserUpdateChoice) -> Void) {
-        foundUpdate(version)
+        foundUpdate(version, publishedAt: publishedAt)
         isChecking = false
         cancellation = nil
         updateReply = reply
         if !userInitiated { automaticSession = automaticUpdatesEnabled }
         let safeURL = informationURL?.scheme == "https" ? informationURL : nil
-        present(.init(version: version, phase: .available, informationURL: safeURL, informationOnly: informationOnly))
+        present(.init(version: version, phase: .available, informationURL: safeURL,
+                      informationOnly: informationOnly, publishedAt: availablePublishedAt))
     }
 
     func downloadStarted(cancellation: @escaping () -> Void) {
@@ -282,7 +287,7 @@ final class AppUpdateController {
     }
     func focusUpdate() { if updatePresentation != nil { onPresentUpdate?() } }
     private func setPhase(_ phase: AppUpdatePresentation.Phase, progress: Double?) {
-        var presentation = updatePresentation ?? .init(version: availableVersion, phase: phase)
+        var presentation = updatePresentation ?? .init(version: availableVersion, phase: phase, publishedAt: availablePublishedAt)
         presentation.phase = phase; presentation.progress = progress
         present(presentation)
     }
@@ -348,15 +353,38 @@ final class AppUpdateController {
 
     #if TRANSLATEX_VISUAL_QA
     static func visualReview(previewInstalledNotes: Bool = false, shortReleaseNotes: Bool = false,
-                             previewAvailableUpdate: Bool = false) -> AppUpdateController {
-        let backend = VisualReviewAppUpdater()
-        let entries: [AppRelease]? = previewAvailableUpdate ? [.init(version: "1.0.1", publishedAt: .distantPast,
+                             previewAvailableUpdate: Bool = false, compactReleaseNotes: Bool = false) -> AppUpdateController {
+        let backend = VisualReviewAppUpdater(fixtureVersion: compactReleaseNotes ? "1.1.2" : "1.0.1")
+        let entries: [AppRelease]? = compactReleaseNotes ? [
+            .init(version: "1.1.2", publishedAt: Date().addingTimeInterval(-10_800), notes: """
+            ## 中文
+            - **更清晰的更新提示** 弹窗居中显示，版本对比与操作一目了然。
+            - **更容易发现新版本** 翻译窗口新增更新入口，悬停时暂停动画。
+            - **更稳定的窗口切换** 修复焦点回跳，关闭更新弹窗后保留翻译内容。
+            ### 安装与说明
+            这段构造的安装说明不应出现在弹窗中。
+            ## English
+            - **Clearer update prompts** Centered dialogs keep versions and actions easy to find.
+            - **Updates are easier to discover** The translation window has an update entry that pauses on hover.
+            - **More stable window switching** Dismissing an update preserves your translation and keyboard focus.
+            ### Installation and notes
+            These constructed installation notes must not appear in the dialog.
+            """, url: URL(string: "https://github.com/TheoYuuu/tsx/releases/tag/v1.1.2")!),
+            .init(version: "1.1.1", publishedAt: Date().addingTimeInterval(-93_600), notes: """
+            ## 中文
+            - **双栏编辑更连贯** 清空一侧时同步移除旧内容，重新输入后可继续双向翻译。
+            - **避免旧结果重新填入** 清空时取消旧翻译，保留中文输入法的正常组合输入。
+            ## English
+            - **Smoother editing in both panes** Clearing one side removes stale text before translation resumes.
+            - **Old results stay cleared** Clearing cancels pending translations and preserves composed input.
+            """, url: URL(string: "https://github.com/TheoYuuu/tsx/releases/tag/v1.1.1")!)
+        ] : previewAvailableUpdate ? [.init(version: "1.0.1", publishedAt: .distantPast,
             notes: "## 中文\n- 修复双栏编辑中删除到空白后，另一侧仍残留旧内容的问题；清空后重新输入可继续双向翻译。\n- 清空时取消旧翻译，避免延迟返回的结果重新填入；保留中文输入法组合输入的正常行为。\n## English\n- Clear stale content in the other pane when editing down to an empty draft. Typing again resumes translation.\n- Cancel pending translations when clearing the draft while preserving composed text input.",
             url: URL(string: "https://github.com/TheoYuuu/tsx/releases")!)] : shortReleaseNotes ? [.init(version: "1.0.0", publishedAt: .distantPast,
             notes: "## 中文\n- 更新说明现在显示在翻译窗口中央。\n- 改善服务切换图标的圆角。\n## English\n- Release notes now appear over the translation workspace.\n- Service action icons have softer corners.",
             url: URL(string: "https://github.com/TheoYuuu/tsx/releases/tag/v1.0.0")!)] : nil
         let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
-                                          currentVersion: "1.0.0", recordsInstalledVersions: false,
+                                          currentVersion: compactReleaseNotes ? (previewAvailableUpdate ? "1.1.1" : "1.1.2") : "1.0.0", recordsInstalledVersions: false,
                                           backend: backend, releases: AppReleaseNotesStore(entries: entries, allowsNetworkLoading: false))
         backend.owner = updates
         if previewInstalledNotes, updates.releases.entries.contains(where: { $0.version == updates.currentVersion }) {
@@ -387,7 +415,8 @@ private final class VisualReviewAppUpdater: AppUpdaterBackend {
     var automaticallyDownloadsUpdates = false
     private var simulation: Task<Void, Never>?
     // This candidate only exercises the UI; it is not a published release.
-    private let fixtureVersion = "1.0.1"
+    private let fixtureVersion: String
+    init(fixtureVersion: String = "1.0.1") { self.fixtureVersion = fixtureVersion }
 
     func start() throws {}
     func checkInformation() { owner?.foundUpdate(fixtureVersion); owner?.finishedCheck() }

@@ -3,7 +3,9 @@ import Observation
 
 struct AppRelease: Codable, Identifiable, Equatable, Sendable {
     let version: String
-    let publishedAt: Date
+    // Bundled notes are prepared before publication; the live release supplies
+    // the actual timestamp rather than substituting the build time.
+    let publishedAt: Date?
     let notes: String
     let url: URL
     var id: String { version }
@@ -117,7 +119,9 @@ struct AppReleaseNotesClient: Sendable {
             releases.append(contentsOf: pageResult.releases)
             if pageResult.count < 100 {
                 var seen = Set<String>()
-                return releases.filter { seen.insert($0.version).inserted }.sorted { $0.publishedAt > $1.publishedAt }
+                return releases.filter { seen.insert($0.version).inserted }.sorted {
+                    ($0.publishedAt ?? .distantPast) > ($1.publishedAt ?? .distantPast)
+                }
             }
         }
         throw LoadError.tooLarge

@@ -132,6 +132,40 @@ final class TranslateXScrollStyleTests: XCTestCase {
         XCTAssertGreaterThan(scroll.contentView.bounds.minX, 300)
     }
 
+    func testServicePickerScrollersSurviveReopeningAndNativeStyleReset() async throws {
+        _ = NSApplication.shared
+        let preferred = NSScroller.preferredScrollerStyle
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 480, height: 410),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        let configuration = TranslationServiceConfiguration(preset: .openAI)
+        for _ in 0..<2 {
+            let pickers: [AnyView] = [
+                AnyView(TranslationServiceProviderPicker(selected: .openAI, choose: { _ in }, dismiss: {})),
+                AnyView(TranslationServiceIconPicker(configuration: configuration, choose: { _ in }, dismiss: {}))
+            ]
+            for picker in pickers {
+                let host = NSHostingView(rootView: picker)
+                window.contentView = host
+                host.layoutSubtreeIfNeeded()
+                try await Task.sleep(for: .milliseconds(100))
+                let scroll = try XCTUnwrap(findScrollView(host))
+                XCTAssertTrue(scroll.verticalScroller is TranslateXScroller)
+                XCTAssertEqual(scroll.scrollerStyle, .overlay)
+                XCTAssertGreaterThan(scroll.documentView?.frame.height ?? 0, scroll.contentSize.height)
+                scroll.scrollerStyle = .legacy
+                scroll.verticalScroller = NSScroller(frame: .zero)
+                try await Task.sleep(for: .milliseconds(100))
+                XCTAssertTrue(scroll.verticalScroller is TranslateXScroller)
+                XCTAssertEqual(scroll.scrollerStyle, .overlay)
+                XCTAssertEqual(scroll.contentView.frame.width, scroll.bounds.width, accuracy: 0.5,
+                               "Popup scrolling must not reserve a legacy track gutter.")
+            }
+        }
+        XCTAssertEqual(NSScroller.preferredScrollerStyle, preferred)
+    }
+
     private func findServiceMenu(_ view: NSView) -> LanguageMenuControl? {
         if let menu = view as? LanguageMenuControl, menu.selection == "all" { return menu }
         return view.subviews.compactMap(findServiceMenu).first

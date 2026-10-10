@@ -54,7 +54,7 @@ nonisolated struct TranslationServiceModelCatalog: TranslationServiceModelLoadin
         let firstRequest = try Self.makeRequest(configuration: configuration, apiKey: apiKey)
         do {
             return try await withThrowingTaskGroup(of: [TranslationServiceModel].self) { group in
-                group.addTask { try await load(firstRequest, kind: configuration.kind) }
+                group.addTask { try await load(firstRequest, format: configuration.effectiveAPIFormat) }
                 group.addTask {
                     try await Task.sleep(for: timeout)
                     throw RemoteTranslationError.timedOut
@@ -76,9 +76,9 @@ nonisolated struct TranslationServiceModelCatalog: TranslationServiceModelLoadin
 
     static func makeRequest(configuration: TranslationServiceConfiguration, apiKey: String?) throws -> URLRequest {
         guard supports(configuration.kind) else { throw TranslationServiceModelCatalogError.unsupportedService }
-        let endpoint = try configuration.endpointURL(appending: "models")
+        let endpoint = try configuration.modelCatalogURL()
         let key = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if configuration.kind.requiresAPIKey && key.isEmpty { throw RemoteTranslationError.missingKey }
+        if configuration.requiresAPIKey && key.isEmpty { throw RemoteTranslationError.missingKey }
         guard key.utf8.count <= 8_192,
               !key.unicodeScalars.contains(where: CharacterSet.whitespacesAndNewlines.union(.controlCharacters).contains) else {
             throw RemoteTranslationError.invalidKey
@@ -87,7 +87,7 @@ nonisolated struct TranslationServiceModelCatalog: TranslationServiceModelLoadin
         request.httpMethod = "GET"
         request.httpShouldHandleCookies = false
         request.setValue("application/json", forHTTPHeaderField: "Accept")
-        if configuration.kind == .claude {
+        if configuration.effectiveAPIFormat == .claudeMessages {
             request.setValue(key, forHTTPHeaderField: "x-api-key")
             request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
             request = try pageRequest(from: request, after: nil)
@@ -97,7 +97,7 @@ nonisolated struct TranslationServiceModelCatalog: TranslationServiceModelLoadin
         return request
     }
 
-    private func load(_ firstRequest: URLRequest, kind: TranslationServiceKind) async throws -> [TranslationServiceModel] {
+    private func load(_ firstRequest: URLRequest, format: TranslationServiceAPIFormat) async throws -> [TranslationServiceModel] {
         let activeSession = session ?? URLSession(configuration: TranslationHTTPPolicy.sessionConfiguration())
         defer { if session == nil { activeSession.invalidateAndCancel() } }
         var request = firstRequest
@@ -115,7 +115,7 @@ nonisolated struct TranslationServiceModelCatalog: TranslationServiceModelLoadin
             try Task.checkCancellation()
             guard (200...299).contains(payload.status) else { throw Self.failure(status: payload.status, body: payload.data) }
             remainingBytes -= payload.data.count
-            let page = try Self.parse(payload.data, kind: kind)
+            let page = try Self.parse(payload.data, format: format)
             guard models.count + page.models.count <= Self.maximumModels else {
                 throw TranslationServiceModelCatalogError.catalogTooLarge
             }
@@ -150,7 +150,7 @@ nonisolated struct TranslationServiceModelCatalog: TranslationServiceModelLoadin
         let nextCursor: String?
     }
 
-    private static func parse(_ data: Data, kind: TranslationServiceKind) throws -> Page {
+    private static func parse(_ data: Data, format: TranslationServiceAPIFormat) throws -> Page {
         guard let envelope = try? JSONDecoder().decode(Envelope.self, from: data),
               envelope.error == nil, envelope.object == nil || envelope.object == "list" else {
             throw TranslationServiceModelCatalogError.invalidCatalog
@@ -161,7 +161,7 @@ nonisolated struct TranslationServiceModelCatalog: TranslationServiceModelLoadin
                   entry.type == nil || entry.type == "model" else {
                 throw TranslationServiceModelCatalogError.invalidCatalog
             }
-            let name = (kind == .claude ? entry.displayName : entry.name) ?? entry.id
+            let name = (format == .claudeMessages ? entry.displayName : entry.name) ?? entry.id
             guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                   name.utf8.count <= maximumIdentifierBytes,
                   !name.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
@@ -169,7 +169,7 @@ nonisolated struct TranslationServiceModelCatalog: TranslationServiceModelLoadin
             }
             return TranslationServiceModel(id: entry.id, name: name)
         }
-        if kind == .claude {
+        if format == .claudeMessages {
             guard let hasMore = envelope.hasMore else { throw TranslationServiceModelCatalogError.invalidCatalog }
             if hasMore {
                 guard let cursor = envelope.lastID, validIdentifier(cursor), models.last?.id == cursor else {

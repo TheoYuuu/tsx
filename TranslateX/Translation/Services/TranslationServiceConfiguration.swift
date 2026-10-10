@@ -145,6 +145,11 @@ struct TranslationServiceConfiguration: Codable, Equatable, Identifiable, Sendab
     var maximumOutputTokens: Int = 8_192
     /// Public local generation identifier, never an OAuth token or account ID.
     var codexAccountGeneration: String?
+    var presetID: String?
+    var iconID: String?
+    var apiFormat: TranslationServiceAPIFormat?
+    var endpointMode: TranslationServiceEndpointMode?
+    var modelsEndpoint: String?
 
     init(
         id: UUID = UUID(),
@@ -157,7 +162,12 @@ struct TranslationServiceConfiguration: Codable, Equatable, Identifiable, Sendab
         region: String = "",
         maximumOutputTokens: Int = 8_192,
         codexAccountGeneration: String? = nil,
-        website: String? = nil
+        website: String? = nil,
+        presetID: String? = nil,
+        iconID: String? = nil,
+        apiFormat: TranslationServiceAPIFormat? = nil,
+        endpointMode: TranslationServiceEndpointMode? = nil,
+        modelsEndpoint: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -170,16 +180,47 @@ struct TranslationServiceConfiguration: Codable, Equatable, Identifiable, Sendab
         self.region = region
         self.maximumOutputTokens = maximumOutputTokens
         self.codexAccountGeneration = codexAccountGeneration
+        self.presetID = presetID
+        self.iconID = iconID
+        self.apiFormat = apiFormat
+        self.endpointMode = endpointMode
+        self.modelsEndpoint = modelsEndpoint
     }
 
     init(kind: TranslationServiceKind) {
         self.init(name: kind.displayName, kind: kind, endpoint: kind.defaultEndpoint, model: kind.defaultModel)
     }
 
+    init(preset: TranslationServicePreset) {
+        self.init(name: preset.displayName, kind: preset.kind, endpoint: preset.defaultEndpoint,
+                  model: preset.defaultModel, website: preset.defaultWebsite, presetID: preset.rawValue)
+    }
+
+    /// Unknown or mismatched presentation metadata never changes the transport
+    /// of an existing service, including its account and credential boundaries.
+    var providerPreset: TranslationServicePreset {
+        guard let presetID, let preset = TranslationServicePreset(rawValue: presetID), preset.kind == kind else {
+            return TranslationServicePreset(kind: kind)
+        }
+        return preset
+    }
+
+    var providerName: String { providerPreset.displayName }
+    var requiresAPIKey: Bool {
+        presetID == nil ? kind.requiresAPIKey : providerPreset.requiresAPIKey
+    }
+    var effectiveAPIFormat: TranslationServiceAPIFormat {
+        providerPreset.supportsCustomProtocol ? apiFormat ?? .chatCompletions : providerPreset.defaultAPIFormat
+    }
+    var effectiveEndpointMode: TranslationServiceEndpointMode {
+        providerPreset.supportsCustomProtocol ? endpointMode ?? .baseURL : .baseURL
+    }
+
     private enum CodingKeys: String, CodingKey {
         case id, name, kind, endpoint, model, additionalInstructions, automaticallyTranslates, region
         case maximumOutputTokens
         case codexAccountGeneration, website
+        case presetID, iconID, apiFormat, endpointMode, modelsEndpoint
     }
 
     /// Keep saved services readable when later optional fields are absent.
@@ -197,10 +238,15 @@ struct TranslationServiceConfiguration: Codable, Equatable, Identifiable, Sendab
         region = try values.decodeIfPresent(String.self, forKey: .region) ?? ""
         maximumOutputTokens = try values.decodeIfPresent(Int.self, forKey: .maximumOutputTokens) ?? 8_192
         codexAccountGeneration = try values.decodeIfPresent(String.self, forKey: .codexAccountGeneration)
+        presetID = try values.decodeIfPresent(String.self, forKey: .presetID)
+        iconID = try values.decodeIfPresent(String.self, forKey: .iconID)
+        apiFormat = try values.decodeIfPresent(TranslationServiceAPIFormat.self, forKey: .apiFormat)
+        endpointMode = try values.decodeIfPresent(TranslationServiceEndpointMode.self, forKey: .endpointMode)
+        modelsEndpoint = try values.decodeIfPresent(String.self, forKey: .modelsEndpoint)
     }
 
     var displayDetail: String {
-        (kind.allowsCustomModel || kind == .codex) && !model.isEmpty ? kind.displayName + " · " + model : kind.displayName
+        (kind.allowsCustomModel || kind == .codex) && !model.isEmpty ? providerName + " · " + model : providerName
     }
 
     func validated() throws -> Self {
@@ -214,7 +260,7 @@ struct TranslationServiceConfiguration: Codable, Equatable, Identifiable, Sendab
         value.additionalInstructions = kind.supportsAdditionalInstructions
             ? additionalInstructions.trimmingCharacters(in: .whitespacesAndNewlines) : ""
         value.region = kind == .azureTranslator ? region.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() : ""
-        value.maximumOutputTokens = kind == .claude ? maximumOutputTokens : 8_192
+        value.maximumOutputTokens = effectiveAPIFormat == .claudeMessages ? maximumOutputTokens : 8_192
         value.codexAccountGeneration = kind == .codex ? codexAccountGeneration : nil
         guard !value.name.isEmpty, value.name.count <= 120,
               !value.name.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
@@ -254,6 +300,15 @@ struct TranslationServiceConfiguration: Codable, Equatable, Identifiable, Sendab
             }
         }
         value.endpoint = try validatedEndpoint().absoluteString
+        if effectiveEndpointMode == .requestURL {
+            value.modelsEndpoint = try modelCatalogURL().absoluteString
+        } else {
+            value.modelsEndpoint = nil
+        }
+        if !providerPreset.supportsCustomProtocol {
+            value.apiFormat = nil
+            value.endpointMode = nil
+        }
         return value
     }
 
@@ -262,6 +317,10 @@ struct TranslationServiceConfiguration: Codable, Equatable, Identifiable, Sendab
         if kind == .codex, trimmed != kind.defaultEndpoint {
             throw TranslationServiceConfigurationError.invalidEndpoint
         }
+        return try Self.validatedURL(trimmed, trimTrailingSlash: effectiveEndpointMode == .baseURL)
+    }
+
+    private static func validatedURL(_ trimmed: String, trimTrailingSlash: Bool) throws -> URL {
         guard !trimmed.isEmpty, trimmed.count <= 2_048,
               !trimmed.unicodeScalars.contains(where: CharacterSet.whitespacesAndNewlines.contains),
               !trimmed.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains),
@@ -288,11 +347,35 @@ struct TranslationServiceConfiguration: Codable, Equatable, Identifiable, Sendab
         }
         components.scheme = scheme
         components.host = host
-        while components.percentEncodedPath.hasSuffix("/") {
+        while trimTrailingSlash && components.percentEncodedPath.hasSuffix("/") {
             components.percentEncodedPath.removeLast()
         }
         guard let url = components.url else { throw TranslationServiceConfigurationError.invalidEndpoint }
         return url
+    }
+
+    func translationRequestURL() throws -> URL {
+        if effectiveEndpointMode == .requestURL { return try validatedEndpoint() }
+        return try endpointURL(appending: effectiveAPIFormat.operationPath)
+    }
+
+    /// A complete request URL carries no reliable information about a gateway's
+    /// model directory. Require the user-supplied URL and keep credentials on the
+    /// same origin (scheme, host and effective port); never derive another host.
+    func modelCatalogURL() throws -> URL {
+        guard effectiveEndpointMode == .requestURL else { return try endpointURL(appending: "models") }
+        let requestURL = try validatedEndpoint()
+        guard let text = modelsEndpoint?.trimmingCharacters(in: .whitespacesAndNewlines),
+              let modelURL = try? Self.validatedURL(text, trimTrailingSlash: false),
+              Self.sameOrigin(requestURL, modelURL) else {
+            throw TranslationServiceConfigurationError.invalidModelsEndpoint
+        }
+        return modelURL
+    }
+
+    private static func sameOrigin(_ lhs: URL, _ rhs: URL) -> Bool {
+        lhs.scheme == rhs.scheme && lhs.host == rhs.host
+            && (lhs.port ?? (lhs.scheme == "https" ? 443 : 80)) == (rhs.port ?? (rhs.scheme == "https" ? 443 : 80))
     }
 
     /// A separate public browser destination; API endpoints are never opened
@@ -343,6 +426,7 @@ enum TranslationServiceConfigurationError: Error, LocalizedError, Equatable {
     case unsupportedTencentModel
     case invalidOutputTokenLimit
     case invalidEndpoint
+    case invalidModelsEndpoint
     case invalidWebsite
     case insecureEndpoint
     case instructionsTooLong
@@ -358,12 +442,13 @@ enum TranslationServiceConfigurationError: Error, LocalizedError, Equatable {
         switch self {
         case .codexLoginRequired: key = "Sign in to ChatGPT and choose an available model before saving."
         case .invalidName: key = "Enter a service name of 1–120 characters."
-        case .invalidModel: key = "Enter a model identifier without spaces, up to 256 characters."
+        case .invalidModel: key = "Choose a valid model from the model list."
         case .invalidRegion: key = "Enter the Azure resource region, such as eastus, using only letters and numbers. Leave it blank for a global resource."
         case .unsupportedQwenMTModel: key = "This Qwen-MT connection currently supports qwen-mt-flash. Use an OpenAI-compatible connection for general Qwen models."
         case .unsupportedTencentModel: key = "This Tencent translation connection currently supports hy-mt2-plus."
         case .invalidOutputTokenLimit: key = "Choose an output limit from 1 to 131,072 tokens that your Claude model supports."
         case .invalidEndpoint: key = "Enter an API base URL without a username, password, query, or fragment."
+        case .invalidModelsEndpoint: key = "Enter a model list URL on the same origin as the request URL."
         case .invalidWebsite: key = "Enter an HTTP or HTTPS website without credentials, a query, or a fragment."
         case .insecureEndpoint: key = "Remote services require HTTPS. HTTP is allowed only for a loopback address."
         case .instructionsTooLong: key = "Additional translation instructions must be no longer than 8,000 characters."

@@ -145,6 +145,9 @@ final class TranslationServiceStore {
     // details, response bodies, keys, or account tokens.
     private var sampleTests: [UUID: SampleTestRecord] = [:]
     private var configurationRevisions: [UUID: UUID] = [:]
+    // Only UUIDs are journaled. A replaced key is inaccessible through active
+    // services and is retried for local deletion after a successful mutation.
+    private var pendingCredentialRemovals: Set<UUID> = []
 
     var selectedConfiguration: TranslationServiceConfiguration? {
         configurations.first { $0.id == selectedID }
@@ -175,6 +178,7 @@ final class TranslationServiceStore {
             let ids = Set(validated.map(\.id))
             sampleTests = (state.sampleTests ?? [:]).filter { ids.contains($0.key) && $0.value.completedAt.timeIntervalSince1970.isFinite }
             configurationRevisions = (state.configurationRevisions ?? [:]).filter { ids.contains($0.key) }
+            pendingCredentialRemovals = Set(state.pendingCredentialRemovals ?? []).subtracting(ids)
             selectedID = state.selectedID.flatMap { selected in
                 validated.contains { $0.id == selected } ? selected : nil
             }
@@ -211,8 +215,19 @@ final class TranslationServiceStore {
     static func sameRequest(_ lhs: TranslationServiceConfiguration, _ rhs: TranslationServiceConfiguration) -> Bool {
         var lhs = lhs
         lhs.name = rhs.name; lhs.automaticallyTranslates = rhs.automaticallyTranslates
-        lhs.website = rhs.website
+        lhs.website = rhs.website; lhs.iconID = rhs.iconID
+        lhs.modelsEndpoint = rhs.modelsEndpoint
         return lhs == rhs
+    }
+
+    /// Credential reuse is stricter than translation equality: a separately
+    /// configured model directory must not silently receive a saved secret.
+    static func sameCredentialReceiver(_ lhs: TranslationServiceConfiguration, _ rhs: TranslationServiceConfiguration) -> Bool {
+        lhs.kind == rhs.kind && lhs.providerPreset == rhs.providerPreset
+            && lhs.effectiveEndpointMode == rhs.effectiveEndpointMode
+            && ((try? lhs.validatedEndpoint().absoluteString) ?? lhs.endpoint)
+                == ((try? rhs.validatedEndpoint().absoluteString) ?? rhs.endpoint)
+            && (lhs.effectiveEndpointMode != .requestURL || lhs.modelsEndpoint == rhs.modelsEndpoint)
     }
 
     /// Changes even for a key-only save. Reading feedback must never read a key.
@@ -235,9 +250,16 @@ final class TranslationServiceStore {
 
     /// A nil key preserves the existing credential. An explicit empty string
     /// removes it for services that allow unauthenticated requests.
-    func save(_ configuration: TranslationServiceConfiguration, apiKey: String?) throws {
+    func save(_ configuration: TranslationServiceConfiguration, apiKey: String?, replacing replacedID: UUID? = nil) throws {
         let configuration = try configuration.validated()
-        let key = try self.apiKey(for: configuration, replacement: apiKey)
+        if let replacedID {
+            try replaceService(replacedID, with: configuration, apiKey: apiKey)
+            return
+        }
+        let prior = configurations.first { $0.id == configuration.id }
+        let requestChanged = apiKey != nil || prior.map({ !Self.sameRequest($0, configuration) }) != false
+        let receiverChanged = prior.map { !Self.sameCredentialReceiver($0, configuration) } != false
+        let key = try (requestChanged || receiverChanged) ? self.apiKey(for: configuration, replacement: apiKey) : nil
         var updated = configurations
         if let index = updated.firstIndex(where: { $0.id == configuration.id }) {
             updated[index] = configuration
@@ -247,8 +269,6 @@ final class TranslationServiceStore {
         // Encode before changing Keychain; validation/encoding/keychain failure
         // leaves the previous in-memory and persisted configuration untouched.
         var revisions = configurationRevisions
-        let prior = configurations.first { $0.id == configuration.id }
-        let requestChanged = apiKey != nil || prior.map({ !Self.sameRequest($0, configuration) }) != false
         if requestChanged {
             revisions[configuration.id] = UUID()
         }
@@ -264,11 +284,74 @@ final class TranslationServiceStore {
         configurations = updated
         usage.registerConfigurations(configurations)
         configurationRevisions = revisions
-        var priorIgnoringWebsite = prior
-        priorIgnoringWebsite?.website = configuration.website
-        // Only a public website edit is new display-only metadata. Preserve the
-        // existing routing behavior of other editor saves and key replacements.
-        if apiKey != nil || priorIgnoringWebsite != configuration { revision &+= 1 }
+        if requestChanged { revision &+= 1 }
+        if prior?.automaticallyTranslates != configuration.automaticallyTranslates {
+            automaticTranslationRevision &+= 1
+        }
+        retryPendingCredentialRemovals()
+    }
+
+    /// A provider change creates a new routing/usage identity in the same list
+    /// position. Prepare both preference payloads before writing any key. The
+    /// small cleanup journal also recovers a crash between the two stores.
+    private func replaceService(_ replacedID: UUID, with configuration: TranslationServiceConfiguration, apiKey: String?) throws {
+        guard let index = configurations.firstIndex(where: { $0.id == replacedID }),
+              configuration.id != replacedID,
+              !configurations.contains(where: { $0.id == configuration.id }),
+              configurations[index].kind != .codex, configuration.kind != .codex,
+              configurations[index].providerPreset != configuration.providerPreset else {
+            throw TranslationServiceConfigurationError.unknownService
+        }
+        // Fresh identities never look up a prior service's or an orphan's key.
+        let key = try validatedKey(apiKey?.trimmingCharacters(in: .whitespacesAndNewlines), required: configuration.requiresAPIKey)
+        var updated = configurations
+        updated[index] = configuration
+        let selection = selectedID == replacedID ? configuration.id : selectedID
+        var revisions = configurationRevisions
+        revisions[replacedID] = nil
+        revisions[configuration.id] = UUID()
+        let preparedRemovals = pendingCredentialRemovals.union([configuration.id])
+        let finalRemovals = pendingCredentialRemovals.subtracting([configuration.id]).union([replacedID])
+        let preparedData = try encoded(configurations: configurations, selectedID: selectedID, removals: preparedRemovals)
+        let finalData = try encoded(configurations: updated, selectedID: selection, revisions: revisions, removals: finalRemovals)
+        defaults.set(preparedData, forKey: StorageKey.services)
+        pendingCredentialRemovals = preparedRemovals
+        do {
+            if let key {
+                try credentials.setCredential(.init(apiKey: key, endpoint: configuration.endpoint), for: configuration.id)
+            } else {
+                try credentials.removeCredential(for: configuration.id)
+            }
+        } catch {
+            retryPendingCredentialRemovals()
+            throw error
+        }
+        defaults.set(finalData, forKey: StorageKey.services)
+        configurations = updated
+        selectedID = selection
+        configurationRevisions = revisions
+        sampleTests[replacedID] = nil
+        pendingCredentialRemovals = finalRemovals
+        usage.registerConfigurations(configurations)
+        usage.setEnabled(false, for: replacedID)
+        accountQueryPreferences.remove(replacedID)
+        revision &+= 1
+        retryPendingCredentialRemovals()
+    }
+
+    private func retryPendingCredentialRemovals() {
+        guard !pendingCredentialRemovals.isEmpty else { return }
+        let activeIDs = Set(configurations.map(\.id))
+        for id in pendingCredentialRemovals where !activeIDs.contains(id) {
+            do {
+                try credentials.removeCredential(for: id)
+                pendingCredentialRemovals.remove(id)
+            } catch {
+                // Keep the exact item ID for a later explicit save/delete; a
+                // cleanup failure must not undo the successfully saved service.
+            }
+        }
+        persistTestHistory()
     }
 
     func remove(_ id: UUID) throws {
@@ -290,6 +373,7 @@ final class TranslationServiceStore {
         usage.setEnabled(false, for: id)
         accountQueryPreferences.remove(id)
         revision &+= 1
+        retryPendingCredentialRemovals()
     }
 
     func select(_ id: UUID?) throws {
@@ -348,6 +432,7 @@ final class TranslationServiceStore {
     func apiKeyForModelCatalog(for configuration: TranslationServiceConfiguration, replacement: String?) throws -> String? {
         var configuration = configuration
         configuration.endpoint = try configuration.validatedEndpoint().absoluteString
+        _ = try configuration.modelCatalogURL()
         return try resolveAPIKey(for: configuration, replacement: replacement)
     }
 
@@ -374,8 +459,8 @@ final class TranslationServiceStore {
         guard let saved = configurations.first(where: { $0.id == configuration.id }) else {
             throw TranslationServiceConfigurationError.unknownService
         }
-        guard saved.kind == configuration.kind,
-              saved.endpoint == (try configuration.validatedEndpoint().absoluteString) else {
+        _ = try configuration.validatedEndpoint()
+        guard Self.sameCredentialReceiver(saved, configuration) else {
             throw TranslationServiceConfigurationError.endpointChanged
         }
     }
@@ -385,8 +470,11 @@ final class TranslationServiceStore {
             guard replacement == nil || replacement == "" else { throw TranslationServiceConfigurationError.invalidAPIKey }
             return nil
         }
-        if let saved = configurations.first(where: { $0.id == configuration.id }), saved.kind != configuration.kind {
-            throw TranslationServiceConfigurationError.endpointChanged
+        if let saved = configurations.first(where: { $0.id == configuration.id }) {
+            guard saved.kind == configuration.kind, saved.providerPreset == configuration.providerPreset,
+                  replacement != nil || Self.sameCredentialReceiver(saved, configuration) else {
+                throw TranslationServiceConfigurationError.endpointChanged
+            }
         }
         let candidate: String?
         if let replacement {
@@ -404,7 +492,7 @@ final class TranslationServiceStore {
                 candidate = nil
             }
         }
-        return try validatedKey(candidate, required: configuration.kind.requiresAPIKey)
+        return try validatedKey(candidate, required: configuration.requiresAPIKey)
     }
 
     private func validatedKey(_ candidate: String?, required: Bool) throws -> String? {
@@ -433,11 +521,13 @@ final class TranslationServiceStore {
         let selectedID: UUID?
         var sampleTests: [UUID: SampleTestRecord]?
         var configurationRevisions: [UUID: UUID]?
+        var pendingCredentialRemovals: [UUID]?
 
-        enum CodingKeys: String, CodingKey { case version, configurations, selectedID, sampleTests, configurationRevisions }
-        init(configurations: [TranslationServiceConfiguration], selectedID: UUID?, sampleTests: [UUID: SampleTestRecord]?, configurationRevisions: [UUID: UUID]?) {
+        enum CodingKeys: String, CodingKey { case version, configurations, selectedID, sampleTests, configurationRevisions, pendingCredentialRemovals }
+        init(configurations: [TranslationServiceConfiguration], selectedID: UUID?, sampleTests: [UUID: SampleTestRecord]?, configurationRevisions: [UUID: UUID]?, pendingCredentialRemovals: [UUID]?) {
             self.configurations = configurations; self.selectedID = selectedID
             self.sampleTests = sampleTests; self.configurationRevisions = configurationRevisions
+            self.pendingCredentialRemovals = pendingCredentialRemovals
         }
         init(from decoder: any Decoder) throws {
             let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -447,6 +537,7 @@ final class TranslationServiceStore {
             // A malformed optional history must not make valid services vanish.
             sampleTests = try? values.decodeIfPresent([UUID: SampleTestRecord].self, forKey: .sampleTests)
             configurationRevisions = try? values.decodeIfPresent([UUID: UUID].self, forKey: .configurationRevisions)
+            pendingCredentialRemovals = try? values.decodeIfPresent([UUID].self, forKey: .pendingCredentialRemovals)
         }
     }
 
@@ -456,11 +547,13 @@ final class TranslationServiceStore {
         }
     }
 
-    private func encoded(configurations: [TranslationServiceConfiguration], selectedID: UUID?, revisions: [UUID: UUID]? = nil) throws -> Data {
+    private func encoded(configurations: [TranslationServiceConfiguration], selectedID: UUID?, revisions: [UUID: UUID]? = nil,
+                         removals: Set<UUID>? = nil) throws -> Data {
         let ids = Set(configurations.map(\.id))
         do { return try JSONEncoder().encode(StoredState(configurations: configurations, selectedID: selectedID,
             sampleTests: sampleTests.filter { ids.contains($0.key) },
-            configurationRevisions: (revisions ?? configurationRevisions).filter { ids.contains($0.key) })) }
+            configurationRevisions: (revisions ?? configurationRevisions).filter { ids.contains($0.key) },
+            pendingCredentialRemovals: Array((removals ?? pendingCredentialRemovals).subtracting(ids)).sorted { $0.uuidString < $1.uuidString })) }
         catch { throw TranslationServiceConfigurationError.storageUnavailable }
     }
 }

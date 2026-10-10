@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct QuickTranslationView: View {
+    static let permissionWindowSize = NSSize(width: 440, height: 320)
     @Bindable var model: TranslationModel
     let close: () -> Void
     let openInput: () -> Void
@@ -21,9 +22,9 @@ struct QuickTranslationView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header.padding(.horizontal, 20).frame(height: 38)
+            header
             if let permission {
-                permissionContent(permission).padding(20)
+                permissionContent(permission)
             } else if model.showsQuickWorkspace {
                 TranslationCommandBar(model: model, compact: true, translateSelection: translateSelection,
                                       translateScreenshot: translateScreenshot, openSettings: openSettings, manageServices: manageServices)
@@ -51,13 +52,39 @@ struct QuickTranslationView: View {
 
     private var header: some View {
         HStack(spacing: 8) {
+            if permission != nil {
+                Image(systemName: "macwindow").font(.system(size: 13))
+                    .foregroundStyle(theme.muted).accessibilityHidden(true)
+            }
             Text(model.sourceName.isEmpty ? L10n.string("Quick translation") : model.sourceName)
-                .font(.system(size: 11, weight: .medium)).foregroundStyle(theme.muted).lineLimit(1)
+                .font(.system(size: permission == nil ? 11 : 12, weight: .medium))
+                .foregroundStyle(theme.muted).lineLimit(1)
             Spacer(minLength: 0)
-            TranslateXIconButton(symbol: "arrow.up.left.and.arrow.down.right", label: "Open in main window", size: 28, action: openInput)
-                .disabled(!canOpenInput())
-            TranslateXIconButton(symbol: "xmark", label: "Close", size: 28, action: close)
-        }.frame(height: 28)
+            HStack(spacing: 4) {
+                windowControl(symbol: "arrow.up.left.and.arrow.down.right", label: "Open in main window", action: openInput)
+                    .disabled(!canOpenInput())
+                windowControl(symbol: "xmark", label: "Close", action: close)
+            }
+        }
+        .padding(.leading, 20).padding(.trailing, 14)
+        .frame(height: permission == nil ? 38 : 52)
+        .background(permission == nil ? Color.clear : theme.secondaryCard)
+        .overlay(alignment: .bottom) {
+            if permission != nil { Rectangle().fill(theme.divider).frame(height: 1) }
+        }
+    }
+
+    private func windowControl(symbol: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            // SF Symbols have different intrinsic bounds at the same font size.
+            // Fit their visible glyphs into one square, independently of the hit area.
+            Image(systemName: symbol).resizable().scaledToFit()
+                .frame(width: 16, height: 16)
+                .frame(width: 30, height: 30).contentShape(Rectangle())
+        }
+        .buttonStyle(TranslateXIconButtonStyle())
+        .translateXTooltip(L10n.string(label))
+        .accessibilityLabel(Text(L10n.string(label)))
     }
 
     private var footer: some View {
@@ -73,24 +100,58 @@ struct QuickTranslationView: View {
     }
 
     private func permissionContent(_ permission: SystemPermission) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                Image(systemName: permission == .accessibility ? "accessibility" : "viewfinder")
-                    .font(.system(size: 24)).foregroundStyle(theme.accent)
-                    .frame(width: 43, height: 43)
-                    .background(theme.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 13))
-                    .padding(.bottom, 18)
-                Text(permission.title).font(.system(size: 19, weight: .semibold)).padding(.bottom, 10)
-                Text(permission.explanation)
-                    .font(.system(size: 13)).lineSpacing(5).foregroundStyle(theme.muted)
-                    .fixedSize(horizontal: false, vertical: true).padding(.bottom, 21)
-                Button(permission.actionTitle, action: requestPermission).buttonStyle(TranslateXButtonStyle(kind: .primary))
-                Button("Use input translation", action: openInput)
-                    .buttonStyle(.link).translateXControlCursor().font(.system(size: 12)).padding(.top, 14)
+        VStack(spacing: 0) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(spacing: 14) {
+                        Image(systemName: permission == .accessibility ? "accessibility" : "viewfinder")
+                            .font(.system(size: 27)).foregroundStyle(theme.accent)
+                            .frame(width: 46, height: 46)
+                            .background(theme.accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 13))
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(permission.name).font(.system(size: 11)).foregroundStyle(theme.muted)
+                            Text(permission.title).font(.system(size: 19, weight: .semibold))
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    Text(permission.explanation)
+                        .font(.system(size: 13)).lineSpacing(5).foregroundStyle(theme.muted)
+                        .fixedSize(horizontal: false, vertical: true).padding(.top, 19)
+                    HStack(alignment: .top, spacing: 7) {
+                        Image(systemName: "checkmark.shield").font(.system(size: 13))
+                            .padding(.top, 1).accessibilityHidden(true)
+                        Text(permission.privacyNote).font(.system(size: 11)).lineSpacing(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }.foregroundStyle(theme.muted).padding(.top, 15)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 26).padding(.top, 25).padding(.bottom, 20)
+                .translateXScrollContent()
             }
-            .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 3)
-            .translateXScrollContent()
-        }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 10) { inputButton; permissionButton }
+                VStack(alignment: .trailing, spacing: 8) { permissionButton; inputButton }
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.horizontal, 26).padding(.bottom, 24)
+        }
+    }
+
+    private var inputButton: some View {
+        Button(action: openInput) { Text("Use input translation").frame(minHeight: 34) }
+            .buttonStyle(TranslateXButtonStyle())
+            .overlay { RoundedRectangle(cornerRadius: theme.buttonRadius).strokeBorder(theme.edge, lineWidth: 0.75).allowsHitTesting(false) }
+            .disabled(!canOpenInput())
+    }
+
+    private var permissionButton: some View {
+        Button(action: requestPermission) {
+            HStack(spacing: 7) {
+                Text("Go to System Settings")
+                Image(systemName: "arrow.up.right").font(.system(size: 11)).accessibilityHidden(true)
+            }.frame(minHeight: 34)
+        }.buttonStyle(TranslateXButtonStyle(kind: .primary))
     }
 }
 

@@ -219,7 +219,7 @@ struct TranslationServicesSettingsView: View {
         let name = configuration?.name ?? L10n.string("Apple Translation")
         let metricID = configuration?.kind.rawValue ?? "apple"
         return HStack(spacing: 10) {
-            TranslationServiceProviderMark(kind: configuration?.kind, size: 32)
+            TranslationServiceProviderMark(configuration: configuration, size: 32)
                 .serviceDesignMetric("list.\(metricID).icon")
             VStack(alignment: .leading, spacing: 5) {
                 Text(name).font(.system(size: 13, weight: .medium)).lineLimit(1)
@@ -231,7 +231,7 @@ struct TranslationServicesSettingsView: View {
                         .translateXTooltip(url.absoluteString)
                         .accessibilityLabel(String(format: L10n.string("Open website for %@"), name))
                 } else {
-                    Text(configuration.map { $0.model.isEmpty ? $0.kind.settingsName : $0.model }
+                    Text(configuration.map { $0.model.isEmpty ? $0.providerName : $0.model }
                          ?? L10n.string("Translates on this Mac"))
                         .font(.system(size: 11)).foregroundStyle(p.muted).lineLimit(1)
                 }

@@ -195,7 +195,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     }
 
     private var quickPresentationSize: NSSize {
-        if panelPermission != nil { return NSSize(width: 430, height: 365) }
+        if panelPermission != nil { return QuickTranslationView.permissionWindowSize }
         if quickModel.showsQuickWorkspace { return preferredSize(for: .quick) }
         return NSSize(width: 392, height: 315)
     }

@@ -507,6 +507,154 @@ final class TranslationServiceStoreTests: XCTestCase {
         }
     }
 
+    func testDisplayOnlySavePreservesRequestEvidenceAndDoesNotReadKeyOrRestartTranslation() throws {
+        try withStore { store, defaults, credentials, _ in
+            var configuration = TranslationServiceConfiguration(kind: .openAI)
+            try store.save(configuration, apiKey: "fixture-original")
+            try store.select(configuration.id)
+            let revision = store.revision
+            let requestRevision = store.configurationRevision(for: configuration.id)
+            store.recordSampleTest(.succeeded, for: configuration, revision: requestRevision)
+            let reads = credentials.readIDs
+            configuration.name = "Renamed service"
+            configuration.website = "https://console.example"
+            configuration.iconID = "network"
+            try store.save(configuration, apiKey: nil)
+            XCTAssertEqual(store.revision, revision)
+            XCTAssertEqual(store.configurationRevision(for: configuration.id), requestRevision)
+            XCTAssertEqual(store.sampleTestOutcome(for: configuration), .succeeded)
+            XCTAssertEqual(credentials.readIDs, reads)
+            let reloaded = TranslationServiceStore(defaults: defaults, credentials: credentials)
+            XCTAssertEqual(reloaded.configurations, [configuration])
+            XCTAssertEqual(reloaded.selectedID, configuration.id)
+        }
+    }
+
+    func testProviderReplacementKeepsListPositionSelectionAndOldUsageIdentity() throws {
+        try withStore { store, defaults, credentials, _ in
+            let original = TranslationServiceConfiguration(kind: .openAI)
+            let neighbor = TranslationServiceConfiguration(kind: .deepL)
+            try store.save(original, apiKey: "fixture-original")
+            try store.save(neighbor, apiKey: "fixture-neighbor")
+            try store.select(original.id)
+            store.recordSampleTest(.succeeded, for: original, revision: store.configurationRevision(for: original.id))
+            store.accountQueryPreferences.set(.init(intervalSeconds: 60), for: original.id)
+            let ticket = store.usage.begin(configurationID: original.id, model: original.model, purpose: .translation)
+            store.usage.finish(ticket, outcome: .succeeded)
+            var replacement = TranslationServiceConfiguration(preset: .deepSeek)
+            replacement.model = "fixture-new-model"
+            try store.save(replacement, apiKey: "fixture-replacement", replacing: original.id)
+            XCTAssertEqual(store.configurations, [replacement, neighbor])
+            XCTAssertEqual(store.selectedID, replacement.id)
+            XCTAssertNil(credentials.values[original.id])
+            XCTAssertEqual(credentials.values[replacement.id]?.apiKey, "fixture-replacement")
+            XCTAssertNil(store.sampleTestRecord(for: original.id))
+            XCTAssertNil(store.sampleTestOutcome(for: replacement))
+            XCTAssertEqual(store.accountQueryPreferences.preferences(for: replacement.id), .init())
+            XCTAssertEqual(store.usage.records.first?.configurationID, original.id)
+            XCTAssertEqual(store.usage.records.first?.serviceName, original.name)
+            XCTAssertFalse(store.usage.isEnabled(for: original.id))
+            XCTAssertTrue(store.usage.records.filter { $0.configurationID == replacement.id }.isEmpty)
+            let reloaded = TranslationServiceStore(defaults: defaults, credentials: credentials)
+            XCTAssertEqual(reloaded.configurations, [replacement, neighbor])
+            XCTAssertEqual(reloaded.selectedID, replacement.id)
+        }
+    }
+
+    func testReplacementKeyFailureKeepsOriginalAndRetryRecoversWithoutDuplicatingService() throws {
+        try withStore { store, defaults, credentials, _ in
+            let original = TranslationServiceConfiguration(kind: .openAI)
+            try store.save(original, apiKey: "fixture-original")
+            try store.select(original.id)
+            let revision = store.revision
+            var replacement = TranslationServiceConfiguration(preset: .deepSeek)
+            replacement.model = "fixture-new-model"
+            credentials.failWrites = true
+            XCTAssertThrowsError(try store.save(replacement, apiKey: "fixture-replacement", replacing: original.id))
+            XCTAssertEqual(store.configurations, [original])
+            XCTAssertEqual(store.selectedID, original.id)
+            XCTAssertEqual(store.revision, revision)
+            XCTAssertEqual(credentials.values[original.id]?.apiKey, "fixture-original")
+            XCTAssertNil(credentials.values[replacement.id])
+            let recovered = TranslationServiceStore(defaults: defaults, credentials: credentials)
+            XCTAssertEqual(recovered.configurations, [original])
+            XCTAssertEqual(recovered.selectedID, original.id)
+            credentials.failWrites = false
+            try recovered.save(replacement, apiKey: "fixture-replacement", replacing: original.id)
+            XCTAssertEqual(recovered.configurations, [replacement])
+            XCTAssertEqual(recovered.selectedID, replacement.id)
+            XCTAssertEqual(Set(credentials.values.keys), [replacement.id])
+        }
+    }
+
+    func testReplacementJournalsFailedOldKeyCleanupAndRetriesAfterReload() throws {
+        try withStore { store, defaults, credentials, _ in
+            let original = TranslationServiceConfiguration(kind: .openAI)
+            try store.save(original, apiKey: "fixture-original")
+            var replacement = TranslationServiceConfiguration(preset: .deepSeek)
+            replacement.model = "fixture-new-model"
+            credentials.failedDeletionIDs = [original.id]
+            try store.save(replacement, apiKey: "fixture-replacement", replacing: original.id)
+            XCTAssertEqual(store.configurations, [replacement])
+            XCTAssertNotNil(credentials.values[original.id])
+            XCTAssertEqual(try store.apiKey(for: replacement.id), "fixture-replacement")
+            XCTAssertThrowsError(try store.apiKey(for: original.id))
+            let data = try XCTUnwrap(defaults.data(forKey: TranslationServiceStore.StorageKey.services))
+            let payload = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+            XCTAssertEqual(payload["pendingCredentialRemovals"] as? [String], [original.id.uuidString])
+            XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("fixture-original"))
+            XCTAssertFalse(String(decoding: data, as: UTF8.self).contains("fixture-replacement"))
+            let reloaded = TranslationServiceStore(defaults: defaults, credentials: credentials)
+            credentials.failedDeletionIDs = []
+            replacement.name = "Display rename after recovery"
+            try reloaded.save(replacement, apiKey: nil)
+            XCTAssertNil(credentials.values[original.id])
+            XCTAssertEqual(credentials.values[replacement.id]?.apiKey, "fixture-replacement")
+            XCTAssertEqual(reloaded.configurations, [replacement])
+        }
+    }
+
+    func testReplacementCannotCrossAccountBoundaryOrReuseAnActiveIdentity() throws {
+        try withStore { store, _, credentials, _ in
+            let original = TranslationServiceConfiguration(kind: .openAI)
+            try store.save(original, apiKey: "fixture-original")
+            var reused = original
+            reused.presetID = TranslationServicePreset.deepSeek.rawValue
+            reused.kind = .deepSeek
+            reused.endpoint = TranslationServiceKind.deepSeek.defaultEndpoint
+            XCTAssertThrowsError(try store.save(reused, apiKey: "fixture-replacement", replacing: original.id))
+            var account = TranslationServiceConfiguration(kind: .codex)
+            account.model = "fixture-account-model"
+            account.codexAccountGeneration = UUID().uuidString.lowercased()
+            XCTAssertThrowsError(try store.save(account, apiKey: nil, replacing: original.id))
+            XCTAssertEqual(store.configurations, [original])
+            XCTAssertEqual(credentials.values[original.id]?.apiKey, "fixture-original")
+        }
+    }
+
+    func testSameProtocolPresetAndDirectoryChangesCannotReuseSavedCredential() throws {
+        try withStore { store, _, credentials, _ in
+            var original = TranslationServiceConfiguration(preset: .custom)
+            original.endpoint = "https://api.example/v1/chat/completions"
+            original.endpointMode = .requestURL
+            original.modelsEndpoint = "https://api.example/v1/models"
+            original.model = "fixture-model"
+            try store.save(original, apiKey: "fixture-original")
+            let reads = credentials.readIDs
+            var draft = original
+            draft.presetID = TranslationServicePreset.newAPI.rawValue
+            XCTAssertThrowsError(try store.apiKeyForModelCatalog(for: draft, replacement: nil))
+            XCTAssertThrowsError(try store.save(draft, apiKey: "fixture-replacement"))
+            draft = original
+            draft.modelsEndpoint = "https://api.example/v2/models"
+            XCTAssertThrowsError(try store.apiKeyForModelCatalog(for: draft, replacement: nil))
+            XCTAssertThrowsError(try store.savedKeyForReveal(for: draft))
+            XCTAssertEqual(credentials.readIDs, reads)
+            XCTAssertEqual(try store.apiKeyForModelCatalog(for: draft, replacement: "fixture-new-key"), "fixture-new-key")
+            XCTAssertEqual(credentials.values[original.id]?.apiKey, "fixture-original")
+        }
+    }
+
     private struct SavedState: Codable {
         var version = 1
         let configurations: [TranslationServiceConfiguration]
@@ -581,6 +729,7 @@ private final class MemoryTranslationCredentialStore: TranslationCredentialStore
     var values: [UUID: TranslationServiceCredential] = [:]
     var readIDs: [UUID] = []
     var failWrites = false
+    var failedDeletionIDs: Set<UUID> = []
 
     func containsCredential(for id: UUID) throws -> Bool? { values[id] != nil }
 
@@ -595,7 +744,7 @@ private final class MemoryTranslationCredentialStore: TranslationCredentialStore
     }
 
     func removeCredential(for id: UUID) throws {
-        if failWrites { throw TranslationServiceConfigurationError.credentialUnavailable }
+        if failWrites || failedDeletionIDs.contains(id) { throw TranslationServiceConfigurationError.credentialUnavailable }
         values.removeValue(forKey: id)
     }
 }

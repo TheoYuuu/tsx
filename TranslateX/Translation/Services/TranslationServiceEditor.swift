@@ -5,7 +5,7 @@ import Observation
 /// a new receiver or credential invalidates the old directory synchronously.
 @MainActor @Observable
 final class TranslationServiceEditor {
-    enum Field: Hashable { case name, key, endpoint, website, model, region, instructions, outputLimit }
+    enum Field: Hashable { case name, key, endpoint, modelsEndpoint, website, model, region, instructions, outputLimit }
     enum KeyState: Equatable { case unconfirmed, stored, missing, unavailable, addressChanged }
     enum CatalogState: Equatable { case idle, loading, loaded, empty, failed }
     enum TestState: Equatable { case idle, running, stopping, stopped, succeeded, failed }
@@ -14,20 +14,19 @@ final class TranslationServiceEditor {
     var configuration: TranslationServiceConfiguration {
         didSet {
             guard configuration != oldValue else { return }
-            var previousRequest = oldValue
-            previousRequest.automaticallyTranslates = configuration.automaticallyTranslates
-            previousRequest.name = configuration.name
-            previousRequest.website = configuration.website
-            guard previousRequest != configuration else {
-                clearChangedFieldErrors(from: oldValue)
-                saveFailure = nil
-                return
-            }
-            if configuration.endpoint != oldValue.endpoint || configuration.kind != oldValue.kind {
+            let receiverChanged = !TranslationServiceStore.sameCredentialReceiver(oldValue, configuration)
+            if receiverChanged {
                 hideKey()
                 replacementKey = ""
                 removeSavedKey = false
                 invalidateCatalog()
+            } else if oldValue.apiFormat != configuration.apiFormat {
+                invalidateCatalog()
+            }
+            guard !TranslationServiceStore.sameRequest(oldValue, configuration) else {
+                clearChangedFieldErrors(from: oldValue)
+                saveFailure = nil
+                return
             }
             clearChangedFieldErrors(from: oldValue)
             invalidateTest()
@@ -59,6 +58,8 @@ final class TranslationServiceEditor {
     var makeDefault = false
     private(set) var isNew: Bool
     let originalName: String
+    var isEditingExistingService: Bool { !isNew || replacingID != nil }
+    var canChangeProvider: Bool { !isEditingExistingService || configuration.kind != .codex }
     private(set) var isTesting = false
     private(set) var testState: TestState = .idle
     private(set) var testResult = ""
@@ -82,6 +83,7 @@ final class TranslationServiceEditor {
     @ObservationIgnored private let modelLoader: any TranslationServiceModelLoading
     @ObservationIgnored private let keyVisibilityDuration: Duration
     private var baseline: TranslationServiceConfiguration
+    @ObservationIgnored private var replacingID: UUID?
     @ObservationIgnored private var revealedSavedKey: String?
     @ObservationIgnored private var keyVisibilityTask: Task<Void, Never>?
     @ObservationIgnored private var keyVisibilityID = UUID()
@@ -111,11 +113,13 @@ final class TranslationServiceEditor {
         configuration: TranslationServiceConfiguration,
         services: TranslationServiceStore,
         modelLoader: any TranslationServiceModelLoading = TranslationServiceModelCatalog(),
-        keyVisibilityDuration: Duration = .seconds(30)
+        keyVisibilityDuration: Duration = .seconds(30),
+        replacing: TranslationServiceConfiguration? = nil
     ) {
         self.configuration = configuration
         self.baseline = configuration
-        self.originalName = configuration.name
+        self.originalName = replacing?.name ?? configuration.name
+        self.replacingID = replacing?.id
         self.services = services
         self.modelLoader = modelLoader
         self.keyVisibilityDuration = keyVisibilityDuration
@@ -132,7 +136,7 @@ final class TranslationServiceEditor {
         keyVisibilityTask?.cancel()
     }
 
-    var isDirty: Bool { configuration != baseline || !replacementKey.isEmpty || removeSavedKey }
+    var isDirty: Bool { replacingID != nil || configuration != baseline || !replacementKey.isEmpty || removeSavedKey }
 
     private func trackAutomaticPreference() {
         withObservationTracking {
@@ -170,8 +174,7 @@ final class TranslationServiceEditor {
     }
     var keyState: KeyState {
         if removeSavedKey { return .missing }
-        if !isNew && (configuration.kind != baseline.kind
-            || (try? configuration.validatedEndpoint()) != (try? baseline.validatedEndpoint())) {
+        if !isNew && !TranslationServiceStore.sameCredentialReceiver(configuration, baseline) {
             return .addressChanged
         }
         return storedKeyState
@@ -197,14 +200,21 @@ final class TranslationServiceEditor {
         guard (try? configuration.validatedEndpoint()) != nil else {
             return L10n.string("Enter a valid API URL before choosing a model.")
         }
-        if configuration.kind.requiresAPIKey,
+        if TranslationServiceModelCatalog.supports(configuration.kind) {
+            do { _ = try configuration.modelCatalogURL() }
+            catch { return Self.safeMessage(for: error) }
+        }
+        if configuration.requiresAPIKey,
            replacementKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
            ![KeyState.stored, .unconfirmed, .unavailable].contains(keyState) {
-            return L10n.string("Add an API key first, then get models or enter a model ID.")
+            return L10n.string("Add an API key first, then get models.")
         }
         return nil
     }
     var canConfigureModel: Bool { !closed && modelSetupHint == nil }
+    /// A saved model remains usable without fetching the transient directory.
+    /// Only changing the selection requires available directory entries.
+    var canChooseModel: Bool { canConfigureModel && catalogState != .loading && !models.isEmpty }
     var codexModelSelectionIsValid: Bool {
         configuration.kind == .codex && codex.canUseModel(
             id: configuration.model, generation: configuration.codexAccountGeneration)
@@ -413,7 +423,7 @@ final class TranslationServiceEditor {
             if configuration.kind == .codex, !canSaveCodex {
                 throw TranslationServiceConfigurationError.codexLoginRequired
             }
-            try services.save(configuration, apiKey: keyReplacement)
+            try services.save(configuration, apiKey: keyReplacement, replacing: replacingID)
             if let saved = services.configurations.first(where: { $0.id == configuration.id }) {
                 configuration = saved
                 baseline = saved
@@ -422,6 +432,7 @@ final class TranslationServiceEditor {
                 }
             }
             isNew = false
+            replacingID = nil
             replacementKey = ""
             removeSavedKey = false
             refreshKeyState()
@@ -570,7 +581,8 @@ final class TranslationServiceEditor {
         testState = .idle
     }
     private func validateEditorIdentity() throws {
-        guard configuration.id == baseline.id, configuration.kind == baseline.kind else {
+        guard configuration.id == baseline.id, configuration.kind == baseline.kind,
+              configuration.providerPreset == baseline.providerPreset else {
             throw TranslationServiceConfigurationError.unknownService
         }
     }
@@ -609,6 +621,9 @@ final class TranslationServiceEditor {
         if configuration.website != old.website { fieldFailures[.website] = nil }
         if configuration.model != old.model { fieldFailures[.model] = nil }
         if configuration.endpoint != old.endpoint { fieldFailures[.endpoint] = nil; fieldFailures[.key] = nil }
+        if configuration.modelsEndpoint != old.modelsEndpoint || configuration.endpointMode != old.endpointMode {
+            fieldFailures[.modelsEndpoint] = nil; fieldFailures[.key] = nil
+        }
         if configuration.region != old.region { fieldFailures[.region] = nil }
         if configuration.additionalInstructions != old.additionalInstructions { fieldFailures[.instructions] = nil }
         if configuration.maximumOutputTokens != old.maximumOutputTokens { fieldFailures[.outputLimit] = nil }
@@ -620,6 +635,7 @@ final class TranslationServiceEditor {
         case .invalidName: field = .name
         case .invalidModel, .unsupportedQwenMTModel, .unsupportedTencentModel, .codexLoginRequired: field = .model
         case .invalidEndpoint, .insecureEndpoint: field = .endpoint
+        case .invalidModelsEndpoint: field = .modelsEndpoint
         case .invalidWebsite: field = .website
         case .missingAPIKey, .invalidAPIKey, .endpointChanged, .credentialUnavailable: field = .key
         case .invalidRegion: field = .region
@@ -664,12 +680,13 @@ final class TranslationServiceEditor {
     }
 }
 
-/// A new-service flow owns one independent UUID and draft per provider. No key,
+/// An editor flow owns one independent UUID and draft per provider. No key,
 /// loaded directory or editor-owned operation crosses provider identities.
 @MainActor @Observable
 final class TranslationServiceDraftSession {
     private(set) var editor: TranslationServiceEditor
-    private var drafts: [TranslationServiceKind: TranslationServiceEditor]
+    private var drafts: [TranslationServicePreset: TranslationServiceEditor]
+    private var editingOriginal: TranslationServiceConfiguration?
     @ObservationIgnored private let services: TranslationServiceStore
     @ObservationIgnored private let modelLoader: any TranslationServiceModelLoading
 
@@ -681,34 +698,50 @@ final class TranslationServiceDraftSession {
         self.services = services
         self.modelLoader = modelLoader
         let configuration = configuration ?? Self.newConfiguration(.openAI)
+        self.editingOriginal = services.configurations.first { $0.id == configuration.id }
         let editor = TranslationServiceEditor(configuration: configuration, services: services, modelLoader: modelLoader)
         self.editor = editor
-        self.drafts = [configuration.kind: editor]
+        self.drafts = [configuration.providerPreset: editor]
     }
     var hasUnsavedChanges: Bool { drafts.values.contains(where: \.isDirty) }
     func selectKind(_ kind: TranslationServiceKind) {
-        guard editor.isNew, kind != editor.configuration.kind else { return }
+        selectPreset(TranslationServicePreset(kind: kind))
+    }
+    func selectPreset(_ preset: TranslationServicePreset) {
+        guard editor.canChangeProvider, editingOriginal == nil || preset.kind != .codex,
+              preset != editor.configuration.providerPreset else { return }
+        let source = editor.configuration
         editor.suspend()
-        if let previous = drafts[kind] { editor = previous }
+        if let previous = drafts[preset] { editor = previous }
         else {
-            let draft = TranslationServiceEditor(configuration: Self.newConfiguration(kind), services: services, modelLoader: modelLoader)
-            drafts[kind] = draft
+            let draft = TranslationServiceEditor(configuration: Self.newConfiguration(preset), services: services,
+                                                 modelLoader: modelLoader, replacing: editingOriginal)
+            drafts[preset] = draft
             editor = draft
         }
+        // Connection fields, keys and selected models remain in their own
+        // provider drafts. User-facing preferences follow this service.
+        var configuration = editor.configuration
+        if source.name != source.providerName && source.name != source.kind.displayName {
+            configuration.name = source.name
+        }
+        configuration.automaticallyTranslates = source.automaticallyTranslates
+        configuration.additionalInstructions = source.additionalInstructions
+        configuration.iconID = source.iconID
+        editor.configuration = configuration
     }
-    func add(_ kind: TranslationServiceKind = .openAI) { replace(with: Self.newConfiguration(kind)) }
+    func add(_ kind: TranslationServiceKind = .openAI) { replace(with: Self.newConfiguration(TranslationServicePreset(kind: kind))) }
     func edit(_ configuration: TranslationServiceConfiguration) { replace(with: configuration) }
     func suspend() { for draft in drafts.values { draft.suspend() } }
     func close() { for draft in drafts.values { draft.close() } }
-    private static func newConfiguration(_ kind: TranslationServiceKind) -> TranslationServiceConfiguration {
-        var configuration = TranslationServiceConfiguration(kind: kind)
-        if kind.allowsCustomModel { configuration.model = "" }
-        return configuration
+    private static func newConfiguration(_ preset: TranslationServicePreset) -> TranslationServiceConfiguration {
+        TranslationServiceConfiguration(preset: preset)
     }
     private func replace(with configuration: TranslationServiceConfiguration) {
         close()
+        editingOriginal = services.configurations.first { $0.id == configuration.id }
         let draft = TranslationServiceEditor(configuration: configuration, services: services, modelLoader: modelLoader)
-        drafts = [configuration.kind: draft]
+        drafts = [configuration.providerPreset: draft]
         editor = draft
     }
 }

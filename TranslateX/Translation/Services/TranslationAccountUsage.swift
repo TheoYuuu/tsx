@@ -48,6 +48,13 @@ final class TranslationAccountUsageController {
         let configuration: TranslationServiceConfiguration
         let revision: UUID
         let preferences: TranslationAccountQueryPreferences
+
+        static func == (lhs: Self, rhs: Self) -> Bool {
+            // The store advances this generation for connection/key changes.
+            // Display metadata must not restart the timer or read credentials.
+            lhs.configuration.id == rhs.configuration.id
+                && lhs.revision == rhs.revision && lhs.preferences == rhs.preferences
+        }
     }
     private var entries: [UUID: Entry] = [:]
     @ObservationIgnored private let services: TranslationServiceStore

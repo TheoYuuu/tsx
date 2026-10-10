@@ -143,25 +143,24 @@ struct AboutSettingsView: View {
     }
 }
 
-/// Recent release notes remain local to Settings. Installation is presented
-/// by the window coordinator over the translation workspace.
+/// Recent notes stay in Settings; installation remains in the main window.
 struct SettingsUpdateOverlay: View {
     @Environment(\.translateXTheme) private var theme
     let updates: AppUpdateController
 
     var body: some View {
-        ZStack {
-            Color.black.opacity(theme.isDark ? 0.46 : 0.23).ignoresSafeArea()
-                .contentShape(Rectangle()).onTapGesture {}
-            Group {
+        GeometryReader { geometry in
+            ZStack {
+                Color.black.opacity(theme.isDark ? 0.46 : 0.23).ignoresSafeArea()
+                    .contentShape(Rectangle()).onTapGesture {}
                 if let mode = updates.releaseNotesPresentation {
-                    ReleaseNotesView(updates: updates, mode: mode) { updates.dismissReleaseNotes() }
+                    ReleaseNotesView(updates: updates, mode: mode, maximumHeight: max(0, geometry.size.height - 40)) {
+                        updates.dismissReleaseNotes()
+                    }.frame(width: min(520, max(0, geometry.size.width - 40)))
                 }
-            }.padding(20)
+            }.frame(width: geometry.size.width, height: geometry.size.height)
         }
-        .onExitCommand {
-            updates.dismissReleaseNotes()
-        }
+        .onExitCommand { updates.dismissReleaseNotes() }
     }
 }
 
@@ -169,125 +168,75 @@ struct AppUpdateInstallationView: View {
     @Environment(\.translateXTheme) private var theme
     let updates: AppUpdateController
     let presentation: AppUpdatePresentation
+    var maximumHeight: CGFloat? = nil
     @FocusState private var primaryFocused: Bool
-    @State private var releaseNotesHeight: CGFloat = 72
-    private var p: TranslationServicePalette { .init(theme: theme) }
+    private var p: ReleaseDialogPalette { .init(theme: theme) }
     private var busy: Bool { [.checking, .downloading, .extracting, .installing].contains(presentation.phase) }
     private var canDismiss: Bool { ![.extracting, .installing].contains(presentation.phase) }
-    private var notes: String? {
-        updates.releases.entries.first { $0.version == presentation.version }?
-            .localizedNotes(languageIdentifier: L10n.currentLanguageIdentifier)
-    }
+    private var showsNotes: Bool { [.available, .ready].contains(presentation.phase) }
+    private var release: AppRelease? { updates.releases.entries.first { $0.version == presentation.version } }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            header.padding(.bottom, 12)
-            if presentation.phase == .available || presentation.phase == .ready {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 9) {
-                        Text(L10n.string("What's new")).font(.system(size: 12, weight: .semibold))
-                        if let notes, !notes.isEmpty { ReleaseMarkdownContent(text: notes) }
-                        else {
-                            Text(L10n.string("Release notes are not available here yet. You can view them on GitHub."))
-                                .font(.system(size: 12)).foregroundStyle(p.muted)
-                            Link(L10n.string("View full release notes"), destination: URL(string: "https://github.com/TheoYuuu/tsx/releases")!)
-                                .buttonStyle(TranslateXTextButtonStyle()).font(.system(size: 11))
-                        }
-                    }.padding(.horizontal, 15).padding(.vertical, 14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .translateXScrollContent()
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height.rounded(.up) } action: { releaseNotesHeight = $0 }
+        CompactUpdateDialog(title: title, maximumHeight: maximumHeight, canDismiss: canDismiss,
+                            onDismiss: { updates.dismissUpdate() }) {
+            VStack(alignment: .leading, spacing: 0) {
+                if let version = presentation.version {
+                    ReleaseVersionHeading(version: version, badge: L10n.string("New version"),
+                                          publishedAt: release?.publishedAt ?? presentation.publishedAt,
+                                          currentVersion: updates.currentVersion)
                 }
-                .frame(height: min(210, max(68, releaseNotesHeight)))
-                .background(p.fill, in: RoundedRectangle(cornerRadius: 10))
-                .serviceDesignMetric("update.notes")
-                .padding(.bottom, 13)
-            }
-            Text(status).font(.system(size: 11)).foregroundStyle(p.muted).lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true).padding(.bottom, 14)
-            if busy {
-                Group {
-                    if let progress = presentation.progress { ProgressView(value: progress).tint(p.accent) }
-                    else { ProgressView().controlSize(.small).frame(maxWidth: .infinity) }
-                }.padding(.bottom, 14)
-            }
-            HStack(spacing: 8) {
-                Spacer()
-                if presentation.phase == .failed {
-                    Button(L10n.string("Close")) { updates.dismissUpdate() }
-                        .buttonStyle(TranslationServiceButtonStyle()).keyboardShortcut(.cancelAction)
-                    Button(L10n.string("Retry")) { updates.dismissUpdate(); updates.checkForUpdates() }
-                        .buttonStyle(TranslationServiceButtonStyle(kind: .primary)).focused($primaryFocused)
-                } else if presentation.phase == .current {
-                    Button(L10n.string("Got it")) { updates.dismissUpdate() }
-                        .buttonStyle(TranslationServiceButtonStyle(kind: .primary)).focused($primaryFocused)
-                        .keyboardShortcut(.cancelAction)
-                } else {
-                    Button(L10n.string(busy ? "Cancel" : "Later")) { updates.dismissUpdate() }
-                        .buttonStyle(TranslationServiceButtonStyle()).disabled(!canDismiss)
-                        .keyboardShortcut(.cancelAction)
-                    if presentation.informationOnly, let url = presentation.informationURL {
-                        Link(L10n.string("View details"), destination: url).buttonStyle(TranslationServiceButtonStyle(kind: .primary))
-                    } else if !busy {
-                        Button { updates.installPendingUpdate() } label: { Label(L10n.string("Update now"), systemImage: "square.and.arrow.down") }
-                            .buttonStyle(TranslationServiceButtonStyle(kind: .primary)).focused($primaryFocused)
-                            .keyboardShortcut(.defaultAction)
+                if showsNotes {
+                    if let notes = release?.localizedNotes(languageIdentifier: L10n.currentLanguageIdentifier), !notes.isEmpty {
+                        ReleaseMarkdownContent(text: ReleaseNotesPresentation.content(notes, version: presentation.version ?? ""))
+                            .padding(.top, 18)
+                    } else {
+                        Text(L10n.string("Release notes are not available here yet. You can view them on GitHub."))
+                            .font(.system(size: 12)).foregroundStyle(p.secondary).padding(.top, 18)
                     }
                 }
-            }.serviceDesignMetric("update.actions")
+                if let status {
+                    Text(status).font(.system(size: 12)).foregroundStyle(p.secondary).lineSpacing(6)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, presentation.version == nil ? 0 : 18)
+                }
+                if busy {
+                    Group {
+                        if let progress = presentation.progress { ProgressView(value: progress).tint(p.blue) }
+                        else { ProgressView().controlSize(.small).frame(maxWidth: .infinity) }
+                    }.padding(.top, 18)
+                }
+            }
+        } footer: {
+            ReleaseDialogFooter { ReleaseHistoryLink() } actions: { actions }
         }
-        .padding(.top, 18).padding(.horizontal, 25).padding(.bottom, 25)
-        .frame(maxWidth: 438)
-        .background(p.popover, in: RoundedRectangle(cornerRadius: 16))
-        .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(p.line) }
-        .serviceDesignMetric("update.dialog")
-        .onAppear {
-            primaryFocused = true
-            updates.continueAutomaticUpdate()
-        }
+        .onAppear { primaryFocused = true; updates.continueAutomaticUpdate() }
         .onChange(of: presentation) { _, _ in updates.continueAutomaticUpdate() }
         .task { await updates.loadReleaseNotes() }
     }
 
-    private var header: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                headerTitle
-                versionPath
-            }.fixedSize(horizontal: true, vertical: false)
-            VStack(alignment: .leading, spacing: 6) {
-                headerTitle
-                versionPath.padding(.leading, 32)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .serviceDesignMetric("update.header")
-    }
-
-    private var headerTitle: some View {
+    private var actions: some View {
         HStack(spacing: 8) {
-            Image(systemName: "square.and.arrow.down")
-                .font(.system(size: 24, weight: .regular)).foregroundStyle(p.accent)
-                .frame(width: 24, height: 28)
-                .accessibilityHidden(true)
-            Text(title).font(.system(size: 18, weight: .semibold))
-                .fixedSize(horizontal: false, vertical: true)
-                .serviceDesignMetric("update.title")
-        }.frame(minHeight: 28)
-    }
-
-    @ViewBuilder
-    private var versionPath: some View {
-        if let version = presentation.version {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(verbatim: "v" + updates.currentVersion).foregroundStyle(p.muted)
-                Image(systemName: "arrow.right").font(.system(size: 11)).foregroundStyle(p.muted)
-                    .accessibilityHidden(true)
-                Text(verbatim: "v" + version).foregroundStyle(p.accent)
+            if presentation.phase == .failed {
+                Button(L10n.string("Close")) { updates.dismissUpdate() }
+                    .buttonStyle(ReleaseDialogButtonStyle()).keyboardShortcut(.cancelAction)
+                Button(L10n.string("Retry")) { updates.dismissUpdate(); updates.checkForUpdates() }
+                    .buttonStyle(ReleaseDialogButtonStyle(primary: true)).focused($primaryFocused)
+                    .keyboardShortcut(.defaultAction)
+            } else if presentation.phase == .current {
+                Button(L10n.string("Got it")) { updates.dismissUpdate() }
+                    .buttonStyle(ReleaseDialogButtonStyle(primary: true)).focused($primaryFocused)
+                    .keyboardShortcut(.defaultAction)
+            } else {
+                Button(L10n.string(busy ? "Cancel" : "Later")) { updates.dismissUpdate() }
+                    .buttonStyle(ReleaseDialogButtonStyle()).disabled(!canDismiss).keyboardShortcut(.cancelAction)
+                if presentation.informationOnly, let url = presentation.informationURL {
+                    Link(L10n.string("View details"), destination: url).buttonStyle(ReleaseDialogButtonStyle(primary: true))
+                } else if !busy {
+                    Button(L10n.string("Update now")) { updates.installPendingUpdate() }
+                        .buttonStyle(ReleaseDialogButtonStyle(primary: true)).focused($primaryFocused)
+                        .keyboardShortcut(.defaultAction)
+                }
             }
-            .font(.system(size: 12, weight: .medium)).monospacedDigit()
-            .fixedSize(horizontal: false, vertical: true)
-            .serviceDesignMetric("update.version")
         }
     }
 
@@ -300,14 +249,14 @@ struct AppUpdateInstallationView: View {
         default: return String(format: L10n.string("Update to v%@"), presentation.version ?? updates.currentVersion)
         }
     }
-    private var status: String {
+    private var status: String? {
         if presentation.informationOnly { return L10n.string("This update requires a separate download. View its details to continue.") }
         switch presentation.phase {
-        case .available, .ready: return L10n.string("TSX will restart after the update. Copy any text you want to keep before continuing.")
+        case .available, .ready: return nil
         case .checking: return L10n.string("Connecting to the update server")
-        case .downloading: return L10n.string("Downloading the update. It will be installed and TSX will restart.")
+        case .downloading: return L10n.string("Downloading the update")
         case .extracting: return L10n.string("Verifying and preparing the update")
-        case .installing: return L10n.string("Installing the update. TSX will restart shortly.")
+        case .installing: return L10n.string("Installing the update")
         case .failed: return L10n.string("Please try again later. Your current version is unchanged.")
         case .current: return L10n.string("The latest available version is already installed.")
         }

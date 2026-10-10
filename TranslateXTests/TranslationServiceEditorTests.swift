@@ -213,6 +213,8 @@ final class TranslationServiceEditorTests: XCTestCase {
             session.selectKind(.openAICompatible)
             XCTAssertFalse(session.editor.canConfigureModel, "Custom services require an explicit endpoint")
             session.editor.configuration.endpoint = "https://custom.example/v1"
+            XCTAssertFalse(session.editor.canConfigureModel, "New custom services require a key")
+            session.editor.replacementKey = "fixture-custom-key"
             XCTAssertTrue(session.editor.canConfigureModel)
             XCTAssertEqual(credentials.reads, 0)
         }
@@ -652,7 +654,7 @@ final class TranslationServiceEditorTests: XCTestCase {
         }
     }
 
-    func testDirtyBaselineReturnsToCleanAndSavedProviderCannotSwitch() async throws {
+    func testDirtyBaselineReturnsToCleanAndProviderSwitchKeepsOriginalUntilSave() async throws {
         try await withStore { store, _ in
             let config = TranslationServiceConfiguration(kind: .openAI)
             try store.save(config, apiKey: "fixture-secret")
@@ -668,8 +670,151 @@ final class TranslationServiceEditorTests: XCTestCase {
             editor.replacementKey = ""
             XCTAssertFalse(editor.isDirty)
             session.selectKind(.deepSeek)
+            XCTAssertFalse(session.editor === editor)
+            XCTAssertNotEqual(session.editor.configuration.id, config.id)
+            XCTAssertTrue(session.editor.isEditingExistingService)
+            XCTAssertEqual(session.editor.originalName, config.name)
+            XCTAssertEqual(session.editor.configuration.kind, .deepSeek)
+            XCTAssertTrue(session.editor.configuration.model.isEmpty)
+            XCTAssertTrue(session.editor.replacementKey.isEmpty)
+            XCTAssertTrue(session.hasUnsavedChanges)
+            XCTAssertEqual(store.configurations, [config])
+            session.selectKind(.openAI)
             XCTAssertTrue(session.editor === editor)
-            XCTAssertEqual(editor.configuration.kind, .openAI)
+            session.close()
+            XCTAssertEqual(store.configurations, [config])
+        }
+    }
+
+    func testPresetsSharingAProtocolKeepIndependentConnectionDraftsAndCarryServicePreferences() async throws {
+        try await withStore { store, credentials in
+            let session = TranslationServiceDraftSession(services: store)
+            defer { session.close() }
+            session.selectPreset(.custom)
+            let custom = session.editor
+            custom.configuration.name = "My translation"
+            custom.configuration.endpoint = "https://first.example/v1"
+            custom.configuration.model = "first-model"
+            custom.configuration.automaticallyTranslates = false
+            custom.configuration.additionalInstructions = "Preserve product names."
+            custom.configuration.iconID = "network"
+            custom.replacementKey = "fixture-first-key"
+            session.selectPreset(.newAPI)
+            let newAPI = session.editor
+            XCTAssertEqual(newAPI.configuration.kind, custom.configuration.kind)
+            XCTAssertNotEqual(newAPI.configuration.id, custom.configuration.id)
+            XCTAssertEqual(newAPI.configuration.name, "My translation")
+            XCTAssertEqual(newAPI.configuration.iconID, "network")
+            XCTAssertEqual(newAPI.configuration.additionalInstructions, "Preserve product names.")
+            XCTAssertFalse(newAPI.configuration.automaticallyTranslates)
+            XCTAssertTrue(newAPI.configuration.model.isEmpty)
+            XCTAssertTrue(newAPI.replacementKey.isEmpty)
+            newAPI.configuration.endpoint = "https://second.example/v1"
+            newAPI.configuration.model = "second-model"
+            newAPI.replacementKey = "fixture-second-key"
+            session.selectPreset(.custom)
+            XCTAssertTrue(session.editor === custom)
+            XCTAssertEqual(custom.configuration.endpoint, "https://first.example/v1")
+            XCTAssertEqual(custom.configuration.model, "first-model")
+            XCTAssertEqual(custom.replacementKey, "fixture-first-key")
+            XCTAssertEqual(credentials.reads, 0)
+            XCTAssertTrue(store.configurations.isEmpty)
+        }
+    }
+
+    func testEditingProviderReplacementRequiresNewCredentialAndCancelPreservesOriginal() async throws {
+        try await withStore { store, credentials in
+            let saved = TranslationServiceConfiguration(kind: .openAI)
+            try store.save(saved, apiKey: "fixture-original-key")
+            try store.select(saved.id)
+            let session = TranslationServiceDraftSession(services: store, configuration: saved)
+            let reads = credentials.reads
+            session.selectPreset(.deepSeek)
+            let replacement = session.editor
+            replacement.refreshKeyState()
+            XCTAssertEqual(replacement.keyState, .missing)
+            XCTAssertFalse(replacement.canConfigureModel)
+            replacement.configuration.model = "fixture-model"
+            XCTAssertFalse(replacement.save())
+            XCTAssertEqual(credentials.reads, reads, "A replacement must not read the old service's credential")
+            replacement.replacementKey = "fixture-new-key"
+            session.close()
+            XCTAssertEqual(store.configurations, [saved])
+            XCTAssertEqual(store.selectedID, saved.id)
+            XCTAssertEqual(credentials.values, [saved.id: .init(apiKey: "fixture-original-key", endpoint: saved.endpoint)])
+        }
+    }
+
+    func testEditingProviderReplacementSavesIntoOriginalPosition() async throws {
+        try await withStore { store, credentials in
+            let saved = TranslationServiceConfiguration(kind: .openAI)
+            let neighbor = TranslationServiceConfiguration(kind: .deepL)
+            try store.save(saved, apiKey: "fixture-original-key")
+            try store.save(neighbor, apiKey: "fixture-neighbor-key")
+            try store.select(saved.id)
+            let session = TranslationServiceDraftSession(services: store, configuration: saved)
+            defer { session.close() }
+            session.selectPreset(.deepSeek)
+            let replacement = session.editor
+            replacement.configuration.model = "fixture-model"
+            replacement.replacementKey = "fixture-new-key"
+            XCTAssertTrue(replacement.save())
+            XCTAssertEqual(store.configurations.map(\.id), [replacement.configuration.id, neighbor.id])
+            XCTAssertEqual(store.selectedID, replacement.configuration.id)
+            XCTAssertFalse(replacement.isNew)
+            XCTAssertNil(credentials.values[saved.id])
+            XCTAssertEqual(credentials.values[replacement.configuration.id]?.apiKey, "fixture-new-key")
+        }
+    }
+
+    func testNewAccountDraftsCanSwitchButSavedAccountIdentityCannotBecomeAnAPIService() async throws {
+        try await withStore { store, _ in
+            let session = TranslationServiceDraftSession(services: store)
+            let apiEditor = session.editor
+            session.selectPreset(.codex)
+            let accountEditor = session.editor
+            XCTAssertFalse(accountEditor === apiEditor)
+            XCTAssertTrue(accountEditor.canChangeProvider)
+            session.selectPreset(.openAI)
+            XCTAssertTrue(session.editor === apiEditor)
+            var savedAccount = TranslationServiceConfiguration(kind: .codex)
+            savedAccount.model = "fixture-account-model"
+            savedAccount.codexAccountGeneration = UUID().uuidString.lowercased()
+            try store.save(savedAccount, apiKey: nil)
+            session.edit(savedAccount)
+            let savedEditor = session.editor
+            XCTAssertFalse(savedEditor.canChangeProvider)
+            session.selectPreset(.openAI)
+            XCTAssertTrue(session.editor === savedEditor)
+            session.close()
+        }
+    }
+
+    func testDisplayChangesKeepRunningCatalogAndSampleRequest() async throws {
+        try await withStore { store, _ in
+            let loader = EditorModelLoader()
+            let editor = TranslationServiceEditor(configuration: .init(kind: .openAI), services: store, modelLoader: loader)
+            defer { editor.close() }
+            editor.replacementKey = "fixture-key"
+            editor.fetchModels()
+            await waitUntil { await loader.requestCount == 1 }
+            let provider = EditorTestProvider()
+            editor.test(using: provider)
+            await waitUntil { provider.request != nil }
+            editor.configuration.name = "A renamed service"
+            editor.configuration.website = "https://console.example"
+            editor.configuration.iconID = "network"
+            XCTAssertEqual(editor.catalogState, .loading)
+            XCTAssertEqual(editor.testState, .running)
+            XCTAssertEqual(editor.replacementKey, "fixture-key")
+            await loader.finish([.init(id: "fixture-model", name: "Fixture model")])
+            provider.finish(text: "构造的样例译文")
+            await waitUntil { editor.catalogState == .loaded && editor.testState == .succeeded }
+            XCTAssertFalse(provider.sawCancellation)
+            XCTAssertEqual(editor.models.map(\.id), ["fixture-model"])
+            editor.configuration.iconID = nil
+            XCTAssertEqual(editor.testResult, "构造的样例译文")
+            XCTAssertEqual(editor.catalogState, .loaded)
         }
     }
 
@@ -680,18 +825,63 @@ final class TranslationServiceEditorTests: XCTestCase {
             editor.configuration.name = ""
             editor.configuration.model = ""
             editor.replacementKey = "fixture-key"
+            XCTAssertFalse(editor.canChooseModel)
             editor.fetchModels()
             await waitUntil { await loader.requestCount == 1 }
             XCTAssertEqual(editor.catalogState, .loading)
+            XCTAssertFalse(editor.canChooseModel)
             await loader.finish([.init(id: "fixture-model", name: "Fixture model")])
             await waitUntil { editor.catalogState == .loaded }
             XCTAssertTrue(editor.configuration.model.isEmpty)
             XCTAssertTrue(editor.configuration.name.isEmpty)
             XCTAssertEqual(editor.models.map(\.id), ["fixture-model"])
+            XCTAssertTrue(editor.canChooseModel)
             XCTAssertTrue(editor.testResult.isEmpty)
             XCTAssertTrue(store.configurations.isEmpty)
+            editor.chooseModel("not-in-the-catalog")
+            XCTAssertTrue(editor.configuration.model.isEmpty)
             editor.chooseModel("fixture-model")
             XCTAssertEqual(editor.configuration.model, "fixture-model")
+        }
+    }
+
+    func testSavedServiceKeepsItsModelWithoutAnAvailableCatalog() async throws {
+        try await withStore { store, _ in
+            let saved = TranslationServiceConfiguration(kind: .deepSeek)
+            try store.save(saved, apiKey: "fixture-key")
+            let loader = EditorModelLoader()
+            let editor = TranslationServiceEditor(configuration: saved, services: store, modelLoader: loader)
+            editor.refreshKeyState()
+            XCTAssertFalse(editor.isNew)
+            XCTAssertFalse(editor.canChooseModel)
+            XCTAssertTrue(editor.canTest, "Fetching a directory is not required to use the saved model.")
+            XCTAssertEqual(editor.configuration.model, saved.model)
+            editor.configuration.name = "Renamed saved service"
+            XCTAssertTrue(editor.save())
+            XCTAssertEqual(store.configurations.first?.model, saved.model)
+
+            for state in [TranslationServiceEditor.CatalogState.empty, .failed] {
+                let count = await loader.requestCount
+                editor.fetchModels()
+                await waitUntil { await loader.requestCount == count + 1 }
+                XCTAssertFalse(editor.canChooseModel)
+                if state == .empty { await loader.finish([]) }
+                else { await loader.fail() }
+                await waitUntil { editor.catalogState == state }
+                XCTAssertFalse(editor.canChooseModel)
+                XCTAssertEqual(editor.configuration.model, saved.model)
+                XCTAssertTrue(editor.canTest)
+            }
+
+            editor.fetchModels()
+            await waitUntil { await loader.requestCount == 3 }
+            await loader.finish([.init(id: "available-model", name: "Available model")])
+            await waitUntil { editor.catalogState == .loaded }
+            XCTAssertTrue(editor.canChooseModel)
+            XCTAssertEqual(editor.configuration.model, saved.model, "Fetching alternatives must not replace the saved model.")
+            editor.cancelModelLoading()
+            XCTAssertFalse(editor.canChooseModel)
+            XCTAssertEqual(editor.configuration.model, saved.model)
         }
     }
 
@@ -707,22 +897,23 @@ final class TranslationServiceEditorTests: XCTestCase {
             await waitUntil { await loader.sawCancellation }
             XCTAssertEqual(editor.catalogState, .idle)
             XCTAssertTrue(editor.models.isEmpty)
+            XCTAssertFalse(editor.canChooseModel)
             XCTAssertEqual(editor.configuration.model, TranslationServiceKind.openAI.defaultModel)
             XCTAssertNil(editor.modelErrorMessage)
         }
     }
 
-    func testCatalogFailurePreservesManualModelAndSanitizesUnknownErrors() async throws {
+    func testCatalogFailurePreservesConfiguredModelAndSanitizesUnknownErrors() async throws {
         try await withStore { store, _ in
             let loader = EditorModelLoader()
             let editor = TranslationServiceEditor(configuration: .init(kind: .openAI), services: store, modelLoader: loader)
             editor.replacementKey = "fixture-key"
-            editor.configuration.model = "manual-model"
+            editor.configuration.model = "configured-model"
             editor.fetchModels()
             await waitUntil { await loader.requestCount == 1 }
             await loader.fail()
             await waitUntil { editor.catalogState == .failed }
-            XCTAssertEqual(editor.configuration.model, "manual-model")
+            XCTAssertEqual(editor.configuration.model, "configured-model")
             XCTAssertTrue(editor.models.isEmpty)
             XCTAssertEqual(editor.modelErrorMessage, L10n.string("Couldn’t update translation services. Please try again."))
             XCTAssertFalse(editor.modelErrorMessage?.contains("secret") ?? true)

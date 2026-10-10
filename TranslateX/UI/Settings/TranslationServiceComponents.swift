@@ -28,6 +28,31 @@ struct TranslationServiceIconButtonStyle: ButtonStyle {
     }
 }
 
+/// One flat option style for provider, icon and model popups.
+/// Only the popup surface casts a shadow; options use rounded borders.
+struct TranslationServicePickerOptionStyle: ButtonStyle {
+    var selected: Bool
+    var focused: Bool
+    @Environment(\.translateXTheme) private var theme
+    @State private var hovered = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        let p = TranslationServicePalette(theme: theme)
+        configuration.label
+            .background(selected ? p.accentSoft : hovered || configuration.isPressed ? p.fill : .clear,
+                        in: RoundedRectangle(cornerRadius: 7))
+            .overlay {
+                RoundedRectangle(cornerRadius: 7)
+                    .strokeBorder(focused ? p.accent.opacity(0.72) : selected ? p.accent.opacity(0.5) : hovered ? p.line : .clear,
+                                  lineWidth: focused ? 2 : 1)
+                    .allowsHitTesting(false)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 7))
+            .onHover { hovered = $0 }
+            .translateXControlCursor()
+    }
+}
+
 /// Colors for the approved service settings surface. The window continues to
 /// use the application's native material; these are only content surfaces.
 struct TranslationServicePalette {
@@ -68,8 +93,8 @@ struct TranslationServiceButtonStyle: ButtonStyle {
             .frame(minWidth: minimumWidth)
             .foregroundStyle(foreground(p))
             .background(background(p, pressed: configuration.isPressed), in: RoundedRectangle(cornerRadius: 7))
-            .overlay { RoundedRectangle(cornerRadius: 7).strokeBorder(kind == .regular || kind == .primary && !enabled ? p.line : .clear, lineWidth: 1) }
-            .opacity(enabled || kind == .primary ? 1 : 0.42)
+            .overlay { RoundedRectangle(cornerRadius: 7).strokeBorder(kind == .regular || !enabled && (kind == .primary || kind == .soft) ? p.line : .clear, lineWidth: 1) }
+            .opacity(enabled || kind == .primary || kind == .soft ? 1 : 0.42)
             .contentShape(RoundedRectangle(cornerRadius: 7))
             .onHover { hovered = $0 }
             .translateXControlCursor()
@@ -85,7 +110,7 @@ struct TranslationServiceButtonStyle: ButtonStyle {
         }
     }
     private func background(_ p: TranslationServicePalette, pressed: Bool) -> Color {
-        if !enabled { return kind == .primary ? p.fill : kind == .quiet ? .clear : p.panel }
+        if !enabled { return kind == .primary || kind == .soft ? p.fill : kind == .quiet ? .clear : p.panel }
         switch kind {
         case .primary: return p.primary.opacity(pressed ? 0.8 : hovered ? 0.9 : 1)
         case .danger: return p.error.opacity(pressed ? 0.8 : hovered ? 0.9 : 1)
@@ -111,17 +136,32 @@ struct TranslationServiceCard<Content: View>: View {
     }
 }
 
-struct TranslationServiceFormRow<Content: View>: View {
+struct TranslateXFormLabel: View {
     @Environment(\.translateXTheme) private var theme
     let title: String
-    var optional = false
+    var required = false
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 3) {
+            Text(L10n.string(title))
+            if required {
+                Text("*").foregroundStyle(TranslationServicePalette(theme: theme).error)
+                    .accessibilityHidden(true)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(required ? L10n.string(title) + ", " + L10n.string("Required") : L10n.string(title))
+    }
+}
+
+struct TranslationServiceFormRow<Content: View>: View {
+    let title: String
+    var required = false
     @ViewBuilder var content: () -> Content
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(L10n.string(title)).font(.system(size: 12, weight: .medium))
-                if optional { Text(L10n.string("Optional")).font(.system(size: 9)).foregroundStyle(TranslationServicePalette(theme: theme).muted) }
-            }
+            TranslateXFormLabel(title: title, required: required)
+            .font(.system(size: 12, weight: .medium))
             .padding(.top, 7)
             .frame(width: 88, alignment: .leading)
             VStack(alignment: .leading, spacing: 5, content: content)
@@ -185,8 +225,8 @@ struct TranslationServiceField: View {
         .onChange(of: focused) { _, value in onFocusChanged?(value) }
         .task(id: focusRequest) {
             guard focusRequest != 0 else { return }
-            // A newly inserted manual-model field must join the focus tree
-            // before the click's original button relinquishes first responder.
+            // Wait for the field to join the focus tree before moving focus
+            // from the previously active native control.
             await Task.yield()
             guard !Task.isCancelled else { return }
             focused = true
@@ -197,23 +237,38 @@ struct TranslationServiceField: View {
 
 struct TranslationServiceProviderMark: View {
     @Environment(\.translateXTheme) private var theme
-    var kind: TranslationServiceKind? = nil
-    var size: CGFloat = 34
+    private var icon: TranslationServiceIcon?
+    var size: CGFloat
+
+    init(kind: TranslationServiceKind? = nil, size: CGFloat = 34) {
+        icon = kind.map(TranslationServiceIcon.defaultIcon(for:))
+        self.size = size
+    }
+
+    init(configuration: TranslationServiceConfiguration?, size: CGFloat = 34) {
+        icon = configuration?.serviceIcon
+        self.size = size
+    }
+
+    init(icon: TranslationServiceIcon, size: CGFloat = 34) {
+        self.icon = icon
+        self.size = size
+    }
+
     var body: some View {
         let p = TranslationServicePalette(theme: theme)
         Group {
-            if let asset = kind?.providerLogo {
+            if let asset = icon?.assetName {
                 Image(asset)
-                    .renderingMode(kind?.usesMonochromeLogo == true ? .template : .original)
+                    .renderingMode(icon?.usesTemplate == true ? .template : .original)
                     .resizable().scaledToFit()
                     .frame(width: size * 0.64, height: size * 0.64)
-            } else if kind == nil {
+            } else if icon == nil {
                 Image("MenuBarIcon").renderingMode(.template)
                     .resizable().scaledToFit()
                     .frame(width: size * 0.64, height: size * 0.64)
             } else {
-                // User-supplied compatible endpoints have no vendor identity.
-                Image(systemName: "network")
+                Image(systemName: icon?.systemName ?? "network")
                     .font(.system(size: size * 0.52, weight: .medium))
             }
         }
@@ -224,17 +279,17 @@ struct TranslationServiceProviderMark: View {
         .accessibilityHidden(true)
     }
     private func markColor(_ p: TranslationServicePalette) -> Color {
-        switch kind {
-        case .deepL: p.color(theme.isDark ? 0xc1cddd : 0x36567e)
-        default: kind == nil ? p.accent : p.ink
+        switch icon {
+        case .deepl: p.color(theme.isDark ? 0xc1cddd : 0x36567e)
+        default: icon == nil ? p.accent : p.ink
         }
     }
     private func markFill(_ p: TranslationServicePalette) -> Color {
         guard !theme.isDark else { return p.color(0x1e2836) }
-        switch kind {
-        case .deepSeek: return p.color(0xeff4ff)
+        switch icon {
+        case .deepseek: return p.color(0xeff4ff)
         case .claude: return p.color(0xfbf1e9)
-        case .deepL: return p.color(0xeef3f8)
+        case .deepl: return p.color(0xeef3f8)
         case nil: return p.accentSoft
         default: return p.fill.opacity(0.5)
         }
@@ -423,21 +478,6 @@ extension TranslationServiceKind {
         default: displayName
         }
     }
-    var providerLogo: String? {
-        switch self {
-        case .openAI, .codex: "ProviderOpenAI"
-        case .deepSeek: "ProviderDeepSeek"
-        case .openAICompatible: nil
-        case .ollama: "ProviderOllama"
-        case .deepL: "ProviderDeepL"
-        case .azureTranslator: "ProviderAzure"
-        case .claude: "ProviderClaude"
-        case .qwenMT: "ProviderQwen"
-        case .googleCloud: "ProviderGoogleCloud"
-        case .tencentTranslation: "ProviderTencentCloud"
-        }
-    }
-    var usesMonochromeLogo: Bool { [.openAI, .codex, .ollama, .deepL].contains(self) }
     var connectionLabel: String {
         if self == .codex { return L10n.string("Account sign-in") }
         if [.deepL, .azureTranslator, .qwenMT, .googleCloud, .tencentTranslation].contains(self) { return L10n.string("Dedicated translation") }

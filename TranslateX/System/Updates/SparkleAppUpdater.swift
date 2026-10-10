@@ -58,7 +58,9 @@ private final class AppSparkleDelegate: NSObject, SPUUpdaterDelegate {
         }
     }
     func updater(_ updater: SPUUpdater, shouldDownloadReleaseNotesForUpdate item: SUAppcastItem) -> Bool { false }
-    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) { owner?.foundUpdate(item.displayVersionString) }
+    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
+        owner?.foundUpdate(item.displayVersionString, publishedAt: item.date)
+    }
     func updaterDidNotFindUpdate(_ updater: SPUUpdater) { owner?.foundNoUpdate() }
     func updater(_ updater: SPUUpdater, didAbortWithError error: any Error) { owner?.checkAborted(error) }
     func updater(_ updater: SPUUpdater, didFinishUpdateCycleFor updateCheck: SPUUpdateCheck, error: (any Error)?) { owner?.finishedCheck() }
@@ -67,7 +69,7 @@ private final class AppSparkleDelegate: NSObject, SPUUpdaterDelegate {
     func updater(_ updater: SPUUpdater, willInstallUpdateOnQuit item: SUAppcastItem,
                  immediateInstallationBlock immediateInstallHandler: @escaping () -> Void) -> Bool {
         guard let owner, owner.automaticUpdatesEnabled else { return false }
-        owner.foundUpdate(item.displayVersionString)
+        owner.foundUpdate(item.displayVersionString, publishedAt: item.date)
         // This is Sparkle's supported immediate-install hook, not a custom quit
         // or installer. A resumed installation must also wait until About is
         // actually visible, so navigating there cannot discard a live draft.
@@ -94,7 +96,8 @@ private final class AppSparkleUserDriver: NSObject, SPUUserDriver {
     func showUpdateFound(with appcastItem: SUAppcastItem, state: SPUUserUpdateState, reply: @escaping (SPUUserUpdateChoice) -> Void) {
         guard let owner else { reply(.dismiss); return }
         owner.offerUpdate(version: appcastItem.displayVersionString, informationOnly: appcastItem.isInformationOnlyUpdate,
-                          informationURL: appcastItem.infoURL, userInitiated: state.userInitiated, reply: reply)
+                          informationURL: appcastItem.infoURL, publishedAt: appcastItem.date,
+                          userInitiated: state.userInitiated, reply: reply)
     }
     func showUpdateReleaseNotes(with downloadData: SPUDownloadData) {
         // Release history uses the fixed public repository feed. Sparkle's

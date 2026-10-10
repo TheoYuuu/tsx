@@ -12,6 +12,8 @@ and repeat with zh-Hans. All account refresh actions use the isolated loader.
 Use --review-service-usage-charts for a targeted rerun of the three chart states.
 Use --review-service-editor for page scrolling at both settings sizes.
 Use --review-settings-refinement for dropdowns, service rows and statistics pages.
+Use --review-scene quick-permission or quick-permission-screen for permission panels;
+append -minimum to the scene name to check the smallest resizable panel.
 No permissions are requested or changed. Existing capture access is required.
 """
 import json
@@ -326,7 +328,8 @@ while time.monotonic() < deadline:
             # exact exported review window rectangle over our constructed backdrop.
             rect = job["region"]
             if len(rect) != 4 or rect[2:] not in ([700, 610], [620, 540], [720, 430], [600, 340],
-                    [980, 598], [760, 780], [660, 640], [540, 620], [460, 480], [660, 440], [660, 390]):
+                    [980, 598], [760, 780], [660, 640], [540, 620], [460, 480], [660, 440], [660, 390],
+                    [440, 320], [340, 300]):
                 raise SystemExit("Unexpected review window rectangle")
             region = ",".join(str(round(value)) for value in rect)
             capture = subprocess.run(["/usr/sbin/screencapture", "-x", "-R", region,

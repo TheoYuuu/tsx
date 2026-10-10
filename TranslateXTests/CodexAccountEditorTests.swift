@@ -8,12 +8,15 @@ final class CodexAccountEditorTests: XCTestCase {
             let editor = TranslationServiceEditor(configuration: .init(kind: .codex), services: store)
             XCTAssertTrue(editor.configuration.automaticallyTranslates)
             XCTAssertFalse(editor.canSaveCodex)
+            XCTAssertFalse(editor.canChooseModel)
             editor.openCodex()
             await settleTasks()
             XCTAssertEqual(fixture.requests.map(\.operation), [.status])
             editor.refreshCodexModels()
+            XCTAssertFalse(editor.canChooseModel)
             await settleTasks()
             XCTAssertEqual(fixture.requests.map(\.operation), [.status, .models])
+            XCTAssertTrue(editor.canChooseModel)
             XCTAssertTrue(editor.configuration.model.isEmpty)
             XCTAssertNil(editor.configuration.codexAccountGeneration)
             XCTAssertFalse(editor.save())
@@ -35,6 +38,8 @@ final class CodexAccountEditorTests: XCTestCase {
         try await withFixture { fixture, store, _ in
             await prepareCatalog(store.codex)
             let editor = TranslationServiceEditor(configuration: .init(kind: .codex), services: store)
+            XCTAssertEqual(editor.catalogState, .idle)
+            XCTAssertTrue(editor.canChooseModel, "A new editor can use the shared account directory.")
             editor.chooseCodexModel("constructed-model")
             let previous = editor.configuration.codexAccountGeneration
             fixture.generation = UUID().uuidString.lowercased()
@@ -59,6 +64,7 @@ final class CodexAccountEditorTests: XCTestCase {
             fixture.models = []
             await store.codex.loadModels(owner: UUID())
             XCTAssertFalse(editor.canSaveCodex)
+            XCTAssertFalse(editor.canChooseModel)
             editor.test()
             await settleTasks()
             XCTAssertFalse(editor.isTesting)

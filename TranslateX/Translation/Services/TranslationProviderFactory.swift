@@ -10,7 +10,10 @@ enum TranslationProviderFactory {
         codex: CodexAccountController? = nil,
         onPartial: @escaping @MainActor @Sendable (String) -> Void = { _ in }
     ) -> any TranslationProvider {
-        switch configuration.kind {
+        if TranslationServiceModelCatalog.supports(configuration.kind), configuration.effectiveAPIFormat == .claudeMessages {
+            return ClaudeTranslationProvider(configuration: configuration, apiKey: apiKey, onPartial: onPartial)
+        }
+        return switch configuration.kind {
         case .deepL, .azureTranslator:
             DedicatedTranslationProvider(configuration: configuration, apiKey: apiKey)
         case .openAI, .deepSeek, .openAICompatible, .ollama:

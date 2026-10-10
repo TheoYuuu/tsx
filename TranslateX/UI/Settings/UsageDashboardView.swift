@@ -647,7 +647,7 @@ private struct UsageDateRangePicker: View {
     }
 
     private func dateEndpoint(_ field: UsageDateRangeSelection.Endpoint, title: String) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
+        VStack(alignment: .leading, spacing: 12) {
             Button { endpoint = field; month = range.date(for: field) } label: {
                 HStack(spacing: 5) {
                     Text(L10n.string(title)).font(.system(size: 11, weight: .medium))
@@ -669,7 +669,7 @@ private struct UsageDateRangePicker: View {
     private func componentMenu(_ component: UsageDateRangeSelection.Component, for field: UsageDateRangeSelection.Endpoint, title: String) -> some View {
         let year = range.value(.year, for: field), month = range.value(.month, for: field)
         let values: ClosedRange<Int> = component == .year ? range.years : component == .month ? range.months(in: year) : range.days(in: year, month: month)
-        return VStack(alignment: .leading, spacing: 4) {
+        return VStack(alignment: .leading, spacing: 8) {
             Text(L10n.string(title)).font(.system(size: 11)).foregroundStyle(palette.muted)
             LanguageMenu(label: L10n.string(field == .start ? "Start date" : "End date") + " · " + L10n.string(title),
                 selection: Binding(get: { String(range.value(component, for: field)) }, set: { value in

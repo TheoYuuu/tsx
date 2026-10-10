@@ -34,7 +34,9 @@ struct ClaudeTranslationProvider: TranslationProvider {
         configuration: TranslationServiceConfiguration, apiKey: String?, request: TranslationRequest
     ) throws -> URLRequest {
         let config = try configuration.validated()
-        guard config.kind == .claude else { throw RemoteTranslationError.invalidRequest }
+        guard TranslationServiceModelCatalog.supports(config.kind), config.effectiveAPIFormat == .claudeMessages else {
+            throw RemoteTranslationError.invalidRequest
+        }
         guard request.text.utf8.count <= maximumInputBytes else { throw RemoteTranslationError.inputTooLarge }
         guard !request.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               validLanguage(request.target), request.source.map(validLanguage) ?? true else {
@@ -61,7 +63,7 @@ struct ClaudeTranslationProvider: TranslationProvider {
             "model": config.model, "max_tokens": config.maximumOutputTokens, "stream": true,
             "system": system, "messages": [["role": "user", "content": request.text]]
         ]
-        let endpoint = try config.endpointURL(appending: "messages")
+        let endpoint = try config.translationRequestURL()
         var result = URLRequest(url: endpoint, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 60)
         result.httpMethod = "POST"
         result.httpShouldHandleCookies = false

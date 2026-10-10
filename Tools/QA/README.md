@@ -89,6 +89,8 @@ Scripts/build-screen-fixture.sh
 
 视觉目录支持 `main-update-entry`、`main-update-modal` 和 `main-update-modal-minimum` 场景，使用正式主窗口与隔离更新器展示入口、弹窗和最小窗口布局，不联网下载或安装。通过 `CaptureTranslationServiceReview.py` 的 `--review-scene`、`--review-interface-language` 和 `--review-theme` 参数选择场景、语言与主题，截图保留在忽略目录。
 
+紧凑更新界面另提供 `main-update-modal-compact`、`release-notes-compact`、`release-notes-recent-compact` 和 `release-notes-settings-compact`，覆盖发现更新、更新完成、主窗口历史和设置内历史；主窗口场景可追加 `-minimum`。这些场景使用双语构造说明与相对发布时间，包含应被隐藏的安装说明，沿用生产视图、全局滚动样式及隔离更新器；点击立即更新只模拟进度，不下载、安装或退出真实产品。
+
 真实普通窗口的键窗口切换使用独立启动的 QA 应用核查；XCTest 宿主可能无法激活应用，不能把非激活宿主的结果当作用户窗口行为，也不能伪造 `isKeyWindow`。完成视觉目录构建后运行：
 
 ```sh

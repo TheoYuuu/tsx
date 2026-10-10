@@ -10,7 +10,7 @@
   <a href="README.md">简体中文</a> · English
 </p>
 
-**TSX 1.1.1 · A free, open-source translation app for Mac.** This repository brings together application source, documentation, feedback, and official installers.
+**TSX 1.2.0 · A free, open-source translation app for Mac.** This repository brings together application source, documentation, feedback, and official installers.
 
 [Releases](https://github.com/TheoYuuu/tsx/releases) · [Usage guide](Docs/USAGE.md#english) · [Privacy and data](Docs/PRIVACY.md#english) · [Report an issue](https://github.com/TheoYuuu/tsx/issues/new/choose)
 
@@ -34,7 +34,7 @@ See release notes for changes and known issues. Text selection depends on the so
 
 ## Downloads and updates
 
-Download **TSX-1.1.1-macOS-universal.dmg** from the [latest release](https://github.com/TheoYuuu/tsx/releases/latest), open it, and drag TSX into Applications. Official installers are signed with Developer ID and notarized by Apple.
+Download **TSX-1.2.0-macOS-universal.dmg** from the [latest release](https://github.com/TheoYuuu/tsx/releases/latest), open it, and drag TSX into Applications. Official installers are signed with Developer ID and notarized by Apple.
 
 GitHub's automatic **Source code (zip / tar.gz)** archives contain the project source at that version. They are **not installable TSX applications**; download the installer attached to the release.
 

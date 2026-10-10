@@ -2,7 +2,7 @@
 "A little clarity." = "A little clarity.";
 "About TSX" = "About TSX";
 "Allow Accessibility" = "Allow Accessibility";
-"Allow Accessibility so TSX can read selected text when you use the shortcut. Your text isn’t collected in the background." = "Allow Accessibility so TSX can read selected text when you use the shortcut. Your text isn’t collected in the background.";
+"Allow TSX in System Settings → Accessibility to translate selected text with your shortcut." = "Allow TSX in System Settings → Accessibility to translate selected text with your shortcut.";
 "Apple may ask to download language files. Keep this window open." = "Apple may ask to download language files. Keep this window open.";
 "Cancel" = "Cancel";
 "Clear" = "Clear";
@@ -48,7 +48,7 @@
 "This shortcut is already in use. Choose another combination." = "This shortcut is already in use. Choose another combination.";
 "Translate" = "Translate";
 "Translate selection" = "Translate selection";
-"Translate your selection" = "Translate your selection";
+"Enable selection translation" = "Enable selection translation";
 "Translating…" = "Translating…";
 "Translation" = "Translation";
 "Translation cancelled" = "Translation cancelled";
@@ -74,9 +74,9 @@
 "Swap languages" = "Swap languages";
 "Screenshot Translation" = "Screenshot Translation";
 "Screenshot" = "Screenshot";
-"Translate a screenshot" = "Translate a screenshot";
+"Enable screenshot translation" = "Enable screenshot translation";
 "Allow Screen Recording" = "Allow Screen Recording";
-"Allow Screen Recording to recognize text in an area you select. Screenshots stay in memory on your Mac. After enabling access, start Screenshot Translation again." = "Allow Screen Recording to recognize text in an area you select. Screenshots stay in memory on your Mac. After enabling access, start Screenshot Translation again.";
+"Allow TSX in System Settings → Screen Recording, then start Screenshot Translation again." = "Allow TSX in System Settings → Screen Recording, then start Screenshot Translation again.";
 "Recognizing text…" = "Recognizing text…";
 "Text recognition stays on your Mac. The first scan may take longer." = "Text recognition stays on your Mac. The first scan may take longer.";
 "Drag to select an area · Esc to cancel" = "Drag to select an area · Esc to cancel";
@@ -195,7 +195,6 @@
 "API base URL" = "API base URL";
 "Model" = "Model";
 "API key" = "API key";
-"API key (optional)" = "API key (optional)";
 "Enter API key" = "Enter API key";
 "Leave blank to keep the saved key" = "Leave blank to keep the saved key";
 "Remove saved API key" = "Remove saved API key";
@@ -225,7 +224,7 @@
 "Unable to read this service’s API key. Open Translation services to update it." = "Unable to read this service’s API key. Open Translation services to update it.";
 "The translation service changed. Translate again to use the selected service." = "The translation service changed. Translate again to use the selected service.";
 "Enter a service name of 1–120 characters." = "Enter a service name of 1–120 characters.";
-"Enter a model identifier without spaces, up to 256 characters." = "Enter a model identifier without spaces, up to 256 characters.";
+"Choose a valid model from the model list." = "Choose a valid model from the model list.";
 "Enter an API base URL without a username, password, query, or fragment." = "Enter an API base URL without a username, password, query, or fragment.";
 "Remote services require HTTPS. HTTP is allowed only for a loopback address." = "Remote services require HTTPS. HTTP is allowed only for a loopback address.";
 "Additional translation instructions must be no longer than 8,000 characters." = "Additional translation instructions must be no longer than 8,000 characters.";
@@ -348,11 +347,9 @@
 /* Translation service settings */
 "%.1f s" = "%.1f s";
 "%d models loaded · Choose a model" = "%d models loaded · Choose a model";
-"%d models loaded · Choose one or enter an ID" = "%d models loaded · Choose one or enter an ID";
 "%d models loaded · Current account model selected" = "%d models loaded · Current account model selected";
 "%d services" = "%d services";
 "A key is unnecessary if the service allows anonymous access" = "A key is unnecessary if the service allows anonymous access";
-"A model list does not guarantee translation suitability. Check with a sample test." = "A model list does not guarantee translation suitability. Check with a sample test.";
 "AI models" = "AI models";
 "API Key" = "API Key";
 "API URL" = "API URL";
@@ -372,12 +369,11 @@
 "Choose a provider" = "Choose a provider";
 "Choose a service for typing, selection and screenshot translation." = "Choose a service for typing, selection and screenshot translation.";
 "Choose an account model" = "Choose an account model";
-"Choose or enter a model ID" = "Choose or enter a model ID";
 "Collapse" = "Collapse";
 "Collapsed" = "Collapsed";
 "Configuration saved · Current service unchanged" = "Configuration saved · Current service unchanged";
 "Connect your preferred translation service" = "Connect your preferred translation service";
-"Couldn’t get models. Check the address and permissions, or enter an ID." = "Couldn’t get models. Check the address and permissions, or enter an ID.";
+"Couldn’t get models. Check the address and permissions, then try again." = "Couldn’t get models. Check the address and permissions, then try again.";
 "Couldn’t load models. Refresh this account’s model list." = "Couldn’t load models. Refresh this account’s model list.";
 "Couldn’t save right now" = "Couldn’t save right now";
 "Dedicated translation" = "Dedicated translation";
@@ -393,12 +389,10 @@
 "Fixed model" = "Fixed model";
 "For example eastus; leave blank for Global" = "For example eastus; leave blank for Global";
 "Get models" = "Get models";
-"Get the model list, or enter a model ID directly." = "Get the model list, or enter a model ID directly.";
 "Google Cloud" = "Google Cloud";
 "Hidden automatically after 30 seconds or when you leave this field." = "Hidden automatically after 30 seconds or when you leave this field.";
 "Hide API key" = "Hide API key";
 "In use" = "In use";
-"Instructions optional" = "Instructions optional";
 "Keep editing" = "Keep editing";
 "Keep saved key" = "Keep saved key";
 "Key status unconfirmed" = "Key status unconfirmed";
@@ -409,7 +403,7 @@
 "More options for %@" = "More options for %@";
 "Name this configuration" = "Name this configuration";
 "No matching models." = "No matching models.";
-"No models returned. You can enter a model ID." = "No models returned. You can enter a model ID.";
+"No models returned. Check the service and try again." = "No models returned. Check the service and try again.";
 "No saved key was found. Enter it again." = "No saved key was found. Enter it again.";
 "Not tested" = "Not tested";
 "Last sample test failed" = "Last sample test failed";
@@ -422,12 +416,9 @@
 "Open sign-in page" = "Open sign-in page";
 "Open the sign-in page and enter the device code below." = "Open the sign-in page and enter the device code below.";
 "OpenAI-compatible" = "OpenAI-compatible";
-"Optional" = "Optional";
-"Optional, for example: Keep technical terms in English" = "Optional, for example: Keep technical terms in English";
-"Optional, if required by the service" = "Optional, if required by the service";
 "Other apps’ sign-ins are not read. OpenAI determines account eligibility and available models." = "Other apps’ sign-ins are not read. OpenAI determines account eligibility and available models.";
 "Output limit" = "Output limit";
-"Overlong results are reported as incomplete and never continued automatically." = "Overlong results are reported as incomplete and never continued automatically.";
+"Claude Messages requires an output limit supported by your model. Overlong results are reported as incomplete." = "Claude Messages requires an output limit supported by your model. Overlong results are reported as incomplete.";
 "Paste API key" = "Paste API key";
 "Provider" = "Provider";
 "Provider cannot be changed while editing" = "Provider cannot be changed while editing";
@@ -478,9 +469,9 @@
 "Use your API key, local model or ChatGPT account. Apple Translation is always available." = "Use your API key, local model or ChatGPT account. Apple Translation is always available.";
 "Use your ChatGPT account" = "Use your ChatGPT account";
 "translationService.catalogError.unsupportedService" = "This service does not provide a model list here.";
-"translationService.catalogError.catalogUnavailable" = "This address does not provide a model list. Check the address or enter a model ID.";
-"translationService.catalogError.invalidCatalog" = "The service returned an invalid model list. Try again or enter a model ID.";
-"translationService.catalogError.catalogTooLarge" = "The model list exceeds the supported size. Enter a model ID instead.";
+"translationService.catalogError.catalogUnavailable" = "This address does not provide a model list. Check the address and service support.";
+"translationService.catalogError.invalidCatalog" = "The service returned an invalid model list. Try again.";
+"translationService.catalogError.catalogTooLarge" = "The model list exceeds the supported size. Check the service’s model catalog.";
 
 "Hover cursor" = "Hover cursor";
 
@@ -490,23 +481,19 @@
 
 "Enter a valid API URL before choosing a model." = "Enter a valid API URL before choosing a model.";
 
-"Add an API key first, then get models or enter a model ID." = "Add an API key first, then get models or enter a model ID.";
+"Add an API key first, then get models." = "Add an API key first, then get models.";
 
-"Model ID" = "Model ID";
 
-"Enter the exact model ID" = "Enter the exact model ID";
 
 "Cancel model loading" = "Cancel model loading";
 
-"Choose from model list" = "Choose from model list";
 
-"Enter model ID manually" = "Enter model ID manually";
 
 "%d models loaded · Choose from the list" = "%d models loaded · Choose from the list";
 
-"Get models to browse available IDs, or choose manual entry." = "Get models to browse available IDs, or choose manual entry.";
+"Get models, then choose from the list." = "Get models, then choose from the list.";
 
-"Get models to browse this service’s directory, or enter an ID manually." = "Get models to browse this service’s directory, or enter an ID manually.";
+"No model list yet. Get models to choose from this service’s directory." = "No model list yet. Get models to choose from this service’s directory.";
 
 "Quick translation" = "Quick translation";
 
@@ -983,11 +970,10 @@
 
 "Translation guidelines" = "Translation guidelines";
 
-"Optional: keep technical terms in English and use a concise tone." = "Optional: keep technical terms in English and use a concise tone.";
+"For example: keep technical terms in English and use a concise tone." = "For example: keep technical terms in English and use a concise tone.";
 
 "Adds preferences to this service’s translation tasks; built-in translation rules stay in place." = "Adds preferences to this service’s translation tasks; built-in translation rules stay in place.";
 
-"Translation guidelines optional" = "Translation guidelines optional";
 
 
 
@@ -1050,3 +1036,64 @@
 "Bar chart" = "Bar chart";
 
 "Estimated cost" = "Estimated cost";
+
+"Required" = "Required";
+"Change service icon" = "Change service icon";
+"Default provider icon" = "Default provider icon";
+"Brand icons" = "Brand icons";
+"General icons" = "General icons";
+"Network icon" = "Network icon";
+"Cloud icon" = "Cloud icon";
+"Server icon" = "Server icon";
+"Chip icon" = "Chip icon";
+"Search providers…" = "Search providers…";
+"No matching providers." = "No matching providers.";
+"Gateways and custom services" = "Gateways and custom services";
+"Local models" = "Local models";
+"API format" = "API format";
+"Address mode" = "Address mode";
+"Base URL" = "Base URL";
+"Full request URL" = "Full request URL";
+"Request URL" = "Request URL";
+"Model list URL" = "Model list URL";
+"https://api.example.com/v1/models" = "https://api.example.com/v1/models";
+"Translation requests use this URL exactly as entered." = "Translation requests use this URL exactly as entered.";
+"Use the API base URL, including its version path." = "Use the API base URL, including its version path.";
+"Use a model list URL on the same server as the request URL." = "Use a model list URL on the same server as the request URL.";
+"Enter a model list URL on the same origin as the request URL." = "Enter a model list URL on the same origin as the request URL.";
+"Custom service" = "Custom service";
+"Accessibility permission" = "Accessibility permission";
+"Screen Recording permission" = "Screen Recording permission";
+"Reads only when you use the shortcut. No background collection." = "Reads only when you use the shortcut. No background collection.";
+"Captures only the area you select. Screenshots stay in memory on your Mac." = "Captures only the area you select. Screenshots stay in memory on your Mac.";
+"Go to System Settings" = "Go to System Settings";
+
+"Update complete" = "Update complete";
+
+"New version" = "New version";
+
+"Current version v%@" = "Current version v%@";
+
+"Full release history" = "Full release history";
+
+"Version details" = "Version details";
+
+"Just published" = "Just published";
+
+"Published 1 minute ago" = "Published 1 minute ago";
+
+"Published %d minutes ago" = "Published %d minutes ago";
+
+"Published 1 hour ago" = "Published 1 hour ago";
+
+"Published %d hours ago" = "Published %d hours ago";
+
+"Published yesterday" = "Published yesterday";
+
+"Published %d days ago" = "Published %d days ago";
+
+"Published %@" = "Published %@";
+
+"Downloading the update" = "Downloading the update";
+
+"Installing the update" = "Installing the update";

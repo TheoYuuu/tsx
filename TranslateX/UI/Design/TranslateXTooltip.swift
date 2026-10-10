@@ -39,6 +39,8 @@ final class TooltipAnchorView: NSView {
     private var requested = false
     private var pointerInside = false
     private var keyboardFocused = false
+    private var hoverDismissed = false
+    private var focusDismissed = false
     private var hoverArea: NSTrackingArea?
     private var text = ""
     private var dark = false
@@ -47,6 +49,14 @@ final class TooltipAnchorView: NSView {
     func update(text: String, dark: Bool, presented: Bool) {
         let changed = self.text != text || self.dark != dark
         self.text = text; self.dark = dark
+        if keyboardFocused && !presented { focusDismissed = false }
+        if presented && !keyboardFocused,
+           let event = NSApp.currentEvent,
+           [.leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp, .otherMouseDown, .otherMouseUp].contains(event.type) {
+            // Mouse focus is not a request for a keyboard hint. The focus
+            // update can arrive after the click has already dismissed it.
+            focusDismissed = true
+        }
         keyboardFocused = presented
         refreshPresentation(changed: changed)
     }
@@ -62,6 +72,7 @@ final class TooltipAnchorView: NSView {
 
     override func mouseEntered(with event: NSEvent) {
         pointerInside = true
+        hoverDismissed = false
         refreshPresentation()
     }
 
@@ -75,7 +86,9 @@ final class TooltipAnchorView: NSView {
         // after another window opens. Ordering a child hint would also raise
         // its parent, so background windows must never create one.
         guard window?.isKeyWindow == true else { requested = false; dismiss(); return }
-        if !pointerInside && !keyboardFocused { requested = false; dismiss(); return }
+        let hovered = pointerInside && !hoverDismissed
+        let focused = keyboardFocused && !focusDismissed
+        if !hovered && !focused { requested = false; dismiss(); return }
         if !requested || changed { requested = true; dismiss(); show() }
     }
 
@@ -119,18 +132,18 @@ final class TooltipAnchorView: NSView {
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown, .scrollWheel]) { [weak self] event in
             let dismissesEscape = MainActor.assumeIsolated {
                 let wasVisible = self?.panel != nil
-                self?.dismiss()
+                self?.dismissForInteraction(isFocusTraversal: event.type == .keyDown && event.keyCode == 48)
                 return wasVisible && event.type == .keyDown && event.keyCode == 53
             }
             return dismissesEscape ? nil : event
         }
         for name in [NSWindow.willCloseNotification, NSWindow.didResignKeyNotification, NSWindow.didMiniaturizeNotification, NSWindow.didMoveNotification, NSWindow.didResizeNotification] {
             observers.append(NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.dismiss() }
+                MainActor.assumeIsolated { self?.dismissForInteraction() }
             })
         }
         observers.append(NotificationCenter.default.addObserver(forName: NSMenu.didBeginTrackingNotification, object: nil, queue: .main) { [weak self] _ in
-            MainActor.assumeIsolated { self?.dismiss() }
+            MainActor.assumeIsolated { self?.dismissForInteraction() }
         })
     }
 
@@ -139,6 +152,16 @@ final class TooltipAnchorView: NSView {
         let below = anchor.minY - 8 - size.height
         let y = below >= visibleFrame.minY + 6 ? below : min(anchor.maxY + 8, visibleFrame.maxY - size.height - 6)
         return NSRect(x: x, y: y, width: size.width, height: size.height)
+    }
+
+    func dismissForInteraction(isFocusTraversal: Bool = false) {
+        // Retain suppression across text/theme updates and a delayed focus
+        // update. Tab may move focus onto a control already showing a hover
+        // hint; allow that new focus while still dismissing the old focus.
+        hoverDismissed = true
+        focusDismissed = !isFocusTraversal || keyboardFocused
+        requested = false
+        dismiss()
     }
 
     func dismiss() {

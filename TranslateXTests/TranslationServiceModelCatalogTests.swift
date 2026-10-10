@@ -96,6 +96,25 @@ final class TranslationServiceModelCatalogTests: XCTestCase {
         }
     }
 
+    func testCustomClaudeCatalogUsesNativePaginationAndDisplayNames() async throws {
+        let scenario = try fixture(.openAICompatible, [
+            json(["data": [["id": "model-a", "display_name": "Model A"]], "has_more": true, "last_id": "model-a"]),
+            json(["data": [["id": "model-b", "display_name": "Model B"]], "has_more": false])
+        ])
+        defer { scenario.session.invalidateAndCancel() }
+        var configuration = scenario.configuration
+        configuration.presetID = TranslationServicePreset.custom.rawValue
+        configuration.apiFormat = .claudeMessages
+        configuration.endpointMode = .requestURL
+        configuration.modelsEndpoint = configuration.endpoint + "/models"
+        configuration.endpoint += "/arbitrary-request-path"
+        let models = try await scenario.loader.models(configuration: configuration, apiKey: "fixture")
+        XCTAssertEqual(models.map(\.name), ["Model A", "Model B"])
+        XCTAssertEqual(scenario.requests.count, 2)
+        XCTAssertTrue(scenario.requests.allSatisfy { $0.value(forHTTPHeaderField: "x-api-key") == "fixture" })
+        XCTAssertTrue(scenario.requests.allSatisfy { $0.value(forHTTPHeaderField: "Authorization") == nil })
+    }
+
     func testClaudeFollowsNativeCursorAndRetainsExactHostPathAndHeaders() async throws {
         let cursor = "claude-a&not_another_query=1"
         let scenario = try fixture(.claude, [

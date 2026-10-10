@@ -23,7 +23,7 @@ struct RemoteTranslationProvider: TranslationProvider {
         try Task.checkCancellation()
         let urlRequest = try Self.makeRequest(configuration: configuration, apiKey: apiKey, request: request)
         let response = try await Self.perform(
-            urlRequest, usesResponses: configuration.kind == .openAI,
+            urlRequest, usesResponses: configuration.effectiveAPIFormat == .responses,
             session: session, onPartial: onPartial
         )
         try Task.checkCancellation()
@@ -42,13 +42,14 @@ struct RemoteTranslationProvider: TranslationProvider {
         default: throw RemoteTranslationError.invalidRequest
         }
         let config = try configuration.validated()
+        guard config.effectiveAPIFormat != .claudeMessages else { throw RemoteTranslationError.invalidRequest }
         guard request.text.utf8.count <= 65_536 else { throw RemoteTranslationError.inputTooLarge }
         guard !request.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               validLanguage(request.target), request.source.map(validLanguage) ?? true else {
             throw RemoteTranslationError.invalidRequest
         }
         let key = apiKey?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if key.isEmpty && (config.kind == .openAI || config.kind == .deepSeek) {
+        if key.isEmpty && config.requiresAPIKey {
             throw RemoteTranslationError.missingKey
         }
         guard !key.unicodeScalars.contains(where: CharacterSet.whitespacesAndNewlines.union(.controlCharacters).contains), key.utf8.count <= 8_192 else {
@@ -65,8 +66,8 @@ struct RemoteTranslationProvider: TranslationProvider {
         if !config.additionalInstructions.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             instruction += "\nAdditional translation requirements from the app user:\n" + config.additionalInstructions
         }
-        let usesResponses = config.kind == .openAI
-        let endpoint = try config.endpointURL(appending: usesResponses ? "responses" : "chat/completions")
+        let usesResponses = config.effectiveAPIFormat == .responses
+        let endpoint = try config.translationRequestURL()
         // Model output caps and accepted token-budget fields differ. Use the
         // selected model's default, reject truncated finishes, and enforce our
         // own bounded response size instead of imposing an invalid fixed cap.
@@ -82,6 +83,9 @@ struct RemoteTranslationProvider: TranslationProvider {
                 ["role": "user", "content": request.text]
             ]
             if config.kind == .deepSeek { body["thinking"] = ["type": "disabled"] }
+            // MiniMax otherwise embeds reasoning in the text content. Request
+            // its documented separate field, which is never shown as translation.
+            if config.providerPreset == .miniMax { body["reasoning_split"] = true }
         }
         var result = URLRequest(url: endpoint, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 60)
         result.httpMethod = "POST"

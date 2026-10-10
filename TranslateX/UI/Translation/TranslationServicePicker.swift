@@ -84,8 +84,14 @@ final class TranslationServiceMenuControl: NSPopUpButton, NSMenuDelegate {
         let options = NSMenu(); options.delegate = self; options.font = .systemFont(ofSize: 13); options.minimumWidth = 214
         let display = NSMenuItem(title: title, action: nil, keyEquivalent: ""); display.isHidden = true
         options.addItem(display)
-        options.addItem(choice(L10n.string("Apple Translation"), id: nil, selected: selectedID == nil))
-        for service in services { options.addItem(choice(service.name, id: service.id, selected: selectedID == service.id)) }
+        let appleImage = NSImage(named: "MenuBarIcon")?.copy() as? NSImage
+        appleImage?.size = NSSize(width: 16, height: 16)
+        appleImage?.isTemplate = true
+        options.addItem(choice(L10n.string("Apple Translation"), id: nil, selected: selectedID == nil, image: appleImage))
+        for service in services {
+            options.addItem(choice(service.name, id: service.id, selected: selectedID == service.id,
+                                   image: service.serviceIcon.menuImage()))
+        }
         options.addItem(.separator())
         let management = NSMenuItem(title: L10n.string("Manage translation services…"), action: #selector(manageServices), keyEquivalent: "")
         management.target = self; options.addItem(management)
@@ -105,9 +111,10 @@ final class TranslationServiceMenuControl: NSPopUpButton, NSMenuDelegate {
         arrow.bounds = NSRect(x: 0, y: 1, width: 8, height: 6); value.append(NSAttributedString(attachment: arrow))
         menu?.items.first?.attributedTitle = value
     }
-    private func choice(_ title: String, id: UUID?, selected: Bool) -> NSMenuItem {
+    private func choice(_ title: String, id: UUID?, selected: Bool, image: NSImage?) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: #selector(choose(_:)), keyEquivalent: "")
         item.target = self; item.representedObject = id; item.state = selected ? .on : .off
+        item.image = image
         return item
     }
     @objc private func choose(_ item: NSMenuItem) { guard isEnabled else { return }; selectService?(item.representedObject as? UUID) }

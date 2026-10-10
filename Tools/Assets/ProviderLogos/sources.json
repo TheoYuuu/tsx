@@ -77,6 +77,114 @@
       "sha256": "f860dae064a3afd24970efd2bc5892f39438526bf52c3a9748f61fc05c1cfd58",
       "asset": "ProviderTencentCloud",
       "vendor": "TencentCloud"
+    },
+    {
+      "name": "kimi",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/kimi.svg",
+      "bytes": 786,
+      "sha256": "ed08131b46acf70e6e2144eceb775e74098b58ea65fa21eaee04be7b05cfe63b",
+      "asset": "ProviderKimi",
+      "vendor": "Kimi",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "name": "zhipu-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/zhipu-color.svg",
+      "bytes": 3597,
+      "sha256": "8174e65ff71647d5c705c920c953a82bd723d9e3e42887bdd4ffc9dfe51207a0",
+      "asset": "ProviderGLM",
+      "vendor": "Zhipu GLM",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "name": "gemini-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/gemini-color.svg",
+      "bytes": 2836,
+      "sha256": "8ab0a9bafec11f7e69bcb9fc4ffd8f1bc927d1ddcbbb6ff36dee5ae8b5a9d602",
+      "asset": "ProviderGemini",
+      "vendor": "Gemini",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "name": "siliconcloud-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/siliconcloud-color.svg",
+      "bytes": 520,
+      "sha256": "a02d8d7ccb81739fbc720e2e5daaf149013dd5088605dc2dce1b71df0784d424",
+      "asset": "ProviderSiliconFlow",
+      "vendor": "SiliconFlow",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "name": "openrouter",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/openrouter.svg",
+      "bytes": 382,
+      "sha256": "ae671cc83de9bd45db97a47ed5e38a4e1bd9f93a12be495ba4b4f8b284026bca",
+      "asset": "ProviderOpenRouter",
+      "vendor": "OpenRouter",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "name": "xiaomimimo",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/xiaomimimo.svg",
+      "bytes": 2544,
+      "sha256": "b04ad7dad52af2212c4567daf0ee6856f2c4625c92c680a27f9880295d558b71",
+      "asset": "ProviderXiaomiMiMo",
+      "vendor": "Xiaomi MiMo",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "name": "newapi-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/newapi-color.svg",
+      "bytes": 2443,
+      "sha256": "b54496a735b49c4e5d7d1b5f00be9f33e0e4ef3f04a7c4c167dc9209dcae334b",
+      "asset": "ProviderNewAPI",
+      "vendor": "New API",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "name": "minimax-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/minimax-color.svg",
+      "bytes": 1570,
+      "sha256": "7f7187fa6d9b341ac5f22f6c5a970523afb439dc45566d64eb4f4b9b604d6b01",
+      "asset": "ProviderMiniMax",
+      "vendor": "MiniMax",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "name": "doubao-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/doubao-color.svg",
+      "bytes": 1153,
+      "sha256": "3cd31ba03ae44b8c29561597a3b863809efecb13fcdfd08407a086df86a69b55",
+      "asset": "ProviderDoubao",
+      "vendor": "Doubao",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "name": "stepfun-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/stepfun-color.svg",
+      "bytes": 676,
+      "sha256": "f55afc0e6004c8854f76bd5bbcc0fce9fc0ed9316691d54fb02d088c24fab40d",
+      "asset": "ProviderStepfun",
+      "vendor": "Stepfun",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "name": "xai",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/xai.svg",
+      "bytes": 372,
+      "sha256": "89eb7de9f0d02a41cfecd9109e253d7fd3529e27467dee4254faa67f3ac21451",
+      "asset": "ProviderXAI",
+      "vendor": "xAI",
+      "retrieved": "2026-10-10"
+    },
+    {
+      "name": "mistral-color",
+      "source": "https://unpkg.com/@lobehub/icons-static-svg@1.95.1/icons/mistral-color.svg",
+      "bytes": 655,
+      "sha256": "722f74b289d95486b43662fe24fa883b333701296f618406cd0ed502299170b6",
+      "asset": "ProviderMistral",
+      "vendor": "Mistral",
+      "retrieved": "2026-10-10"
     }
   ]
 }

@@ -117,7 +117,7 @@ struct TranslationServiceUsageView: View {
     }
     private func durationField(_ title: String, value: Binding<String>, options: [Int], hint: String) -> some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text(L10n.string(title)).font(.system(size: 11, weight: .medium))
+            TranslateXFormLabel(title: title, required: true).font(.system(size: 11, weight: .medium))
             LanguageMenu(label: L10n.string(title), selection: value, languages: options.map {
                 .init(id: String($0), name: $0 == 0 ? L10n.string("No automatic queries") : String(format: L10n.string("%d seconds"), $0))
             }, prominent: false, minimumWidth: 180)

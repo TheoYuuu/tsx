@@ -38,6 +38,7 @@ Docs/*
 !Docs/BUILDING.md
 !Docs/Distribution.md
 !Docs/PRIVACY.md
+!Docs/ProviderAPIs.md
 !Docs/RELEASING.md
 !Docs/USAGE.md
 !Docs/Validation.md

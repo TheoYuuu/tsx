@@ -10,7 +10,7 @@
   简体中文 · <a href="README.en.md">English</a>
 </p>
 
-**TSX 1.1.1 · 免费、开源的 Mac 翻译工具。** 本仓库统一提供应用源码、使用说明、问题反馈和正式安装包。
+**TSX 1.2.0 · 免费、开源的 Mac 翻译工具。** 本仓库统一提供应用源码、使用说明、问题反馈和正式安装包。
 
 [版本与下载](https://github.com/TheoYuuu/tsx/releases) · [使用说明](Docs/USAGE.md) · [隐私与数据说明](Docs/PRIVACY.md) · [反馈问题](https://github.com/TheoYuuu/tsx/issues/new/choose)
 
@@ -34,7 +34,7 @@
 
 ## 下载与更新
 
-从 [最新 Release](https://github.com/TheoYuuu/tsx/releases/latest) 下载 **TSX-1.1.1-macOS-universal.dmg**，打开后将 TSX 拖入 Applications。正式安装包使用 Developer ID 签名并通过 Apple 公证。
+从 [最新 Release](https://github.com/TheoYuuu/tsx/releases/latest) 下载 **TSX-1.2.0-macOS-universal.dmg**，打开后将 TSX 拖入 Applications。正式安装包使用 Developer ID 签名并通过 Apple 公证。
 
 GitHub 自动生成的 **Source code (zip / tar.gz)** 包含对应版本的项目源码，**不是可以直接安装的 TSX 应用**。请下载 Release 附件中的安装包。
 

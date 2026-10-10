@@ -457,6 +457,28 @@ final class TranslationServiceVisualReview: NSObject {
         self.fixture = fixture
         let services = TranslationServiceStore(defaults: defaults, credentials: VisualCredentialStore(),
             codex: CodexAccountController(sessionFactory: { request in fixture.session(request) }))
+        if backdrop == nil, let screen = NSScreen.main {
+            let background = NSWindow(contentRect: screen.visibleFrame, styleMask: [.borderless], backing: .buffered, defer: false)
+            background.isReleasedWhenClosed = false
+            background.level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue - 1)
+            background.contentView = NSHostingView(rootView: ReviewWallpaper())
+            background.orderFrontRegardless()
+            backdrop = background
+        }
+        if scene.hasPrefix("quick-permission") {
+            // Exercise the real panel sizing and handoff without requesting TCC access.
+            let windows = WindowCoordinator(preferences: preferences, services: services)
+            windows.quickModel.sourceName = "Google Chrome"
+            reviewWindows = windows
+            windows.showQuick(source: nil, permission: scene.contains("screen") ? .screenCapture : .accessibility)
+            window = NSApp.windows.first { $0.identifier?.rawValue == "translatex.quick" && $0.isVisible }
+            if scene.contains("minimum"), let window {
+                window.setFrame(NSRect(origin: window.frame.origin, size: window.minSize), display: true)
+            }
+            window?.appearance = NSAppearance(named: theme.hasPrefix("dark") ? .darkAqua : .aqua)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
         if scene.hasPrefix("release-notes") || scene.hasPrefix("main-update") {
             if scene.contains("minimum") {
                 preferences.rememberWindowSize(preferences.translationLayout.minimumSize(for: .main),
@@ -465,15 +487,24 @@ final class TranslationServiceVisualReview: NSObject {
             let windows = WindowCoordinator(preferences: preferences, services: services)
             let updates = AppUpdateController.visualReview(previewInstalledNotes: scene.hasPrefix("release-notes"),
                                                            shortReleaseNotes: scene.contains("short"),
-                                                           previewAvailableUpdate: scene.hasPrefix("main-update"))
+                                                           previewAvailableUpdate: scene.hasPrefix("main-update"),
+                                                           compactReleaseNotes: scene.contains("compact"))
             windows.updates = updates
             updates.onPresentUpdate = { [weak windows] in windows?.showMainUpdate() }
             reviewWindows = windows
-            if scene.hasPrefix("main-update") {
+            if scene.contains("settings") {
+                let shortcuts = ShortcutSettings(preferences: preferences, manager: ShortcutManager(), onAction: { _ in }, onBindingsChanged: {})
+                windows.showSettings(shortcuts: shortcuts)
+                windows.showAbout()
+                updates.showRecentReleaseNotes()
+            } else if scene.hasPrefix("main-update") {
                 windows.showMain()
                 if scene.contains("modal") { updates.performUpdateAction() }
-            } else { windows.showMainReleaseNotes() }
-            window = NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" }
+            } else {
+                if scene.contains("recent") { updates.showRecentReleaseNotes(in: .mainWindow) }
+                windows.showMainReleaseNotes()
+            }
+            window = NSApp.windows.first { $0.identifier?.rawValue == (scene.contains("settings") ? "translatex.settings" : "translatex.main") }
             window?.level = .floating
             window?.appearance = NSAppearance(named: theme.hasPrefix("dark") ? .darkAqua : .aqua)
             NSApp.activate(ignoringOtherApps: true)
@@ -624,14 +655,6 @@ final class TranslationServiceVisualReview: NSObject {
         } else {
             window.contentView = WindowSurface(preferences: preferences, content: ServiceReviewSurface(
                 content: content.environment(\.translationServiceReviewUsageState, usageState), report: { [weak self] in self?.frames = $0 }))
-        }
-        if backdrop == nil, let screen = NSScreen.main {
-            let background = NSWindow(contentRect: screen.visibleFrame, styleMask: [.borderless], backing: .buffered, defer: false)
-            background.isReleasedWhenClosed = false
-            background.level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue - 1)
-            background.contentView = NSHostingView(rootView: ReviewWallpaper())
-            background.orderFrontRegardless()
-            backdrop = background
         }
         window.center()
         window.makeKeyAndOrderFront(nil)
