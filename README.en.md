@@ -54,8 +54,8 @@ The product name is **TSX**. Its Xcode project, scheme, Swift module, and source
 
 TSX uses Swift 6, AppKit, and SwiftUI, with a Rust component for optional account-based services. Read the [build notes](Docs/BUILDING.md#english), [development conventions](AGENTS.md), [public repository rules](Docs/PUBLIC_REPOSITORY.md), and [third-party notices](THIRD_PARTY_NOTICES.md). The deployment target is macOS 15; Intel and minimum-OS hardware coverage remains limited. See the [validation record](Docs/Validation.md).
 
-## Source and contributions
+## Source and feedback
 
 This repository contains buildable MIT-licensed source and retains subsequent public change history. The initial source snapshot matches the application code and build inputs of the existing release; repository preparation did not rebuild or replace its installer.
 
-Issues and pull requests are welcome. Use constructed test data and exclude real accounts, private screenshots, local paths, and credentials. Review the [public repository policy](Docs/PUBLIC_REPOSITORY.md) before contributing.
+Issues for bug reports and suggestions are welcome. Pull requests are disabled; changes to this repository are made by maintainers. Use constructed examples and exclude real accounts, private screenshots, local paths, and credentials. See the [public repository policy](Docs/PUBLIC_REPOSITORY.md).

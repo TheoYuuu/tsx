@@ -54,8 +54,8 @@ TSX 官方版本永久免费，不设置付费功能或订阅。你主动配置�
 
 项目使用 Swift 6、AppKit 与 SwiftUI，并包含可选账号服务所需的 Rust 组件。请先阅读[源码构建说明](Docs/BUILDING.md)、[开发约定](AGENTS.md)、[公开仓库规范](Docs/PUBLIC_REPOSITORY.md)和[第三方声明](THIRD_PARTY_NOTICES.md)。最低部署目标为 macOS 15；Intel 与最低系统真机覆盖仍有限，完整范围见[验证记录](Docs/Validation.md)。
 
-## 源码与协作
+## 源码与反馈
 
 本仓库提供可构建的 MIT 开源源码，并保留后续公开版本的变更记录。初始源码快照对应现有正式发行的应用代码与构建输入；仓库整理未重新构建或替换安装包。
 
-欢迎提交 Issue 和 Pull Request。贡献请使用构造测试数据，避免真实账号、截图、私人路径或凭据；提交前参阅[公开仓库规范](Docs/PUBLIC_REPOSITORY.md)。
+欢迎通过 Issue 反馈问题与建议。本仓库不接受 Pull Request，PR 功能已关闭，代码仅由维护者提交。反馈请使用构造测试数据，避免真实账号、截图、私人路径或凭据；参阅[公开仓库规范](Docs/PUBLIC_REPOSITORY.md)。
