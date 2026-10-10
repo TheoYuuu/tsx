@@ -71,6 +71,10 @@ final class TooltipAnchorView: NSView {
     }
 
     private func refreshPresentation(changed: Bool = false) {
+        // A late SwiftUI focus update or activeAlways hover event can arrive
+        // after another window opens. Ordering a child hint would also raise
+        // its parent, so background windows must never create one.
+        guard window?.isKeyWindow == true else { requested = false; dismiss(); return }
         if !pointerInside && !keyboardFocused { requested = false; dismiss(); return }
         if !requested || changed { requested = true; dismiss(); show() }
     }
@@ -81,7 +85,7 @@ final class TooltipAnchorView: NSView {
     }
 
     private func show() {
-        guard panel == nil, requested, !text.isEmpty, let window, window.isVisible,
+        guard panel == nil, requested, !text.isEmpty, let window, window.isVisible, window.isKeyWindow,
               let screen = window.screen else { return }
         let font = NSFont.systemFont(ofSize: 11)
         let paragraph = NSMutableParagraphStyle(); paragraph.lineSpacing = 2

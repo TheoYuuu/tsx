@@ -69,4 +69,36 @@ final class WindowPreferencesTests: XCTestCase {
         XCTAssertEqual(NSApp.windows.filter { $0.identifier?.rawValue == "translatex.settings" && $0.isVisible }.count, 1)
         XCTAssertTrue(ShortcutAction.allCases.allSatisfy { manager.shortcut(for: $0) == nil })
     }
+
+    func testOpeningSettingsCancelsQueuedMainEditorFocus() async throws {
+        let monitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(monitor) }
+        let windows = try isolatedWindows()
+        let shortcuts = ShortcutSettings(preferences: windows.preferences, manager: ShortcutManager(),
+                                         onAction: { _ in }, onBindingsChanged: {})
+        defer { windows.shutdown() }
+        windows.showMain()
+        let main = try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" && $0.isVisible })
+        func findEditor(in view: NSView) -> TranslationInputTextView? {
+            if let editor = view as? TranslationInputTextView { return editor }
+            return view.subviews.compactMap { findEditor(in: $0) }.first
+        }
+        let content = try XCTUnwrap(main.contentView)
+        for _ in 0..<30 {
+            content.layoutSubtreeIfNeeded()
+            if findEditor(in: content) != nil { break }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        let editor = try XCTUnwrap(findEditor(in: content))
+        // Queue another editor focus, then open Settings before it can run.
+        windows.showMain()
+        XCTAssertTrue(main.makeFirstResponder(nil))
+        let responder = main.firstResponder
+        windows.showSettings(shortcuts: shortcuts)
+        let settings = try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.settings" && $0.isVisible })
+        for _ in 0..<20 { try await Task.sleep(for: .milliseconds(10)) }
+        XCTAssertTrue(settings.isVisible)
+        XCTAssertTrue(main.firstResponder === responder, "A queued main-editor callback must not run after opening Settings.")
+        XCTAssertFalse(main.firstResponder === editor)
+    }
 }

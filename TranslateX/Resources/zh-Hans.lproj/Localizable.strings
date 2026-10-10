@@ -836,6 +836,7 @@
 "Automatic updates" = "自动更新";
 "At launch, check, download and install updates, then restart." = "启动时检查、下载并安装更新，完成后自动重启。";
 "Check at launch. You choose when to install." = "启动时检查新版本，由你选择何时安装。";
+"Online updates are disabled in this development build." = "此开发版本已停用在线更新。";
 "Free and open source · MIT License" = "免费开源 · MIT 许可证";
 "Official website" = "官方网站";
 "Release notes" = "更新日志";
@@ -847,6 +848,8 @@
 "Update to v%@" = "更新到 v%@";
 "Could not check for updates. Please try again." = "暂时无法检查更新，请重试。";
 "New version v%@ is available" = "发现新版本 v%@";
+"New version available" = "发现新版本";
+"Update now" = "立即更新";
 "What's new" = "更新内容";
 "Release notes are not available here yet. You can view them on GitHub." = "暂时无法显示更新内容，可前往 GitHub 查看。";
 "Retry" = "重试";

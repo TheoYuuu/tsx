@@ -26,7 +26,7 @@ struct SettingsView: View {
     @State private var resetFailed = false
 
     private var p: TranslationServicePalette { .init(theme: theme) }
-    private var showsUpdateModal: Bool { tab == 5 && updates?.isPresentingModal == true }
+    private var showsUpdateModal: Bool { tab == 5 && updates?.releaseNotesPresentation != nil }
 
     var body: some View {
         ZStack {

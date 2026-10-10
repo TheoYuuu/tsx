@@ -85,6 +85,20 @@ Scripts/build-screen-fixture.sh
 
 视觉目录只包含构造翻译状态，不作为真实翻译证据。
 
+### 更新弹窗与窗口焦点
+
+视觉目录支持 `main-update-entry`、`main-update-modal` 和 `main-update-modal-minimum` 场景，使用正式主窗口与隔离更新器展示入口、弹窗和最小窗口布局，不联网下载或安装。通过 `CaptureTranslationServiceReview.py` 的 `--review-scene`、`--review-interface-language` 和 `--review-theme` 参数选择场景、语言与主题，截图保留在忽略目录。
+
+真实普通窗口的键窗口切换使用独立启动的 QA 应用核查；XCTest 宿主可能无法激活应用，不能把非激活宿主的结果当作用户窗口行为，也不能伪造 `isKeyWindow`。完成视觉目录构建后运行：
+
+```sh
+open -n -W '.build/NativeVisualReview/TranslateX Visual Review.app' \
+  --args --translation-services-review --review-update-focus \
+  --review-output "$PWD/.build/QA/UpdateFocus"
+```
+
+该入口核对真实主窗 → 设置确认 → 主窗更新弹窗的键窗口切换、延迟确认、重复请求、原生编辑器禁用与恢复，以及构造草稿保留。结果写入 `focus-results.json`，失败返回非零退出码，结束关闭 QA 窗口并清理临时偏好。检查期间会激活 QA 应用并拦截其窗口内输入，勿与 XCTest 或其他界面自动化同时运行；此检查不证明正式版本间的安装替换或重启链路。
+
 ## 真实本地模型固定样例
 
 已准备好本机 Ollama 服务及模型后，显式选择地址与模型：

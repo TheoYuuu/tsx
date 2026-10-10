@@ -52,11 +52,11 @@ final class TranslationToolbarTests: XCTestCase {
 
     func testTooltipAppearsImmediatelyWithoutTakingFocusAndCleansUpOnMenu() throws {
         _ = NSApplication.shared
-        let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 320, height: 100), styleMask: [.borderless], backing: .buffered, defer: false)
+        let window = QuickPanel(contentRect: NSRect(x: 200, y: 200, width: 320, height: 100), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         let anchor = TooltipAnchorView(frame: NSRect(x: 30, y: 30, width: 28, height: 28))
         window.contentView?.addSubview(anchor)
-        window.orderFront(nil)
+        window.makeKeyAndOrderFront(nil)
         defer { anchor.dismiss(); window.close() }
         let keyBefore = NSApp.keyWindow
         anchor.update(text: "Constructed tooltip", dark: false, presented: true)
@@ -77,11 +77,11 @@ final class TranslationToolbarTests: XCTestCase {
 
     func testTooltipFitsChineseLatinAndWrappedTextWithoutClipping() throws {
         _ = NSApplication.shared
-        let window = NSWindow(contentRect: NSRect(x: 200, y: 200, width: 400, height: 240), styleMask: [.borderless], backing: .buffered, defer: false)
+        let window = QuickPanel(contentRect: NSRect(x: 200, y: 200, width: 400, height: 240), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         let anchor = TooltipAnchorView(frame: NSRect(x: 180, y: 130, width: 28, height: 28))
         window.contentView?.addSubview(anchor)
-        window.orderFront(nil)
+        window.makeKeyAndOrderFront(nil)
         defer { anchor.dismiss(); window.close() }
         let samples = ["截图翻译", "翻译选中文字", "设置", "Screenshot Translation", "Nothing to undo",
                        "撤销上次替换 · 恢复两侧文字\n保留输入内容，可以继续编辑。",
@@ -116,7 +116,7 @@ final class TranslationToolbarTests: XCTestCase {
 
     func testDisabledButtonShowsImmediateNativeHoverHintWithoutTakingFocus() async throws {
         _ = NSApplication.shared
-        let window = NSWindow(contentRect: NSRect(x: 220, y: 220, width: 180, height: 90), styleMask: [.titled], backing: .buffered, defer: false)
+        let window = QuickPanel(contentRect: NSRect(x: 220, y: 220, width: 180, height: 90), styleMask: [.titled, .nonactivatingPanel], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false
         let button = Button("Undo") { XCTFail("Disabled undo must remain inert") }
             .disabled(true).frame(width: 28, height: 28).translateXTooltip("暂无可撤销内容")
@@ -150,6 +150,40 @@ final class TranslationToolbarTests: XCTestCase {
             windowNumber: window.windowNumber, context: nil, eventNumber: 1, trackingNumber: 0, userData: nil))
         anchor.mouseExited(with: exited)
         XCTAssertTrue(window.childWindows?.isEmpty ?? true)
+    }
+
+    func testInactiveWindowCannotPresentTooltipFromLateFocusOrHover() throws {
+        _ = NSApplication.shared
+        // Nonactivating panels exercise real AppKit key transitions even when
+        // the isolated test host is not the desktop's active application.
+        let main = QuickPanel(contentRect: NSRect(x: 220, y: 220, width: 180, height: 90),
+                              styleMask: [.titled, .nonactivatingPanel], backing: .buffered, defer: false)
+        let settings = QuickPanel(contentRect: NSRect(x: 240, y: 240, width: 180, height: 90),
+                                  styleMask: [.titled, .nonactivatingPanel], backing: .buffered, defer: false)
+        main.isReleasedWhenClosed = false
+        settings.isReleasedWhenClosed = false
+        defer { settings.close(); main.close() }
+        let anchor = TooltipAnchorView(frame: NSRect(x: 20, y: 20, width: 28, height: 28))
+        main.contentView?.addSubview(anchor)
+        main.makeKeyAndOrderFront(nil)
+        XCTAssertTrue(main.isKeyWindow)
+        anchor.update(text: "Settings", dark: false, presented: true)
+        XCTAssertEqual(main.childWindows?.count, 1)
+        settings.makeKeyAndOrderFront(nil)
+        XCTAssertTrue(main.childWindows?.isEmpty ?? true)
+
+        // SwiftUI can deliver the button's focus update after its action has
+        // opened Settings. A new child tooltip must not reorder its old parent.
+        anchor.update(text: "Settings", dark: false, presented: false)
+        anchor.update(text: "Settings", dark: false, presented: true)
+        XCTAssertTrue(main.childWindows?.isEmpty ?? true)
+        XCTAssertTrue(settings.isKeyWindow)
+        anchor.update(text: "Settings", dark: false, presented: false)
+        let entered = try XCTUnwrap(NSEvent.enterExitEvent(with: .mouseEntered, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: main.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil))
+        anchor.mouseEntered(with: entered)
+        XCTAssertTrue(main.childWindows?.isEmpty ?? true, "Native activeAlways tracking must not raise a background window.")
+        XCTAssertTrue(settings.isKeyWindow)
     }
 
     func testAnimationVisibilityFollowsNativeWindowShowAndHide() async throws {

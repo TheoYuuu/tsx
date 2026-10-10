@@ -216,10 +216,211 @@ final class QuickHandoffWindowTests: XCTestCase {
         XCTAssertEqual(windows.quickModel.translatedText, "保留的译文。")
         XCTAssertNil(windows.quickModel.request)
     }
+
+    func testUpdateUsesMainWindowAndRestoresItsEditorsWithoutReplacingContent() async throws {
+        let monitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(monitor) }
+        let (windows, updates, _) = try updateWindowFixture()
+        defer { windows.shutdown() }
+        let result = try await complete(windows.inputModel, text: "Constructed update draft.", translated: "更新前保留的译文。")
+        let completedRequest = windows.inputModel.request
+        var settingsRequests = 0
+        windows.onSettings = { settingsRequests += 1 }
+        windows.showMain()
+        let main = try visibleUpdateMainWindow()
+        let surface = try XCTUnwrap(main.contentView as? WindowSurface<InputTranslationView>)
+        try await waitForUpdateWindowState { self.updateEditors(in: surface).count == 2 }
+        let editors = updateEditors(in: surface)
+        let editorContents = editors.map(\.string)
+        XCTAssertTrue(editors.allSatisfy(\.isEditable))
+
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            userInitiated: true, reply: { _ in })
+        try await waitForUpdateWindowState {
+            surface.modalHostingView != nil && editors.allSatisfy { !$0.isInteractionEnabled }
+        }
+
+        XCTAssertTrue(updates.showsMainUpdate)
+        XCTAssertTrue(updates.isPresentingMainModal)
+        XCTAssertTrue(try visibleUpdateMainWindow() === main)
+        XCTAssertTrue(main.contentView === surface)
+        XCTAssertEqual(settingsRequests, 0)
+        XCTAssertFalse(NSApp.windows.contains { $0.identifier?.rawValue == "translatex.settings" && $0.isVisible })
+        XCTAssertFalse(main.firstResponder is TranslationInputTextView)
+        let overlay = try XCTUnwrap(surface.modalHostingView)
+        XCTAssertTrue(surface.subviews.last === overlay)
+        XCTAssertTrue(editors.allSatisfy { !$0.isEditable && !$0.isSelectable && !$0.acceptsFirstResponder })
+        for editor in editors {
+            editor.insertText("Blocked modal edit", replacementRange: NSRange(location: NSNotFound, length: 0))
+        }
+        XCTAssertEqual(editors.map(\.string), editorContents)
+
+        updates.dismissUpdate()
+        try await waitForUpdateWindowState {
+            surface.modalHostingView == nil && editors.allSatisfy(\.isInteractionEnabled)
+        }
+        XCTAssertFalse(updates.showsMainUpdate)
+        XCTAssertFalse(updates.isPresentingMainModal)
+        XCTAssertTrue(main.isVisible)
+        XCTAssertTrue(main.contentView === surface)
+        XCTAssertEqual(updateEditors(in: surface).map(ObjectIdentifier.init), editors.map(ObjectIdentifier.init))
+        XCTAssertTrue(editors.allSatisfy(\.isEditable))
+        XCTAssertEqual(editors.map(\.string), editorContents)
+        XCTAssertEqual(windows.inputModel.text, "Constructed update draft.")
+        XCTAssertEqual(windows.inputModel.result, result)
+        XCTAssertEqual(windows.inputModel.request, completedRequest, "Showing or dismissing the update must not replace the completed request.")
+    }
+
+    func testUpdateWaitsForServiceDraftExitBeforeShowingItsMainModal() async throws {
+        let monitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(monitor) }
+        let (windows, updates, _) = try updateWindowFixture()
+        defer { windows.shutdown() }
+        var pendingExit: (@MainActor () -> Void)?
+        var exitRequests = 0
+        windows.serviceNavigation.exitHandler = { [weak windows] action in
+            exitRequests += 1
+            pendingExit = action
+            windows?.serviceNavigation.isPresentingConfirmation = true
+        }
+        let visibleMainCount = NSApp.windows.filter { $0.identifier?.rawValue == "translatex.main" && $0.isVisible }.count
+
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            userInitiated: true, reply: { _ in })
+
+        XCTAssertEqual(exitRequests, 1)
+        XCTAssertNotNil(pendingExit)
+        XCTAssertEqual(updates.updatePresentation?.phase, .available)
+        XCTAssertFalse(updates.showsMainUpdate)
+        XCTAssertFalse(updates.isPresentingMainModal)
+        XCTAssertEqual(NSApp.windows.filter { $0.identifier?.rawValue == "translatex.main" && $0.isVisible }.count, visibleMainCount)
+        updates.focusUpdate()
+        XCTAssertEqual(exitRequests, 1, "Refocusing a pending update must not replace the draft confirmation action.")
+
+        // Keeping the service draft cancels only that navigation attempt. The
+        // available update must remain reachable when the user opens it again.
+        pendingExit = nil
+        windows.serviceNavigation.isPresentingConfirmation = false
+        updates.focusUpdate()
+        XCTAssertEqual(exitRequests, 2)
+        XCTAssertNotNil(pendingExit)
+        XCTAssertFalse(updates.showsMainUpdate)
+
+        // An independent translation-window request cannot approve leaving the
+        // settings draft or mount the pending update behind its confirmation.
+        windows.showMain()
+        let main = try visibleUpdateMainWindow()
+        let surface = try XCTUnwrap(main.contentView as? WindowSurface<InputTranslationView>)
+        try await waitForUpdateWindowState { self.updateEditors(in: surface).count == 2 }
+        XCTAssertFalse(updates.showsMainUpdate)
+        XCTAssertNil(surface.modalHostingView)
+        XCTAssertTrue(updateEditors(in: surface).allSatisfy(\.isInteractionEnabled))
+        XCTAssertEqual(exitRequests, 2)
+
+        windows.serviceNavigation.isPresentingConfirmation = false
+        try XCTUnwrap(pendingExit)()
+        pendingExit = nil
+        try await waitForUpdateWindowState {
+            surface.modalHostingView != nil && self.updateEditors(in: surface).allSatisfy { !$0.isInteractionEnabled }
+        }
+        XCTAssertTrue(updates.showsMainUpdate)
+        XCTAssertTrue(updates.isPresentingMainModal)
+        XCTAssertTrue(try visibleUpdateMainWindow() === main)
+        XCTAssertEqual(exitRequests, 2)
+    }
+
+    func testDismissingUpdateKeepsPendingInstalledNotesUnacknowledged() async throws {
+        try await assertUpdatePreservesMainNotes(showRecent: false)
+    }
+
+    func testDismissingUpdateKeepsRecentNotesAndPendingInstalledVersionUnacknowledged() async throws {
+        try await assertUpdatePreservesMainNotes(showRecent: true)
+    }
+
+    private func assertUpdatePreservesMainNotes(showRecent: Bool) async throws {
+        let monitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(monitor) }
+        let (windows, updates, defaults) = try updateWindowFixture()
+        defer { windows.shutdown() }
+        defaults.set("1.0.0", forKey: "TSXLastLaunchedReleaseVersion")
+        updates.prepareInstalledReleaseNotes()
+        if showRecent { updates.showRecentReleaseNotes(in: .mainWindow) }
+        let expectedMode: AppReleaseNotesMode = showRecent ? .recent : .installed(version: "1.1.0")
+        let main = try visibleUpdateMainWindow()
+        let surface = try XCTUnwrap(main.contentView as? WindowSurface<InputTranslationView>)
+        try await waitForUpdateWindowState { self.updateEditors(in: surface).count == 2 }
+        XCTAssertEqual(updates.mainReleaseNotesPresentation, expectedMode)
+
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            userInitiated: true, reply: { _ in })
+        XCTAssertTrue(updates.showsMainUpdate)
+        XCTAssertEqual(updates.mainReleaseNotesPresentation, expectedMode)
+        updates.dismissUpdate()
+        try await waitForUpdateWindowState {
+            surface.modalHostingView != nil && self.updateEditors(in: surface).allSatisfy { !$0.isInteractionEnabled }
+        }
+
+        XCTAssertNil(updates.updatePresentation)
+        XCTAssertFalse(updates.showsMainUpdate)
+        XCTAssertTrue(updates.isPresentingMainModal, "Closing an update must leave the older release-notes modal in place.")
+        XCTAssertEqual(updates.mainReleaseNotesPresentation, expectedMode)
+        XCTAssertEqual(updates.pendingReleaseNotesVersion, "1.1.0")
+        XCTAssertEqual(defaults.string(forKey: "TSXPendingInstalledReleaseVersion"), "1.1.0")
+        XCTAssertNil(defaults.string(forKey: "TSXAcknowledgedReleaseNotesVersion"))
+        XCTAssertFalse(main.firstResponder is TranslationInputTextView)
+    }
+
+    private func updateWindowFixture() throws -> (WindowCoordinator, AppUpdateController, UserDefaults) {
+        _ = NSApplication.shared
+        let suite = "TranslateXTests.MainUpdate.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        addTeardownBlock { UserDefaults(suiteName: suite)?.removePersistentDomain(forName: suite) }
+        let releases = ["1.1.0", "2.0.0"].map {
+            AppRelease(version: $0, publishedAt: .distantPast, notes: "Constructed release notes.",
+                       url: URL(string: "https://github.com/TheoYuuu/tsx/releases/tag/v\($0)")!)
+        }
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
+                                          currentVersion: "1.1.0", defaults: defaults,
+                                          recordsInstalledVersions: true, backend: QuickHandoffUpdateBackend(),
+                                          releases: AppReleaseNotesStore(entries: releases, allowsNetworkLoading: false))
+        let windows = try isolatedWindows()
+        windows.inputModel.setAutomaticTranslation(false)
+        windows.updates = updates
+        updates.onPresentUpdate = { [weak windows] in windows?.showMainUpdate() }
+        updates.onPresentReleaseNotes = { [weak windows] in windows?.showMainReleaseNotes() }
+        return (windows, updates, defaults)
+    }
+
+    private func visibleUpdateMainWindow() throws -> NSWindow {
+        try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" && $0.isVisible })
+    }
+
+    private func updateEditors(in view: NSView) -> [TranslationInputTextView] {
+        if let editor = view as? TranslationInputTextView { return [editor] }
+        return view.subviews.flatMap { updateEditors(in: $0) }
+    }
+
+    private func waitForUpdateWindowState(file: StaticString = #filePath, line: UInt = #line, _ condition: () -> Bool) async throws {
+        for _ in 0..<50 {
+            if condition() { return }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertTrue(condition(), "The main update window did not reach the expected state.", file: file, line: line)
+    }
 }
 
 @MainActor
 private struct QuickHandoffProvider: TranslationProvider {
     let result: TranslationResult
     func translate(_ request: TranslationRequest) async throws -> TranslationResult { result }
+}
+
+@MainActor
+private final class QuickHandoffUpdateBackend: AppUpdaterBackend {
+    var canCheckForUpdates = true
+    var automaticallyChecksForUpdates = false
+    var automaticallyDownloadsUpdates = false
+    func start() throws {}
+    func checkInformation() {}
+    func checkUpdates() {}
 }

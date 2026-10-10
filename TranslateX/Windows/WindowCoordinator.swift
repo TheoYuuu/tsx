@@ -33,7 +33,9 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     let inputModel: TranslationModel
     let quickModel: TranslationModel
     let languages = LanguageCatalog()
-    var updates: AppUpdateController?
+    var updates: AppUpdateController? {
+        didSet { trackMainModal() }
+    }
     var onSelection: (() -> Void)?
     var onScreenshot: (() -> Void)?
     var onSettings: (() -> Void)?
@@ -80,6 +82,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         trackQuickPresentation()
         trackLayout()
         trackInterfaceLanguage()
+        trackSettingsConfirmation()
     }
 
     private func trackInterfaceLanguage() {
@@ -285,7 +288,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     func showMain(handoff: TranslationHandoff? = nil) {
         lastTranslationWindow = .main
         applyTranslationLayout()
-        needsInputFocus = updates?.mainReleaseNotesPresentation == nil
+        needsInputFocus = updates?.isPresentingMainModal != true
         closeQuick(restoreFocus: false)
         if let handoff {
             inputEditor?.finishCompositionForReplacement()
@@ -328,12 +331,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
                 updates: updates
             ))
         }
-        if let updates, updates.mainReleaseNotesPresentation != nil,
-           let surface = mainWindow?.contentView as? WindowSurface<InputTranslationView> {
-            surface.presentModal { [weak self] in
-                MainReleaseNotesOverlay(updates: updates) { [weak self] in self?.dismissMainReleaseNotes() }
-            }
-        }
+        syncMainModal()
         if mainWindow?.isMiniaturized == true { mainWindow?.deminiaturize(nil) }
         mainWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
@@ -344,8 +342,8 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         // SwiftUI attaches the native editor and establishes its own responder chain
         // during layout. Apply the requested focus after that transaction completes.
         DispatchQueue.main.async { [weak self] in
-            guard let self, self.needsInputFocus, self.updates?.mainReleaseNotesPresentation == nil,
-                  let window = self.mainWindow,
+            guard let self, self.needsInputFocus, self.updates?.isPresentingMainModal != true,
+                  let window = self.mainWindow, window.isKeyWindow,
                   let editor = self.inputEditor, editor.window === window else { return }
             if window.makeFirstResponder(editor) { self.needsInputFocus = false }
         }
@@ -368,11 +366,15 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     }
 
     func windowDidResignKey(_ notification: Notification) {
+        if notification.object as? NSWindow === mainWindow { needsInputFocus = false }
         if notification.object as? NSWindow === settingsWindow { settingsShortcuts?.endRecording() }
     }
 
     func showSettings(shortcuts: ShortcutSettings) {
         closeQuick(restoreFocus: false)
+        // The settings action supersedes any editor attachment/focus callback
+        // still queued by the translation window.
+        needsInputFocus = false
         settingsShortcuts = shortcuts
         permissions.refresh()
         if settingsWindow == nil {
@@ -412,6 +414,72 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         settingsNavigation.showAbout()
     }
 
+    func showMainUpdate() {
+        guard let updates, updates.updatePresentation != nil else { return }
+        if updates.showsMainUpdate { showMain(); return }
+        // Keep an outstanding draft confirmation visible and do not replace
+        // its pending action when Sparkle requests focus more than once.
+        if serviceNavigation.isPresentingConfirmation {
+            settingsWindow?.makeKeyAndOrderFront(nil)
+            return
+        }
+        serviceNavigation.requestExit { [weak self, weak updates] in
+            guard let self, let updates, updates === self.updates,
+                  updates.updatePresentation != nil else { return }
+            updates.presentUpdateInMainWindow()
+            self.showMain()
+        }
+    }
+
+    private func trackSettingsConfirmation() {
+        withObservationTracking { _ = serviceNavigation.isPresentingConfirmation } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                // SwiftUI publishes this after requestExit returns. Bring the
+                // actual confirmation forward only when it is presented.
+                if self.serviceNavigation.isPresentingConfirmation,
+                   self.updates?.updatePresentation != nil, self.updates?.showsMainUpdate == false,
+                   let settingsWindow = self.settingsWindow {
+                    if settingsWindow.isMiniaturized { settingsWindow.deminiaturize(nil) }
+                    settingsWindow.makeKeyAndOrderFront(nil)
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+                self.trackSettingsConfirmation()
+            }
+        }
+    }
+
+    private func trackMainModal() {
+        guard let updates else { return }
+        withObservationTracking { _ = updates.isPresentingMainModal } onChange: { [weak self, weak updates] in
+            Task { @MainActor [weak self, weak updates] in
+                guard let self, let updates, updates === self.updates else { return }
+                self.syncMainModal()
+                self.trackMainModal()
+            }
+        }
+    }
+
+    private func syncMainModal() {
+        guard let surface = mainWindow?.contentView as? WindowSurface<InputTranslationView> else { return }
+        let presenting = updates?.isPresentingMainModal == true
+        inputEditor?.setInteractionEnabled(!presenting)
+        inputTranslationEditor?.setInteractionEnabled(!presenting)
+        if presenting, let updates {
+            needsInputFocus = false
+            if mainWindow?.firstResponder === inputEditor || mainWindow?.firstResponder === inputTranslationEditor {
+                mainWindow?.makeFirstResponder(nil)
+            }
+            surface.presentModal { [weak self] in
+                MainReleaseNotesOverlay(updates: updates) { [weak self] in self?.dismissMainReleaseNotes() }
+            }
+        } else if surface.modalHostingView != nil {
+            surface.dismissModal()
+            needsInputFocus = true
+            focusInputWhenReady()
+        }
+    }
+
     /// Startup notes are part of the existing translation workspace. Keep its
     /// native editors mounted so dismissing the overlay preserves the draft.
     func showMainReleaseNotes() {
@@ -427,11 +495,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     func dismissMainReleaseNotes() {
         guard updates?.mainReleaseNotesPresentation != nil else { return }
         updates?.dismissReleaseNotes(in: .mainWindow)
-        (mainWindow?.contentView as? WindowSurface<InputTranslationView>)?.dismissModal()
-        inputEditor?.setInteractionEnabled(true)
-        inputTranslationEditor?.setInteractionEnabled(true)
-        needsInputFocus = true
-        focusInputWhenReady()
+        syncMainModal()
     }
 
     func showQuick(source: NSRunningApplication?, bounds: CGRect? = nil, permission: SystemPermission? = nil) {

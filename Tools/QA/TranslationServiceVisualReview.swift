@@ -1,4 +1,5 @@
 import AppKit
+import Darwin
 import SwiftUI
 
 // The visual binary excludes the real catalog implementation. These matching
@@ -136,6 +137,10 @@ final class TranslationServiceVisualReview: NSObject {
     private func run() async {
         let output = URL(fileURLWithPath: argument("--review-output", fallback: "/tmp/TranslateXTranslationServiceReview"))
         try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        if CommandLine.arguments.contains("--review-update-focus") {
+            await verifyUpdateFocus(output: output)
+            return
+        }
         if CommandLine.arguments.contains("--review-resume") {
             await presentResumeFixture()
             return
@@ -199,6 +204,141 @@ final class TranslationServiceVisualReview: NSObject {
             closeReviewWindow()
             NSApp.terminate(nil)
         }
+    }
+
+    /// Ordinary NSWindow key transitions need a normally launched application.
+    /// Keep every native focus assertion here instead of substituting panels or
+    /// weakening the check when an XCTest host cannot activate itself.
+    private func verifyUpdateFocus(output: URL) async {
+        enum ReviewFailure: Error { case assertion(String) }
+        var checks: [[String: Any]] = []
+        var failures: [String] = []
+        var main: NSWindow?
+        var settings: NSWindow?
+        var coordinator: WindowCoordinator?
+        let domain = "TranslateX.TranslationServiceVisualReview.UpdateFocus.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: domain)!
+        let monitor = NSEvent.addLocalMonitorForEvents(matching: [
+            .keyDown, .keyUp, .flagsChanged, .leftMouseDown, .leftMouseUp, .rightMouseDown, .rightMouseUp
+        ]) { _ in nil }
+        func diagnostic() -> [String: Any] {
+            ["active": NSApp.isActive, "activationPolicy": NSApp.activationPolicy().rawValue,
+             "keyWindow": NSApp.keyWindow.map { $0.windowNumber as Any } ?? NSNull(),
+             "mainWindow": main.map { $0.windowNumber as Any } ?? NSNull(),
+             "settingsWindow": settings.map { $0.windowNumber as Any } ?? NSNull(),
+             "mainIsKey": main?.isKeyWindow ?? false, "settingsIsKey": settings?.isKeyWindow ?? false,
+             "mainVisible": main?.isVisible ?? false, "settingsVisible": settings?.isVisible ?? false]
+        }
+        func require(_ condition: Bool, _ name: String) throws {
+            checks.append(["name": name, "passed": condition, "diagnostic": diagnostic()])
+            if !condition { throw ReviewFailure.assertion(name) }
+        }
+        func wait(_ name: String, until condition: () -> Bool) async throws {
+            for _ in 0..<150 {
+                if condition() { break }
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            try require(condition(), name)
+        }
+        func editors(in view: NSView) -> [TranslationInputTextView] {
+            if let editor = view as? TranslationInputTextView { return [editor] }
+            return view.subviews.flatMap { editors(in: $0) }
+        }
+        do {
+            let preferences = AppPreferences(defaults: defaults)
+            preferences.appearance = .light
+            let fixture = VisualCodexAccount(.signedOut)
+            let services = TranslationServiceStore(defaults: defaults, credentials: VisualCredentialStore(),
+                codex: CodexAccountController(sessionFactory: { request in fixture.session(request) }))
+            let windows = WindowCoordinator(preferences: preferences, services: services)
+            coordinator = windows
+            let updates = AppUpdateController.visualReview(previewAvailableUpdate: true)
+            windows.updates = updates
+            updates.onPresentUpdate = { [weak windows] in windows?.showMainUpdate() }
+            windows.inputModel.setAutomaticTranslation(false)
+            windows.inputModel.text = "Constructed draft retained through update focus verification."
+            let shortcuts = ShortcutSettings(preferences: preferences, manager: ShortcutManager(),
+                                             onAction: { _ in }, onBindingsChanged: {})
+            windows.showSettings(shortcuts: shortcuts)
+            settings = NSApp.windows.first { $0.identifier?.rawValue == "translatex.settings" && $0.isVisible }
+            try require(settings != nil, "Settings uses the real coordinator window")
+            windows.showMain()
+            main = NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" && $0.isVisible }
+            guard let main, let settings, let surface = main.contentView as? WindowSurface<InputTranslationView> else {
+                throw ReviewFailure.assertion("Main window and native surface exist")
+            }
+            try await wait("Main window really becomes key before requesting the update") {
+                main.isKeyWindow && !settings.isKeyWindow && editors(in: surface).count == 2
+            }
+            let originalEditors = editors(in: surface)
+            let originalContents = originalEditors.map(\.string)
+            let originalDraft = windows.inputModel.text
+            var pendingExit: (@MainActor () -> Void)?
+            var exitRequests = 0
+            var installReplies = 0
+            windows.serviceNavigation.exitHandler = { action in
+                exitRequests += 1
+                pendingExit = action
+            }
+            updates.offerUpdate(version: "1.0.1", informationOnly: false, informationURL: nil,
+                                userInitiated: true) { _ in installReplies += 1 }
+            try require(pendingExit != nil && exitRequests == 1, "Update requests the settings draft guard once")
+            try require(!windows.serviceNavigation.isPresentingConfirmation && !updates.showsMainUpdate,
+                        "An unreported draft confirmation does not approve the update")
+            await Task.yield()
+            try require(main.isKeyWindow && !settings.isKeyWindow && surface.modalHostingView == nil,
+                        "Requesting confirmation does not flash Settings or mount an update")
+            try require(installReplies == 0, "Pending confirmation cannot install the update")
+
+            // Match SwiftUI's delayed onChange publication, rather than setting
+            // this flag synchronously inside the draft-exit handler.
+            windows.serviceNavigation.isPresentingConfirmation = true
+            try await wait("Delayed confirmation makes Settings key and Main non-key") {
+                settings.isKeyWindow && !main.isKeyWindow
+            }
+            try require(!updates.showsMainUpdate && !updates.isPresentingMainModal && surface.modalHostingView == nil,
+                        "The settings confirmation keeps the main update modal unmounted")
+            updates.focusUpdate()
+            try require(exitRequests == 1, "Refocusing preserves the pending draft decision")
+
+            windows.serviceNavigation.isPresentingConfirmation = false
+            guard let approve = pendingExit else { throw ReviewFailure.assertion("Draft approval remains available") }
+            pendingExit = nil
+            approve()
+            try await wait("Approving the draft makes Main key with its update modal") {
+                main.isKeyWindow && !settings.isKeyWindow && surface.modalHostingView != nil
+                    && originalEditors.allSatisfy { !$0.isInteractionEnabled }
+            }
+            try require(updates.showsMainUpdate && updates.isPresentingMainModal && main.contentView === surface,
+                        "The approved update reuses the original main content")
+            try require(installReplies == 0, "Showing a manual update still waits for install confirmation")
+            updates.dismissUpdate()
+            try await wait("Dismissing the update restores editors without leaving Main") {
+                main.isKeyWindow && surface.modalHostingView == nil && originalEditors.allSatisfy(\.isInteractionEnabled)
+            }
+            try require(main.contentView === surface
+                        && editors(in: surface).map(ObjectIdentifier.init) == originalEditors.map(ObjectIdentifier.init)
+                        && originalEditors.map(\.string) == originalContents && windows.inputModel.text == originalDraft,
+                        "Dismissal preserves the native editor instances and constructed draft")
+        } catch ReviewFailure.assertion(let name) {
+            failures.append(name)
+        } catch {
+            failures.append("Focus review interrupted: \(String(describing: error))")
+        }
+        let report: [String: Any] = ["checkCount": checks.count, "checks": checks, "failures": failures,
+                                     "passed": failures.isEmpty, "finalDiagnostic": diagnostic()]
+        do {
+            let data = try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
+            try data.write(to: output.appendingPathComponent("focus-results.json"), options: .atomic)
+        } catch {
+            failures.append("Could not write the focus review result")
+        }
+        coordinator?.shutdown()
+        main?.close()
+        settings?.close()
+        defaults.removePersistentDomain(forName: domain)
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        exit(failures.isEmpty ? EXIT_SUCCESS : EXIT_FAILURE)
     }
 
     private func capture(_ window: NSWindow, key: String, output: URL) async {
@@ -317,16 +457,22 @@ final class TranslationServiceVisualReview: NSObject {
         self.fixture = fixture
         let services = TranslationServiceStore(defaults: defaults, credentials: VisualCredentialStore(),
             codex: CodexAccountController(sessionFactory: { request in fixture.session(request) }))
-        if scene.hasPrefix("release-notes") {
+        if scene.hasPrefix("release-notes") || scene.hasPrefix("main-update") {
             if scene.contains("minimum") {
                 preferences.rememberWindowSize(preferences.translationLayout.minimumSize(for: .main),
                                                for: .main, layout: preferences.translationLayout)
             }
             let windows = WindowCoordinator(preferences: preferences, services: services)
-            windows.updates = AppUpdateController.visualReview(previewInstalledNotes: true,
-                                                               shortReleaseNotes: scene.contains("short"))
+            let updates = AppUpdateController.visualReview(previewInstalledNotes: scene.hasPrefix("release-notes"),
+                                                           shortReleaseNotes: scene.contains("short"),
+                                                           previewAvailableUpdate: scene.hasPrefix("main-update"))
+            windows.updates = updates
+            updates.onPresentUpdate = { [weak windows] in windows?.showMainUpdate() }
             reviewWindows = windows
-            windows.showMainReleaseNotes()
+            if scene.hasPrefix("main-update") {
+                windows.showMain()
+                if scene.contains("modal") { updates.performUpdateAction() }
+            } else { windows.showMainReleaseNotes() }
             window = NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" }
             window?.level = .floating
             window?.appearance = NSAppearance(named: theme.hasPrefix("dark") ? .darkAqua : .aqua)

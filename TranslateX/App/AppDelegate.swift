@@ -58,7 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         windows.applyAppearance()
         windows.updates = updates
-        updates.onPresentUpdate = { [weak self] in self?.windows.showAbout() }
+        updates.onPresentUpdate = { [weak self] in self?.windows.showMainUpdate() }
         updates.onPresentReleaseNotes = { [weak self] in self?.windows.showMainReleaseNotes() }
         windows.startAccountQueries()
         configureMenus()

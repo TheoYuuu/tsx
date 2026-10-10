@@ -836,6 +836,7 @@
 "Automatic updates" = "Automatic updates";
 "At launch, check, download and install updates, then restart." = "At launch, check, download and install updates, then restart.";
 "Check at launch. You choose when to install." = "Check at launch. You choose when to install.";
+"Online updates are disabled in this development build." = "Online updates are disabled in this development build.";
 "Free and open source · MIT License" = "Free and open source · MIT License";
 "Official website" = "Official website";
 "Release notes" = "Release notes";
@@ -847,6 +848,8 @@
 "Update to v%@" = "Update to v%@";
 "Could not check for updates. Please try again." = "Could not check for updates. Please try again.";
 "New version v%@ is available" = "New version v%@ is available";
+"New version available" = "New version available";
+"Update now" = "Update now";
 "What's new" = "What's new";
 "Release notes are not available here yet. You can view them on GitHub." = "Release notes are not available here yet. You can view them on GitHub.";
 "Retry" = "Retry";

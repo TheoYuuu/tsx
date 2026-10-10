@@ -370,7 +370,7 @@
     },
     "Tools/QA/README.md": {
       "mode": "100644",
-      "sha256": "92556d2813188cbb220b2444e511c6f88907183d4598905fc0c01f775f0b8aae"
+      "sha256": "c265261eb12040e6e3cf8124d38fca5e72dfb421edd751f785c6c6a34beb3bf0"
     },
     "Tools/QA/RemoteTranslationNetworkProbe.swift": {
       "mode": "100644",
@@ -390,7 +390,7 @@
     },
     "Tools/QA/TranslationServiceVisualReview.swift": {
       "mode": "100644",
-      "sha256": "89614fe38bda3472e4ed3d5d395961fff2e77ec608fe160cf871cbfa7baf0b12"
+      "sha256": "7816c85a78b04eb7a2289a343e04e06b1c9a703fedffa09efd32a476f0bfce43"
     },
     "Tools/QA/ValidateProject.swift": {
       "mode": "100644",
@@ -418,7 +418,7 @@
     },
     "TranslateX.xcodeproj/project.pbxproj": {
       "mode": "100644",
-      "sha256": "9f05b85437c93a3a76554aed40d41c5c6b554d45bb85bcefd2a93f440ec3a188"
+      "sha256": "b373eb5b80dc6b268a5c39e6b98f1126efd0c11e3e66ede26e22ebe9130225a7"
     },
     "TranslateX.xcodeproj/project.xcworkspace/contents.xcworkspacedata": {
       "mode": "100644",
@@ -434,7 +434,7 @@
     },
     "TranslateX/App/AppDelegate.swift": {
       "mode": "100644",
-      "sha256": "94221bdd006bd81fc0a6b1d0b931af022c7831438d90ca8a9702dc056cab0852"
+      "sha256": "edd6288781f97bbe9f5a08e75e6cd59f9b6193e6d14fd1625f0c3db8520c43b6"
     },
     "TranslateX/App/MenuBarController.swift": {
       "mode": "100644",
@@ -630,7 +630,7 @@
     },
     "TranslateX/Resources/PublishedReleaseNotes.json": {
       "mode": "100644",
-      "sha256": "cf6eb9f60d2cb38989f1f567b979b48f8349a7f9cd0a2dd76013199783367e4d"
+      "sha256": "d81acb54add7bc6c8ed723f4eb16426abf8cc28c93af23eb94b407af16471a22"
     },
     "TranslateX/Resources/en.lproj/InfoPlist.strings": {
       "mode": "100644",
@@ -638,7 +638,7 @@
     },
     "TranslateX/Resources/en.lproj/Localizable.strings": {
       "mode": "100644",
-      "sha256": "9c9498146fc3886b3e85e47995341bdf5349b8ad1595d377c7114acdda874cc1"
+      "sha256": "1dc8b0785d52660ba3402a891182ea90c245dcc3bc80417b8425a7848c7b66ec"
     },
     "TranslateX/Resources/zh-Hans.lproj/InfoPlist.strings": {
       "mode": "100644",
@@ -646,7 +646,7 @@
     },
     "TranslateX/Resources/zh-Hans.lproj/Localizable.strings": {
       "mode": "100644",
-      "sha256": "6000991f9f03c781ff039d0929726e9be86fb77ed4b092d78eb108fe630ad8eb"
+      "sha256": "85ec6cc1b5e823e9c85c95f76dd11dd2150992f75d26ad37fb8a7035aa41d46d"
     },
     "TranslateX/Settings/AppPreferences.swift": {
       "mode": "100644",
@@ -730,7 +730,7 @@
     },
     "TranslateX/System/Updates/AppUpdateController.swift": {
       "mode": "100644",
-      "sha256": "eaa8a4a04731ded2f8ecfc4bbd7adefaf022e7e302c5569beb5e1ea18b589fd9"
+      "sha256": "f770778be8b84e21d484a127e10740ef2d9b79bcc49a2b1b0e8156c2b2dc76d4"
     },
     "TranslateX/System/Updates/SparkleAppUpdater.swift": {
       "mode": "100644",
@@ -898,7 +898,7 @@
     },
     "TranslateX/UI/Design/TranslateXTooltip.swift": {
       "mode": "100644",
-      "sha256": "06171ff0f4c62551de9fa8647d9011a6778a3cabcacc10ae240012810047e47d"
+      "sha256": "a78f744b4e6ef57e53e0852eea7d8acadad9bd82cc9cd115e81aa97dd364cb0e"
     },
     "TranslateX/UI/Design/TranslationSplitLayout.swift": {
       "mode": "100644",
@@ -906,7 +906,7 @@
     },
     "TranslateX/UI/Settings/AboutSettingsView.swift": {
       "mode": "100644",
-      "sha256": "934d2410ba47b285c17358d84ed790373a691778953ca90e3802aa24e958b7c9"
+      "sha256": "e54d085dd1fe576d98ab1b765597c79f5c1e4e4197328314f423635a794288f4"
     },
     "TranslateX/UI/Settings/CodexAccountSettingsView.swift": {
       "mode": "100644",
@@ -914,11 +914,11 @@
     },
     "TranslateX/UI/Settings/ReleaseNotesView.swift": {
       "mode": "100644",
-      "sha256": "c1f5b4164f0a610eee139baf936dda646b16a87ad4c8c70ca6eeecb6e86757e6"
+      "sha256": "49dcc07882a792a15a6392150f2dc7972e91fa17645127df1a7086a614d8ee74"
     },
     "TranslateX/UI/Settings/SettingsView.swift": {
       "mode": "100644",
-      "sha256": "8494c87aef6cdfcd280c2e9aa6455247b3321021785572426f1caac927619dd9"
+      "sha256": "a1b4da96f7c3ece92047385a0b049ea730c2a045ed89efc3d796c1faff83d4ec"
     },
     "TranslateX/UI/Settings/ShortcutRecorder.swift": {
       "mode": "100644",
@@ -970,7 +970,7 @@
     },
     "TranslateX/UI/Translation/InputTranslationView.swift": {
       "mode": "100644",
-      "sha256": "59220b72b77df9dc513a424cc9685b160be9836adde91c06cde3ade74312241d"
+      "sha256": "5c33ba65105502966a6ca0455ca6294741870a51edc121bf8a414f540e19f20f"
     },
     "TranslateX/UI/Translation/QuickTranslationView.swift": {
       "mode": "100644",
@@ -1018,7 +1018,7 @@
     },
     "TranslateX/Windows/WindowCoordinator.swift": {
       "mode": "100644",
-      "sha256": "ff38d82f89028f63138cc06998161c7d2c7234912745cf0a29b5c5f006af8956"
+      "sha256": "bd53b348ae755c1daf5eb3400253f737e636294c4b7a6e9dea8aa3de0f020e0a"
     },
     "TranslateX/Windows/WindowSurface.swift": {
       "mode": "100644",
@@ -1034,7 +1034,7 @@
     },
     "TranslateXTests/AppUpdateControllerTests.swift": {
       "mode": "100644",
-      "sha256": "e4c78323bb7730947885fd13607c2a8b831a4b303a9f00f63c09cb07b32c49f6"
+      "sha256": "70649013b241db267aec23b2bad86fd5beb1e6c0e02b0de827501f4458938a10"
     },
     "TranslateXTests/AppleTranslationHostTests.swift": {
       "mode": "100644",
@@ -1146,7 +1146,7 @@
     },
     "TranslateXTests/QuickHandoffWindowTests.swift": {
       "mode": "100644",
-      "sha256": "b3337be2f433198f0022fbe3331d7daadf1abcf9b96db4fcc9dde8905e80844a"
+      "sha256": "77522d37cac13b8a606ce8b1a61290ae89ea1b3b45c73c5777c7362b420a9306"
     },
     "TranslateXTests/QuickPanelKeyboardTests.swift": {
       "mode": "100644",
@@ -1270,7 +1270,7 @@
     },
     "TranslateXTests/TranslationToolbarTests.swift": {
       "mode": "100644",
-      "sha256": "cd4dbd484e74c88a9381f8194fa2cc8c45d0328ea6404412e10e66cf41910a92"
+      "sha256": "bf36575dc94e8ec8c0c1f0517a2847e9b07c113fde9cdc48432ce121aab43ecb"
     },
     "TranslateXTests/TranslationUsageDashboardTests.swift": {
       "mode": "100644",
@@ -1298,7 +1298,7 @@
     },
     "TranslateXTests/WindowPreferencesTests.swift": {
       "mode": "100644",
-      "sha256": "5d87e418ec2ef370130e7b6751af334f8bcf7e874f39be2c0478fd86d4851ad6"
+      "sha256": "845958c2f43d74a2942123b67cc54c14e891a7102b41d531198688ec78963f99"
     },
     "assets/app-icon.png": {
       "mode": "100644",
@@ -1306,7 +1306,7 @@
     },
     "project.yml": {
       "mode": "100644",
-      "sha256": "28f998e8abc9545fd9cf382088bb91c6c06c35a25dba250c02fd7d9201abbd25"
+      "sha256": "eb2fb64200c2482e8b3bda545bc8fb097eb49d4f03db2d848338966877d44446"
     }
   },
   "version": 1

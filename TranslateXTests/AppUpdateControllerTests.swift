@@ -7,7 +7,7 @@ import XCTest
 final class AppUpdateControllerTests: XCTestCase {
     func testTestHostsAndPreviewBundlesCannotStartUpdaterOrChangePreferences() {
         for identifier in [nil, "com.lumax.tsx.TestHost", "preview", "com.lumax.tsx"] {
-            let updates = AppUpdateController(bundleIdentifier: identifier, isTesting: true)
+            let updates = AppUpdateController(bundleIdentifier: identifier, isTesting: true, isReleaseBuild: true)
             updates.start()
             updates.setAutomaticChecks(true)
             updates.setAutomaticDownloads(true)
@@ -18,16 +18,92 @@ final class AppUpdateControllerTests: XCTestCase {
             XCTAssertFalse(updates.automaticallyChecksForUpdates)
             XCTAssertFalse(updates.automaticallyDownloadsUpdates)
         }
-        XCTAssertFalse(AppUpdateController(bundleIdentifier: "preview", isTesting: false).isAvailable)
+        XCTAssertFalse(AppUpdateController(bundleIdentifier: "preview", isTesting: false, isReleaseBuild: true).isAvailable)
     }
 
     func testConstructingControllerDoesNotStartNetworkOrEnableAutomaticUpdates() {
-        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false)
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true)
         XCTAssertTrue(updates.isAvailable)
         XCTAssertFalse(updates.started)
         XCTAssertFalse(updates.canCheckForUpdates)
         XCTAssertFalse(updates.automaticallyChecksForUpdates)
         XCTAssertFalse(updates.automaticallyDownloadsUpdates)
+    }
+
+    func testBuildConfigurationControlsDefaultUpdateAvailability() {
+        let backend = UpdateBackendFixture()
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+                                          recordsInstalledVersions: false, backend: backend)
+        updates.start()
+        #if DEBUG
+        XCTAssertFalse(AppUpdateController.isReleaseBuild)
+        XCTAssertFalse(updates.isAvailable)
+        XCTAssertFalse(updates.started)
+        XCTAssertTrue(backend.calls.isEmpty)
+        #else
+        XCTAssertTrue(AppUpdateController.isReleaseBuild)
+        XCTAssertTrue(updates.isAvailable)
+        XCTAssertTrue(updates.started)
+        XCTAssertEqual(backend.calls, ["start", "information"])
+        #endif
+    }
+
+    func testDevelopmentBuildCannotStartUpdaterOrChangePersistedPreferences() throws {
+        let suite = "TSX.DevelopmentUpdateTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(true, forKey: "SUEnableAutomaticChecks")
+        defaults.set(true, forKey: "SUAutomaticallyUpdate")
+        defaults.set("1.0.0", forKey: "TSXLastLaunchedReleaseVersion")
+        let before = defaults.persistentDomain(forName: suite)! as NSDictionary
+        let backend = UpdateBackendFixture(defaults: defaults)
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: false,
+                                          currentVersion: "2.0.0", defaults: defaults,
+                                          recordsInstalledVersions: true, backend: backend)
+
+        updates.start()
+        updates.refreshUpdaterState()
+        updates.performUpdateAction()
+        updates.foundUpdate("3.0.0")
+        updates.performUpdateAction()
+        updates.checkForUpdates()
+        updates.setAutomaticUpdates(false)
+        updates.setAutomaticChecks(true)
+        updates.setAutomaticDownloads(true)
+        updates.prepareInstalledReleaseNotes()
+        updates.willInstallVersion("3.0.0")
+
+        XCTAssertFalse(updates.isAvailable)
+        XCTAssertFalse(updates.started)
+        XCTAssertFalse(updates.canCheckForUpdates)
+        XCTAssertFalse(updates.isChecking)
+        XCTAssertFalse(updates.automaticUpdatesEnabled)
+        XCTAssertNil(updates.updatePresentation)
+        XCTAssertNil(updates.pendingReleaseNotesVersion)
+        XCTAssertTrue(backend.calls.isEmpty)
+        XCTAssertTrue(backend.automaticallyChecksForUpdates)
+        XCTAssertTrue(backend.automaticallyDownloadsUpdates)
+        XCTAssertEqual(defaults.persistentDomain(forName: suite)! as NSDictionary, before)
+    }
+
+    func testReleaseBuildUsesExistingAutomaticUpdatePreferences() throws {
+        let suite = "TSX.ReleaseUpdatePreferencesTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(true, forKey: "SUEnableAutomaticChecks")
+        defaults.set(true, forKey: "SUAutomaticallyUpdate")
+        let before = defaults.persistentDomain(forName: suite)! as NSDictionary
+        let backend = UpdateBackendFixture(defaults: defaults)
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
+                                          defaults: defaults, recordsInstalledVersions: false, backend: backend)
+        updates.start()
+        XCTAssertTrue(updates.isAvailable)
+        XCTAssertTrue(updates.started)
+        XCTAssertTrue(updates.canCheckForUpdates)
+        XCTAssertTrue(updates.automaticallyChecksForUpdates)
+        XCTAssertTrue(updates.automaticUpdatesEnabled)
+        XCTAssertEqual(backend.calls, ["start", "update"])
+        XCTAssertEqual(defaults.persistentDomain(forName: suite)! as NSDictionary, before)
     }
 
     func testVersionProbeUpdatesCombinedActionStateWithoutStartingUpdater() {
@@ -65,10 +141,20 @@ final class AppUpdateControllerTests: XCTestCase {
 
 @MainActor
 private final class UpdateBackendFixture: AppUpdaterBackend {
+    private let defaults: UserDefaults?
     var canCheckForUpdates = true
-    var automaticallyChecksForUpdates = false
-    var automaticallyDownloadsUpdates = false
+    var automaticallyChecksForUpdates = false {
+        didSet { defaults?.set(automaticallyChecksForUpdates, forKey: "SUEnableAutomaticChecks") }
+    }
+    var automaticallyDownloadsUpdates = false {
+        didSet { defaults?.set(automaticallyDownloadsUpdates, forKey: "SUAutomaticallyUpdate") }
+    }
     var calls: [String] = []
+    init(defaults: UserDefaults? = nil) {
+        self.defaults = defaults
+        automaticallyChecksForUpdates = defaults?.bool(forKey: "SUEnableAutomaticChecks") ?? false
+        automaticallyDownloadsUpdates = defaults?.bool(forKey: "SUAutomaticallyUpdate") ?? false
+    }
     func start() throws { calls.append("start") }
     func checkInformation() { calls.append("information") }
     func checkUpdates() { calls.append("update") }
@@ -166,7 +252,7 @@ extension AppUpdateControllerTests {
         defaults.set("1.0.0", forKey: "TSXLastLaunchedReleaseVersion")
         let release = AppRelease(version: "1.1.0", publishedAt: .distantPast, notes: "Constructed release note",
                                  url: URL(string: "https://github.com/TheoYuuu/tsx/releases/tag/v1.1.0")!)
-        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                           currentVersion: release.version, defaults: defaults,
                                           recordsInstalledVersions: true, backend: UpdateBackendFixture(),
                                           releases: AppReleaseNotesStore(entries: [release], allowsNetworkLoading: false))
@@ -186,7 +272,7 @@ extension AppUpdateControllerTests {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
         let backend = UpdateBackendFixture()
-        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                           currentVersion: "1.1.0", defaults: defaults,
                                           recordsInstalledVersions: true, backend: backend)
         defaults.set(true, forKey: "SUHasLaunchedBefore")
@@ -202,7 +288,7 @@ extension AppUpdateControllerTests {
         defer { defaults.removePersistentDomain(forName: suite) }
         defaults.set(true, forKey: "SUHasLaunchedBefore")
         func launch() -> AppUpdateController {
-            let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+            let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                               currentVersion: "1.1.0", defaults: defaults,
                                               recordsInstalledVersions: true, backend: UpdateBackendFixture())
             updates.start()
@@ -217,7 +303,7 @@ extension AppUpdateControllerTests {
 
     func testEachLaunchProbesWithoutDownloadingWhenAutomaticUpdatesAreOff() {
         let backend = UpdateBackendFixture()
-        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                           recordsInstalledVersions: false, backend: backend)
         updates.start()
         updates.start()
@@ -234,7 +320,7 @@ extension AppUpdateControllerTests {
         let backend = UpdateBackendFixture()
         backend.automaticallyChecksForUpdates = true
         backend.automaticallyDownloadsUpdates = true
-        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                           recordsInstalledVersions: false, backend: backend)
         updates.start()
         XCTAssertEqual(backend.calls, ["start", "update"])
@@ -253,7 +339,7 @@ extension AppUpdateControllerTests {
         let backend = UpdateBackendFixture()
         backend.automaticallyChecksForUpdates = true
         backend.automaticallyDownloadsUpdates = true
-        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                           recordsInstalledVersions: false, backend: backend)
         var navigationRequests = 0
         updates.onPresentUpdate = { navigationRequests += 1 } // A draft keeps About from appearing.
@@ -278,7 +364,7 @@ extension AppUpdateControllerTests {
         let backend = UpdateBackendFixture()
         backend.automaticallyChecksForUpdates = true
         backend.automaticallyDownloadsUpdates = true
-        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                           recordsInstalledVersions: false, backend: backend)
         updates.start()
         var choices: [SPUUserUpdateChoice] = []
@@ -294,7 +380,7 @@ extension AppUpdateControllerTests {
         let backend = UpdateBackendFixture()
         backend.automaticallyChecksForUpdates = true
         backend.automaticallyDownloadsUpdates = true
-        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                           recordsInstalledVersions: false, backend: backend)
         updates.start()
         updates.foundUpdate("2.0.0")
@@ -307,7 +393,7 @@ extension AppUpdateControllerTests {
 
     func testManualUpdateWaitsForConfirmationAndThenUsesSparkleRelaunch() {
         let backend = UpdateBackendFixture()
-        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                           recordsInstalledVersions: false, backend: backend)
         updates.start()
         updates.foundUpdate("2.0.0")
@@ -330,7 +416,7 @@ extension AppUpdateControllerTests {
         let backend = UpdateBackendFixture()
         backend.automaticallyChecksForUpdates = true
         backend.automaticallyDownloadsUpdates = true
-        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                           recordsInstalledVersions: false, backend: backend)
         updates.start()
         var choice: SPUUserUpdateChoice?
@@ -348,7 +434,7 @@ extension AppUpdateControllerTests {
         let backend = UpdateBackendFixture()
         backend.automaticallyChecksForUpdates = true
         backend.automaticallyDownloadsUpdates = true
-        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                           recordsInstalledVersions: false, backend: backend)
         updates.start()
         var cancellations = 0
@@ -380,12 +466,12 @@ extension AppUpdateControllerTests {
         let suite = "TSX.UpdateLaunchTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let first = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let first = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                         currentVersion: "1.0.0", defaults: defaults, recordsInstalledVersions: true)
         first.prepareInstalledReleaseNotes()
         XCTAssertNil(first.pendingReleaseNotesVersion)
         XCTAssertEqual(defaults.string(forKey: "TSXLastLaunchedReleaseVersion"), "1.0.0")
-        let debug = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let debug = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: false,
                                         currentVersion: "2.0.0", defaults: defaults, recordsInstalledVersions: false)
         debug.prepareInstalledReleaseNotes()
         debug.willInstallVersion("3.0.0")
@@ -398,11 +484,11 @@ extension AppUpdateControllerTests {
         let suite = "TSX.UpdateAcknowledgementTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let previous = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let previous = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                            currentVersion: "1.0.0", defaults: defaults, recordsInstalledVersions: true)
         previous.willInstallVersion("1.1.0")
         func launch() -> AppUpdateController {
-            let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+            let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                               currentVersion: "1.1.0", defaults: defaults, recordsInstalledVersions: true)
             updates.prepareInstalledReleaseNotes()
             return updates
@@ -431,7 +517,7 @@ extension AppUpdateControllerTests {
         defer { defaults.removePersistentDomain(forName: suite) }
         for version in ["2.0.0", "1.0.0"] {
             defaults.set("2.0.0", forKey: "TSXLastLaunchedReleaseVersion")
-            let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+            let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                               currentVersion: version, defaults: defaults, recordsInstalledVersions: true)
             updates.prepareInstalledReleaseNotes()
             XCTAssertNil(updates.pendingReleaseNotesVersion)

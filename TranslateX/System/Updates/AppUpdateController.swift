@@ -29,7 +29,7 @@ enum AppReleaseNotesMode: Equatable {
 enum AppReleaseNotesLocation { case settings, mainWindow }
 
 /// Sparkle owns feed/archive verification, installation, authorization and relaunch.
-/// The app only chooses when to probe and supplies the shared settings presentation.
+/// The app only chooses when to probe and supplies the shared main-window presentation.
 @MainActor
 @Observable
 final class AppUpdateController {
@@ -42,6 +42,7 @@ final class AppUpdateController {
     private(set) var isChecking = false
     private(set) var lastCheckFailed = false
     private(set) var updatePresentation: AppUpdatePresentation?
+    private var mainUpdatePresentationApproved = false
     private(set) var pendingReleaseNotesVersion: String?
     private(set) var releaseNotesPresentation: AppReleaseNotesMode?
     private(set) var mainReleaseNotesPresentation: AppReleaseNotesMode?
@@ -50,6 +51,8 @@ final class AppUpdateController {
     let releases: AppReleaseNotesStore
     var automaticUpdatesEnabled: Bool { automaticallyDownloadsUpdates }
     var isPresentingModal: Bool { updatePresentation != nil || releaseNotesPresentation != nil }
+    var showsMainUpdate: Bool { mainUpdatePresentationApproved && updatePresentation != nil }
+    var isPresentingMainModal: Bool { showsMainUpdate || mainReleaseNotesPresentation != nil }
     @ObservationIgnored var onPresentUpdate: (() -> Void)?
     @ObservationIgnored var onPresentReleaseNotes: (() -> Void)?
     @ObservationIgnored private var backend: (any AppUpdaterBackend)?
@@ -76,6 +79,7 @@ final class AppUpdateController {
 
     init(bundleIdentifier: String? = Bundle.main.bundleIdentifier,
          isTesting: Bool = NSClassFromString("XCTestCase") != nil,
+         isReleaseBuild: Bool = AppUpdateController.isReleaseBuild,
          currentVersion: String = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—",
          defaults: UserDefaults = .standard,
          recordsInstalledVersions: Bool = AppUpdateController.isReleaseBuild,
@@ -87,7 +91,8 @@ final class AppUpdateController {
         // Capture before starting Sparkle: 1.0.0 only persisted this launch marker.
         hadLegacyLaunch = defaults.bool(forKey: "SUHasLaunchedBefore")
         self.backend = backend
-        let available = bundleIdentifier == "com.lumax.tsx" && !isTesting
+        // A release update must never replace Xcode's development product.
+        let available = bundleIdentifier == "com.lumax.tsx" && !isTesting && isReleaseBuild
         self.releases = releases ?? AppReleaseNotesStore(allowsNetworkLoading: available)
         isAvailable = available
     }
@@ -120,7 +125,7 @@ final class AppUpdateController {
     }
 
     func refreshUpdaterState() {
-        guard let backend else { return }
+        guard isAvailable, let backend else { return }
         canCheckForUpdates = backend.canCheckForUpdates
         automaticallyChecksForUpdates = backend.automaticallyChecksForUpdates
         automaticallyDownloadsUpdates = backend.automaticallyDownloadsUpdates
@@ -191,9 +196,15 @@ final class AppUpdateController {
         reply(.install)
     }
 
-    /// Called by the visible About modal, after settings navigation has passed
-    /// its unsaved-draft guard. Merely requesting that navigation is not consent
-    /// to interrupt a live editor with an automatic restart.
+    /// Called only after the window coordinator has passed the settings draft
+    /// guard. A pending update alone must not mount a modal or trigger a restart.
+    func presentUpdateInMainWindow() {
+        guard updatePresentation != nil else { return }
+        mainUpdatePresentationApproved = true
+    }
+
+    /// The visible main-window modal continues automatic installation only
+    /// after the settings draft guard has accepted the window handoff.
     func continueAutomaticUpdate() {
         guard automaticSession, automaticUpdatesEnabled, !installRequested,
               let presentation = updatePresentation,
@@ -277,12 +288,13 @@ final class AppUpdateController {
     }
     private func present(_ presentation: AppUpdatePresentation) {
         let firstPresentation = updatePresentation == nil
+        if firstPresentation { mainUpdatePresentationApproved = false }
         updatePresentation = presentation
         if firstPresentation { onPresentUpdate?() }
     }
 
     func willInstallVersion(_ version: String) {
-        guard recordsInstalledVersions else { return }
+        guard isAvailable, recordsInstalledVersions else { return }
         defaults.set(currentVersion, forKey: "TSXLastLaunchedReleaseVersion")
         defaults.set(version, forKey: "TSXPendingInstalledReleaseVersion")
     }
@@ -335,12 +347,15 @@ final class AppUpdateController {
     }
 
     #if TRANSLATEX_VISUAL_QA
-    static func visualReview(previewInstalledNotes: Bool = false, shortReleaseNotes: Bool = false) -> AppUpdateController {
+    static func visualReview(previewInstalledNotes: Bool = false, shortReleaseNotes: Bool = false,
+                             previewAvailableUpdate: Bool = false) -> AppUpdateController {
         let backend = VisualReviewAppUpdater()
-        let entries: [AppRelease]? = shortReleaseNotes ? [.init(version: "1.0.0", publishedAt: .distantPast,
+        let entries: [AppRelease]? = previewAvailableUpdate ? [.init(version: "1.0.1", publishedAt: .distantPast,
+            notes: "## 中文\n- 修复双栏编辑中删除到空白后，另一侧仍残留旧内容的问题；清空后重新输入可继续双向翻译。\n- 清空时取消旧翻译，避免延迟返回的结果重新填入；保留中文输入法组合输入的正常行为。\n## English\n- Clear stale content in the other pane when editing down to an empty draft. Typing again resumes translation.\n- Cancel pending translations when clearing the draft while preserving composed text input.",
+            url: URL(string: "https://github.com/TheoYuuu/tsx/releases")!)] : shortReleaseNotes ? [.init(version: "1.0.0", publishedAt: .distantPast,
             notes: "## 中文\n- 更新说明现在显示在翻译窗口中央。\n- 改善服务切换图标的圆角。\n## English\n- Release notes now appear over the translation workspace.\n- Service action icons have softer corners.",
             url: URL(string: "https://github.com/TheoYuuu/tsx/releases/tag/v1.0.0")!)] : nil
-        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
                                           currentVersion: "1.0.0", recordsInstalledVersions: false,
                                           backend: backend, releases: AppReleaseNotesStore(entries: entries, allowsNetworkLoading: false))
         backend.owner = updates

@@ -113,8 +113,8 @@ struct ReleaseNotesView: View {
     }
 }
 
-/// Startup notes stay over the translation workspace. Only the release text
-/// scrolls; the title and dismissal controls remain inside the available area.
+/// One stable host for updates and installed notes. An update temporarily
+/// takes precedence without acknowledging notes the user has not read.
 struct MainReleaseNotesOverlay: View {
     @Environment(\.translateXTheme) private var theme
     let updates: AppUpdateController
@@ -122,20 +122,28 @@ struct MainReleaseNotesOverlay: View {
 
     var body: some View {
         GeometryReader { geometry in
-            if let mode = updates.mainReleaseNotesPresentation {
+            if updates.isPresentingMainModal {
                 ZStack {
                     Color.black.opacity(theme.isDark ? 0.46 : 0.23).ignoresSafeArea()
                         .contentShape(Rectangle()).onTapGesture {}
-                    ReleaseNotesView(updates: updates, mode: mode, location: .mainWindow,
+                    if updates.showsMainUpdate, let presentation = updates.updatePresentation {
+                        AppUpdateInstallationView(updates: updates, presentation: presentation)
+                            .frame(width: min(438, max(0, geometry.size.width - 40)))
+                    } else if let mode = updates.mainReleaseNotesPresentation {
+                        ReleaseNotesView(updates: updates, mode: mode, location: .mainWindow,
                                      maximumHeight: max(0, geometry.size.height - 40), onDismiss: onDismiss)
                         .frame(width: min(480, max(0, geometry.size.width - 40)))
                         .shadow(color: .black.opacity(theme.isDark ? 0.25 : 0.12), radius: 24, y: 8)
+                    }
                 }
                 .frame(width: geometry.size.width, height: geometry.size.height)
             }
         }
         .ignoresSafeArea()
-        .onExitCommand(perform: onDismiss)
+        .onExitCommand {
+            if updates.showsMainUpdate { updates.dismissUpdate() }
+            else { onDismiss() }
+        }
     }
 }
 

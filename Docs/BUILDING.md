@@ -35,6 +35,8 @@ Scripts/verify.sh
 
 验证产物位于 `.build/DerivedData/Build/Products/Debug/TSX.app` 和对应的 `Release` 目录。校验脚本使用 ad-hoc 签名，不能作为已公证的正式安装包。正式发行按 [RELEASING.md](RELEASING.md) 完成 Developer ID 签名、公证、打包与安装升级验证。
 
+Debug 开发构建停用在线检查和安装更新，不改动已有自动更新偏好，避免发行包覆盖 Xcode 构建产物；关于页会显示停用说明。Release 构建保留正常更新能力，测试及视觉夹具仅使用隔离的模拟更新器。
+
 ## 参与开发
 
 - 工程配置以 `project.yml` 为准，变更后运行 `xcodegen generate` 并提交共享工程。
@@ -49,5 +51,7 @@ The source includes Swift/AppKit/SwiftUI application code and an optional Rust a
 On an Apple Silicon build host, run `python3 Tools/CodexRuntime/bootstrap.py` and `python3 Tools/Release/setup_sparkle.py` from the repository root. These prepare hash-verified, pinned compiler/source/dependency inputs inside ignored `.build` directories without installing global Rust. Network access and several GiB of disk space may be required. The bootstrap currently supports Apple Silicon build hosts; Release output includes both arm64 and x86_64. Validation with existing caches does not establish a clean-Mac setup.
 
 Then run `Scripts/verify.sh`, or open the committed `TranslateX.xcodeproj` and choose the `TranslateX` scheme. The verification script builds Debug/Release, checks signing and permissions, and runs tests in an isolated host. Its ad-hoc signed outputs are not notarized releases. See [the release workflow](RELEASING.md) for distribution signing, notarization and installation checks.
+
+Debug builds disable online update checks and installation without changing existing automatic-update preferences, preventing a release package from replacing an Xcode build product. About explains this restriction. Release builds retain online updates; tests and visual fixtures use isolated simulated updaters.
 
 Follow the [public repository rules](PUBLIC_REPOSITORY.md). Keep credentials, signing keys, personal text/screenshots and build artifacts out of Git. Third-party dependencies retain their own licenses. Compilation and automated tests do not establish real Intel/macOS 15, account-service, translation or permission coverage.
