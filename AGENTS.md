@@ -44,9 +44,12 @@
 - 默认主分支是 `main`。已授权且应保留的修改在验证通过后默认形成一个逻辑完整的 commit；纯分析不提交。
 - 提交前检查工作区、暂存与未暂存差异、merge/rebase 和冲突状态。只暂存本次修改；同文件混合改动按片段暂存。不使用 `git add .`、`git add -A` 或 `git commit -a`。
 - 暂存后复核差异、凭据、本地配置、依赖与大文件。hook 改写文件后重新审核，不绕过 hook。
-- 提交格式为 `<type>(<scope>): <简体中文摘要>` 或 `<type>: <简体中文摘要>`。允许 feat/fix/refactor/perf/style/docs/test/build/ci/chore/revert；style 仅用于代码格式，UI 功能用 feat、UI 缺陷用 fix。
+- 提交前读取用户 Codex Git 提交规范（配置中的 `[desktop].git-commit-instructions` 字段），只读取该字段，不输出无关配置。提交语言遵循全局规范，按实际提交所在仓库的用途区分：私有源仓库使用简体中文，公开仓库及明确用于承载公开历史的目标仓库使用英文。
+- 本仓库是公开源码仓库，新提交的标题摘要、必要正文及 `BREAKING CHANGE` 说明使用英文，包括尚未推送的本地提交；配套私有源仓库继续使用简体中文。公开同步按本仓库的实际差异创建英文提交，不沿用私有提交消息。
+- 提交格式为 `<type>(<scope>): <摘要>` 或 `<type>: <摘要>`。允许 feat/fix/refactor/perf/style/docs/test/build/ci/chore/revert；style 仅用于代码格式，UI 功能用 feat、UI 缺陷用 fix。
+- 语言规范只适用于新提交；保留已有提交，不为统一语言执行 amend、rebase 或重写历史，也不因此翻译 README、Release notes 或其他文档。
 - 摘要准确具体、末尾无句号，不含 emoji、软件版本或 AI 署名。破坏性修改使用 `!` 和 `BREAKING CHANGE:` 迁移说明，不因此自行升级版本。
-- 普通开发不修改软件版本、Build Number、CHANGELOG、Tag、Release 或发布配置。实际发布元数据变更使用 `chore(release): 发布 vX.Y.Z`，不制造空提交。
+- 普通开发不修改软件版本、Build Number、CHANGELOG、Tag、Release 或发布配置。实际发布元数据变更在本公开仓库使用 `chore(release): release vX.Y.Z`，在配套私有源仓库使用 `chore(release): 发布 vX.Y.Z`，不制造空提交。
 - 官网版发布必须使用真实 Xcode Archive，并在 Organizer 中完成 App 的分发上传、公证及成功导出；登录或 Xcode 流程受阻时保留候选并报告，不改用 App 命令行公证。DMG 仍须独立公证，不会作为 DMG 公证记录出现在 Organizer。
 - 真实归档保留在 Xcode 默认 Archives 目录；完成后将含 `Submissions`／`Distributions` 的完整归档、导出 App、最终 DMG、摘要、appcast、公证日志及源码 commit／版本／Build 记录备份到仓库外持久目录。DerivedData 和 `.build` 仅作缓存或临时验证目录，不得成为发行证据的唯一副本。不得伪造历史归档、补写 Xcode 分发状态或改写已发布包。
 - 无明确授权，不 push、force-push、amend、rebase、reset --hard、clean、删除分支或 Tag、重写历史、修改 Git 身份/凭据/签名设置。
