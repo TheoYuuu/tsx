@@ -75,7 +75,7 @@ struct AboutSettingsView: View {
                     .overlay { RoundedRectangle(cornerRadius: 5).strokeBorder(p.line) }
             }
             Spacer(minLength: 16)
-            Button { updates.performUpdateAction() } label: {
+            Button { updates.performUpdateAction(in: .settings) } label: {
                 HStack(spacing: 7) {
                     if updates.isChecking { ProgressView().controlSize(.mini) }
                     else { Image(systemName: updates.availableVersion == nil ? "arrow.clockwise" : "square.and.arrow.down") }
@@ -143,7 +143,7 @@ struct AboutSettingsView: View {
     }
 }
 
-/// Recent notes stay in Settings; installation remains in the main window.
+/// About-initiated updates and recent notes stay in the settings window.
 struct SettingsUpdateOverlay: View {
     @Environment(\.translateXTheme) private var theme
     let updates: AppUpdateController
@@ -153,14 +153,21 @@ struct SettingsUpdateOverlay: View {
             ZStack {
                 Color.black.opacity(theme.isDark ? 0.46 : 0.23).ignoresSafeArea()
                     .contentShape(Rectangle()).onTapGesture {}
-                if let mode = updates.releaseNotesPresentation {
+                if updates.showsSettingsUpdate, let presentation = updates.updatePresentation {
+                    let dialogSize = UpdateDialogLayout.size(in: geometry.size)
+                    AppUpdateInstallationView(updates: updates, presentation: presentation, dialogSize: dialogSize)
+                        .frame(width: dialogSize.width)
+                } else if let mode = updates.releaseNotesPresentation {
                     ReleaseNotesView(updates: updates, mode: mode, maximumHeight: max(0, geometry.size.height - 40)) {
                         updates.dismissReleaseNotes()
                     }.frame(width: min(520, max(0, geometry.size.width - 40)))
                 }
             }.frame(width: geometry.size.width, height: geometry.size.height)
         }
-        .onExitCommand { updates.dismissReleaseNotes() }
+        .onExitCommand {
+            if updates.showsSettingsUpdate { updates.dismissUpdate() }
+            else { updates.dismissReleaseNotes() }
+        }
     }
 }
 
@@ -168,7 +175,7 @@ struct AppUpdateInstallationView: View {
     @Environment(\.translateXTheme) private var theme
     let updates: AppUpdateController
     let presentation: AppUpdatePresentation
-    var maximumHeight: CGFloat? = nil
+    var dialogSize: CGSize? = nil
     @FocusState private var primaryFocused: Bool
     private var p: ReleaseDialogPalette { .init(theme: theme) }
     private var busy: Bool { [.checking, .downloading, .extracting, .installing].contains(presentation.phase) }
@@ -177,7 +184,9 @@ struct AppUpdateInstallationView: View {
     private var release: AppRelease? { updates.releases.entries.first { $0.version == presentation.version } }
 
     var body: some View {
-        CompactUpdateDialog(title: title, maximumHeight: maximumHeight, canDismiss: canDismiss,
+        CompactUpdateDialog(title: title, maximumHeight: dialogSize?.height,
+                            minimumHeight: showsNotes ? (dialogSize?.height ?? 0) : 0,
+                            maximumWidth: dialogSize?.width ?? 520, canDismiss: canDismiss,
                             onDismiss: { updates.dismissUpdate() }) {
             VStack(alignment: .leading, spacing: 0) {
                 if let version = presentation.version {
@@ -219,7 +228,7 @@ struct AppUpdateInstallationView: View {
             if presentation.phase == .failed {
                 Button(L10n.string("Close")) { updates.dismissUpdate() }
                     .buttonStyle(ReleaseDialogButtonStyle()).keyboardShortcut(.cancelAction)
-                Button(L10n.string("Retry")) { updates.dismissUpdate(); updates.checkForUpdates() }
+                Button(L10n.string("Retry")) { updates.retryUpdate() }
                     .buttonStyle(ReleaseDialogButtonStyle(primary: true)).focused($primaryFocused)
                     .keyboardShortcut(.defaultAction)
             } else if presentation.phase == .current {

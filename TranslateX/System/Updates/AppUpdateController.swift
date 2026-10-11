@@ -27,10 +27,10 @@ enum AppReleaseNotesMode: Hashable {
     case installed(version: String)
 }
 
-enum AppReleaseNotesLocation { case settings, mainWindow }
+enum AppUpdateLocation { case settings, mainWindow }
 
 /// Sparkle owns feed/archive verification, installation, authorization and relaunch.
-/// The app only chooses when to probe and supplies the shared main-window presentation.
+/// The app chooses when to probe and keeps update progress in its initiating window.
 @MainActor
 @Observable
 final class AppUpdateController {
@@ -44,6 +44,7 @@ final class AppUpdateController {
     private(set) var isChecking = false
     private(set) var lastCheckFailed = false
     private(set) var updatePresentation: AppUpdatePresentation?
+    private(set) var updateLocation: AppUpdateLocation = .mainWindow
     private var mainUpdatePresentationApproved = false
     private(set) var pendingReleaseNotesVersion: String?
     private(set) var releaseNotesPresentation: AppReleaseNotesMode?
@@ -53,7 +54,8 @@ final class AppUpdateController {
     let releases: AppReleaseNotesStore
     var automaticUpdatesEnabled: Bool { automaticallyDownloadsUpdates }
     var isPresentingModal: Bool { updatePresentation != nil || releaseNotesPresentation != nil }
-    var showsMainUpdate: Bool { mainUpdatePresentationApproved && updatePresentation != nil }
+    var showsMainUpdate: Bool { updateLocation == .mainWindow && mainUpdatePresentationApproved && updatePresentation != nil }
+    var showsSettingsUpdate: Bool { updateLocation == .settings && updatePresentation != nil }
     var isPresentingMainModal: Bool { showsMainUpdate || mainReleaseNotesPresentation != nil }
     @ObservationIgnored var onPresentUpdate: (() -> Void)?
     @ObservationIgnored var onPresentReleaseNotes: (() -> Void)?
@@ -68,6 +70,7 @@ final class AppUpdateController {
     @ObservationIgnored private var automaticSession = false
     @ObservationIgnored private var automaticInstallAttemptedVersion: String?
     @ObservationIgnored private var installRequested = false
+    @ObservationIgnored private var directlyRequestedVersion: String?
     @ObservationIgnored private var expectedDownloadBytes: UInt64 = 0
     @ObservationIgnored private var receivedDownloadBytes: UInt64 = 0
 
@@ -133,24 +136,52 @@ final class AppUpdateController {
         automaticallyDownloadsUpdates = backend.automaticallyDownloadsUpdates
     }
 
-    func checkForUpdates() {
-        guard started, canCheckForUpdates else { return }
+    func checkForUpdates(in location: AppUpdateLocation = .mainWindow) {
+        if updatePresentation != nil { focusUpdate(); return }
+        beginUpdateCheck(in: location, installing: nil)
+    }
+
+    private func beginUpdateCheck(in location: AppUpdateLocation, installing version: String?) {
+        guard started, canCheckForUpdates, !isChecking else { return }
+        updateLocation = location
+        directlyRequestedVersion = version
+        installRequested = false
         automaticSession = false
         lastCheckFailed = false
         isChecking = true
         backend?.checkUpdates()
     }
 
-    func performUpdateAction() {
-        if updatePresentation != nil { onPresentUpdate?(); return }
-        guard started, canCheckForUpdates else { return }
-        if availableVersion != nil { checkForUpdates() }
+    func performUpdateAction(in location: AppUpdateLocation = .mainWindow) {
+        if let presentation = updatePresentation {
+            if location == .settings, [.available, .ready].contains(presentation.phase) {
+                updateLocation = .settings
+                mainUpdatePresentationApproved = false
+                automaticSession = false
+                installPendingUpdate()
+            }
+            onPresentUpdate?()
+            return
+        }
+        guard started, canCheckForUpdates, !isChecking else { return }
+        if let version = availableVersion {
+            beginUpdateCheck(in: location, installing: location == .settings ? version : nil)
+        }
         else {
+            updateLocation = location
+            directlyRequestedVersion = nil
             automaticSession = false
             lastCheckFailed = false
             isChecking = true
             backend?.checkInformation()
         }
+    }
+
+    func retryUpdate() {
+        let location = updateLocation
+        dismissUpdate()
+        if location == .settings { performUpdateAction(in: .settings) }
+        else { checkForUpdates(in: location) }
     }
 
     func setAutomaticUpdates(_ enabled: Bool) {
@@ -181,20 +212,25 @@ final class AppUpdateController {
         availableVersion = version; hasChecked = true; lastCheckFailed = false
     }
     func foundNoUpdate() {
+        directlyRequestedVersion = nil; installRequested = false
         availablePublishedAt = nil
         availableVersion = nil; hasChecked = true; lastCheckFailed = false; isChecking = false
     }
-    func checkFailed() { lastCheckFailed = true; isChecking = false }
+    func checkFailed() {
+        directlyRequestedVersion = nil; installRequested = false
+        lastCheckFailed = true; isChecking = false
+    }
     func checkAborted(_ error: any Error) {
         let error = error as NSError
         if error.domain == SUSparkleErrorDomain && error.code == Int(SUError.noUpdateError.rawValue) { foundNoUpdate() }
         else if error.domain != SUSparkleErrorDomain || error.code != Int(SUError.installationCanceledError.rawValue) { checkFailed() }
-        else { isChecking = false }
+        else { directlyRequestedVersion = nil; installRequested = false; isChecking = false }
     }
     func finishedCheck() { isChecking = false; refreshUpdaterState() }
 
     func installPendingUpdate() {
         guard updatePresentation?.informationOnly == false, let reply = updateReply else { return }
+        directlyRequestedVersion = nil
         updateReply = nil
         installRequested = true
         reply(.install)
@@ -203,7 +239,7 @@ final class AppUpdateController {
     /// Called only after the window coordinator has passed the settings draft
     /// guard. A pending update alone must not mount a modal or trigger a restart.
     func presentUpdateInMainWindow() {
-        guard updatePresentation != nil else { return }
+        guard updateLocation == .mainWindow, updatePresentation != nil else { return }
         mainUpdatePresentationApproved = true
     }
 
@@ -222,6 +258,7 @@ final class AppUpdateController {
     func dismissUpdate() {
         guard let presentation = updatePresentation else { return }
         if [.extracting, .installing].contains(presentation.phase) { return }
+        directlyRequestedVersion = nil
         let cancel = cancellation
         cancellation = nil
         let reply = updateReply
@@ -243,10 +280,15 @@ final class AppUpdateController {
         isChecking = false
         cancellation = nil
         updateReply = reply
-        if !userInitiated { automaticSession = automaticUpdatesEnabled }
+        if !userInitiated, updateLocation == .mainWindow { automaticSession = automaticUpdatesEnabled }
+        let requestedVersion = directlyRequestedVersion
+        directlyRequestedVersion = nil
         let safeURL = informationURL?.scheme == "https" ? informationURL : nil
         present(.init(version: version, phase: .available, informationURL: safeURL,
                       informationOnly: informationOnly, publishedAt: availablePublishedAt))
+        // The version-labelled About action already expressed install intent.
+        // A different candidate or information-only release still needs review.
+        if requestedVersion == version, !informationOnly { installPendingUpdate() }
     }
 
     func downloadStarted(cancellation: @escaping () -> Void) {
@@ -282,6 +324,7 @@ final class AppUpdateController {
         if !automaticSession { present(.init(phase: .current)) }
     }
     func installationDismissed() {
+        directlyRequestedVersion = nil
         cancellation = nil; updateReply = nil; installRequested = false
         if let phase = updatePresentation?.phase, ![.failed, .current].contains(phase) { updatePresentation = nil }
     }
@@ -327,13 +370,13 @@ final class AppUpdateController {
         pendingReleaseNotesVersion = nil
     }
 
-    func showRecentReleaseNotes(in location: AppReleaseNotesLocation = .settings) {
+    func showRecentReleaseNotes(in location: AppUpdateLocation = .settings) {
         switch location {
         case .settings: releaseNotesPresentation = .recent
         case .mainWindow: mainReleaseNotesPresentation = .recent
         }
     }
-    func dismissReleaseNotes(in location: AppReleaseNotesLocation = .settings, acknowledging: Bool = true) {
+    func dismissReleaseNotes(in location: AppUpdateLocation = .settings, acknowledging: Bool = true) {
         switch location {
         case .settings:
             releaseNotesPresentation = nil

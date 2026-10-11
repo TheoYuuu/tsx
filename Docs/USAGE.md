@@ -50,7 +50,7 @@ API 服务使用自己的 API Key。选择预设厂商，或使用 New API／自
 
 ## 软件更新
 
-可从 TSX 菜单或「设置 → 关于」手动检查更新和查看近期更新。每次启动会检查新版本；自动更新默认关闭，仅提示可用版本。开启后将下载、安装并重启，升级后在主窗口展示一次更新内容。检查连接官网，下载与更新说明来自 GitHub。正文和截图不保存为历史，安装并重启前请复制需要保留的文字。
+可从 TSX 菜单或「设置 → 关于」手动检查更新和查看近期更新。关于页发现新版本后，点击「更新到 v…」即开始下载、安装和重启，进度在设置窗口展示，无需再次确认；主窗口的「发现新版本」入口可先查看更新说明，再点击「立即更新」。每次启动会检查新版本；自动更新默认关闭，仅提示可用版本。开启后将下载、安装并重启，升级后在主窗口展示一次更新内容。检查连接官网，下载与更新说明来自 GitHub。正文和截图不保存为历史，安装并重启前请复制需要保留的文字。
 
 # English
 
@@ -104,4 +104,4 @@ Open an [issue](https://github.com/TheoYuuu/tsx/issues/new/choose) with your TSX
 
 ## Software updates
 
-Use Check for Updates in the TSX menu or Settings → About, where recent release notes are also available. Launch checks run without automatic downloads by default. Enabling automatic updates allows downloading, installation, and restart. After upgrading, release notes appear once in the main window. Checks use the website; downloads and release history use GitHub. Copy text you want to keep before installing and restarting; translation text and screenshots are not saved as history.
+Use Check for Updates in the TSX menu or Settings → About, where recent release notes are also available. Once a new version is found, clicking Update to v… on the About page starts downloading, installation, and restart without another confirmation; progress stays in Settings. The main window's New Version Available entry lets you read the release notes before clicking Update Now. Launch checks run without automatic downloads by default. Enabling automatic updates allows downloading, installation, and restart. After upgrading, release notes appear once in the main window. Checks use the website; downloads and release history use GitHub. Copy text you want to keep before installing and restarting; translation text and screenshots are not saved as history.

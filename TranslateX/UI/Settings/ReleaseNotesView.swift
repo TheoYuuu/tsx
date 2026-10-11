@@ -4,7 +4,7 @@ struct ReleaseNotesView: View {
     @Environment(\.translateXTheme) private var theme
     let updates: AppUpdateController
     let mode: AppReleaseNotesMode
-    var location: AppReleaseNotesLocation = .settings
+    var location: AppUpdateLocation = .settings
     var maximumHeight: CGFloat? = nil
     let onDismiss: () -> Void
     @FocusState private var acknowledgementFocused: Bool
@@ -96,9 +96,10 @@ struct MainReleaseNotesOverlay: View {
                     Color.black.opacity(theme.isDark ? 0.46 : 0.23).ignoresSafeArea()
                         .contentShape(Rectangle()).onTapGesture {}
                     if updates.showsMainUpdate, let presentation = updates.updatePresentation {
+                        let dialogSize = UpdateDialogLayout.size(in: geometry.size)
                         AppUpdateInstallationView(updates: updates, presentation: presentation,
-                                                      maximumHeight: max(0, geometry.size.height - 40))
-                            .frame(width: min(520, max(0, geometry.size.width - 40)))
+                                                  dialogSize: dialogSize)
+                            .frame(width: dialogSize.width)
                     } else if let mode = updates.mainReleaseNotesPresentation {
                         ReleaseNotesView(updates: updates, mode: mode, location: .mainWindow,
                                      maximumHeight: max(0, geometry.size.height - 40), onDismiss: onDismiss)

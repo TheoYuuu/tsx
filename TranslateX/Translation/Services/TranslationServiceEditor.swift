@@ -170,7 +170,11 @@ final class TranslationServiceEditor {
             && (configuration.kind != .codex || canSaveCodex)
     }
     var receiver: String {
-        URL(string: configuration.endpoint)?.host ?? L10n.string("the configured service")
+        guard let host = try? configuration.validatedEndpoint().host else {
+            return L10n.string("the configured service")
+        }
+        return TranslationServiceConfiguration.isLoopbackHost(host)
+            ? L10n.string("a service on this Mac") : host
     }
     var keyState: KeyState {
         if removeSavedKey { return .missing }

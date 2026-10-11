@@ -462,6 +462,7 @@
 "Translating the public sample…" = "Translating the public sample…";
 "Translation URL" = "Translation URL";
 "Translation sends text to %@." = "Translation sends text to %@.";
+"a service on this Mac" = "a service on this Mac";
 "Translation sends text to OpenAI. Saving does not change the current service." = "Translation sends text to OpenAI. Saving does not change the current service.";
 "Unsaved" = "Unsaved";
 "Use the eye to view it; enter a new key to replace it" = "Use the eye to view it; enter a new key to replace it";

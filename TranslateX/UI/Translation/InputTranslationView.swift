@@ -101,6 +101,7 @@ private struct MainUpdateEntry: View {
         .fixedSize()
         .focused($focused)
         .onHover { hovered = $0 }
+        .translateXControlCursor()
         .accessibilityLabel(L10n.string("New version available"))
         .accessibilityValue(String(format: L10n.string("New version v%@ is available"), updates.availableVersion ?? ""))
         .accessibilityIdentifier("main.updateAvailable")

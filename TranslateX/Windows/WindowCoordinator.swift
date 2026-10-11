@@ -414,8 +414,9 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         settingsNavigation.showAbout()
     }
 
-    func showMainUpdate() {
+    func showUpdate() {
         guard let updates, updates.updatePresentation != nil else { return }
+        if updates.showsSettingsUpdate { showAbout(); return }
         if updates.showsMainUpdate { showMain(); return }
         // Keep an outstanding draft confirmation visible and do not replace
         // its pending action when Sparkle requests focus more than once.
@@ -425,7 +426,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         }
         serviceNavigation.requestExit { [weak self, weak updates] in
             guard let self, let updates, updates === self.updates,
-                  updates.updatePresentation != nil else { return }
+                  updates.updatePresentation != nil, updates.updateLocation == .mainWindow else { return }
             updates.presentUpdateInMainWindow()
             self.showMain()
         }

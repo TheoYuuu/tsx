@@ -386,7 +386,7 @@ final class QuickHandoffWindowTests: XCTestCase {
         let windows = try isolatedWindows()
         windows.inputModel.setAutomaticTranslation(false)
         windows.updates = updates
-        updates.onPresentUpdate = { [weak windows] in windows?.showMainUpdate() }
+        updates.onPresentUpdate = { [weak windows] in windows?.showUpdate() }
         updates.onPresentReleaseNotes = { [weak windows] in windows?.showMainReleaseNotes() }
         return (windows, updates, defaults)
     }

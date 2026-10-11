@@ -2,6 +2,34 @@ import XCTest
 @testable import TranslateX
 
 final class ReleaseNotesPresentationTests: XCTestCase {
+    func testAvailableUpdateDialogFitsMinimumAndReachesMaximumAtDefaultWindowSizes() {
+        XCTAssertEqual(UpdateDialogLayout.size(in: TranslationLayout.sideBySide.minimumSize(for: .main)),
+                       CGSize(width: 520, height: 400))
+        for layout in TranslationLayout.allCases {
+            XCTAssertEqual(UpdateDialogLayout.size(in: layout.defaultSize(for: .main)),
+                           CGSize(width: 620, height: 520))
+        }
+        XCTAssertEqual(UpdateDialogLayout.size(in: CGSize(width: 2_000, height: 1_200)),
+                       CGSize(width: 620, height: 520))
+    }
+
+    func testAvailableUpdateDialogResizesEachAxisWithinTheWindow() {
+        let sizes = [CGSize(width: 660, height: 440), CGSize(width: 710, height: 500),
+                     CGSize(width: 760, height: 560), CGSize(width: 980, height: 598)]
+        let dialogs = sizes.map { UpdateDialogLayout.size(in: $0) }
+        XCTAssertEqual(dialogs[1], CGSize(width: 570, height: 460))
+        for (window, dialog) in zip(sizes, dialogs) {
+            XCTAssertLessThanOrEqual(dialog.width, window.width - 40)
+            XCTAssertLessThanOrEqual(dialog.height, window.height - 40)
+        }
+        XCTAssertEqual(UpdateDialogLayout.size(in: CGSize(width: 980, height: 440)),
+                       CGSize(width: 620, height: 400))
+        XCTAssertEqual(UpdateDialogLayout.size(in: CGSize(width: 660, height: 780)),
+                       CGSize(width: 520, height: 520))
+        XCTAssertEqual(UpdateDialogLayout.size(in: CGSize(width: 500, height: 350)),
+                       CGSize(width: 460, height: 310))
+    }
+
     private let now = Date(timeIntervalSince1970: 1_791_662_400) // A fixed instant, independent of the test machine.
     private var utc: Calendar {
         var value = Calendar(identifier: .gregorian)

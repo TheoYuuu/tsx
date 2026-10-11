@@ -2,6 +2,45 @@
 
 TSX 通过 GitHub Releases 分发，官网提供下载入口与 Sparkle 签名更新清单。发布需有明确授权；普通开发不自动递增版本、创建 Tag/Release 或推送。已测范围与限制见 [Validation.md](Validation.md)。
 
+## 手动发布的完整顺序
+
+手动发布是由维护者逐步执行下面的操作；可以使用仓库工具完成重复检查，无需手工重写签名和打包逻辑。只有 App 公证及导出必须在 Xcode Organizer 中操作。首次准备见 [BUILDING.md](BUILDING.md)，各阶段的命令和核对项目见本文后续章节。
+
+1. **核对三个工作区。** 私有开发仓库、独立公开源码仓库和官网仓库分别检查 `git status`、`git remote -v`，再 `git fetch origin` 检查远端进展。确认没有未处理改动或冲突，两套应用仓库不能共用 Git 历史。只有本次发版涉及的文件进入提交；不得覆盖其他工作。
+2. **在私有源码确定版本。** 在 `project.yml` 同时更新 `MARKETING_VERSION` 和递增的 `CURRENT_PROJECT_VERSION`，运行 `xcodegen generate`。在 `TranslateX/Resources/PublishedReleaseNotes.json` 开头加入本版中英文说明，当前尚未发布的版本不填写虚构发布时间；上一版时间可按 GitHub 的真实发布时间补齐。准备本版公开说明，描述用户可见的变化和必要升级提醒。
+3. **验证并提交私有源码。** 运行 `Scripts/verify.sh`；发布工具变化时再运行本文的工具测试。完成本次界面及行为检查，记录真实覆盖范围。查看 `git diff`，按文件暂存，再检查 `git diff --cached` 和剩余差异，创建发布提交。通过私有历史和固定远端检查后执行 `git push origin main`。
+4. **同步独立公开源码。** 按 [双仓文件同步](PUBLIC_REPOSITORY.md#双仓库文件同步) 在公开工作区对上一步的准确 commit 生成导出预览，审阅后带 `--expect-plan` 应用。README、Docs、AGENTS 和策略属于公开仓库独立维护内容，逐项检查跳过项并同步适用的说明。检查真实暂存区，必要时执行策略差异审核；运行公开 `staged` 检查、相关构建验证并提交，再运行 `history main` 和 `git push origin main`。记录两边 commit 对应关系，记录只保存在私有归档中。
+5. **从干净的公开提交归档。** 在公开源码根目录运行 `python3 Tools/Release/release.py archive`。保存工具输出的候选目录和 `.xcarchive` 路径；后续所有命令使用同一个候选目录。真实归档保留在 Xcode 默认 Archives 目录，候选长期保存在仓库外。不能拿 Debug/TestHost 或普通 Release 构建目录冒充发行归档。
+6. **在 Xcode 公证并导出 App。** 打开 **Window → Organizer → Archives**，选择本版、对应 Build 的归档，执行 **Distribute App → Direct Distribution**；旧界面可能为 **Custom → Developer ID → Upload**。沿用有效的签名身份，核对后上传；等待 **Ready to distribute**，再点击 **Export Notarized App**，导出到本次候选的 `XcodeExport/`。只查询同一上传，不因等待而重复提交；登录或协议问题由账号持有人处理。
+7. **制作并公证 DMG。** 使用本文的 `prepare → submit --stage dmg → status → finish` 命令。`prepare` 核验导出 App、备份完整归档并制作签名 DMG；`submit` 上传容器；`status` 查询同一提交；状态为 Accepted 后 `finish` 附票并生成 `artifacts/`。只发布 `artifacts/` 内的最终 DMG 和 SHA256SUMS，不使用候选根目录中提交公证的原始 DMG，也不重新签名导出的 App。
+8. **验证最终产物。** 核对 `release.json`、`verification.json`、App／DMG 公证记录、归档备份与最终摘要。挂载最终 DMG 检查 App，执行适用的安装和升级测试；需要保留旧版时不覆盖日常应用，并明确记录未执行真实替换。使用 `shasum -a 256 -c SHA256SUMS.txt` 时先进入 `artifacts/`。保留失败与未测项，不将模拟更新当成真实升级通过。
+9. **发布 GitHub 版本。** 在公开仓库为实际构建 commit 创建新的版本 Tag 并推送，通过历史检查后创建 Release。可在 GitHub **Releases → Draft a new release** 中选择该 Tag，填写双语说明并上传最终 DMG 和 SHA256SUMS，检查后发布；也可使用下面的命令。私有仓库只推送源码，不需要复制公开 Release 或安装包。已存在的 Tag 或发布资产不得覆盖。
+
+   ```sh
+   git tag -a vX.Y.Z PUBLIC_BUILD_COMMIT -m "TSX vX.Y.Z"
+   Scripts/check-public-repo.sh history main vX.Y.Z
+   git push origin vX.Y.Z
+   gh release create vX.Y.Z --repo TheoYuuu/tsx --verify-tag \
+     --title "TSX vX.Y.Z" --notes-file "/path/to/release-notes.md" \
+     "/path/to/candidate/artifacts/TSX-X.Y.Z-macOS-universal.dmg" \
+     "/path/to/candidate/artifacts/SHA256SUMS.txt"
+   ```
+
+10. **核对附件后上线官网更新。** 从刚发布的 Release 重新下载附件，核对摘要和公证。将候选 `artifacts/appcast.xml` 中的新条目合入官网 `public/updates/tsx/appcast.xml`，保留旧条目，使用真实 Release 时间并核对 Build、版本、下载 URL、长度和安装包签名。维护双语更新摘要及官网显示版本。XML 最后一次修改后，用同一 Sparkle 密钥重新签名并验证，再运行官网检查、构建、提交和推送，等待已有部署集成完成。安装包可下载之前不能上线更新清单。
+
+    从公开源码工作区调用已校验的固定 Sparkle 工具，下面参数是官网文件的实际路径：
+
+    ```sh
+    .build/ReleaseTools/Sparkle-2.10.0/bin/sign_update \
+      --account com.lumax.tsx "/path/to/site/public/updates/tsx/appcast.xml"
+    .build/ReleaseTools/Sparkle-2.10.0/bin/sign_update \
+      --account com.lumax.tsx --verify "/path/to/site/public/updates/tsx/appcast.xml"
+    ```
+
+11. **验证线上并完成留档。** 获取官网实际返回的原始 appcast 并验签，核对最新版、附件地址和字节数，打开中英文产品页检查版本与下载入口。把 Release 信息、重新下载的附件校验、最终线上 appcast、公开源码与官网 commit、实际测试结果补存到本次候选目录并更新索引。保留 Xcode 默认目录中的归档及仓库外完整副本，确认 Organizer 能查询该版；不要把清理构建缓存当成清理发行档案。
+
+下一次发版从第 1 步重新开始，使用新版本、新 Build 和新候选目录。有效的 Developer ID、Bundle ID、团队、Sparkle 密钥及 DMG 公证 profile 均沿用。Release、官网部署、App 公证和 DMG 公证是独立状态，不能用其中一个成功代替其余步骤。
+
 ## 发布说明
 
 - 首次公开发行介绍产品能力、系统要求、安装包选择及简明安装步骤，链接完整使用说明和许可证。后续发行以新增、改进和修复为主，末尾保留简短的「下载与验证」：本版本安装包、系统与架构要求、实际验证的签名／公证状态、校验文件及[安装指南](USAGE.md)。不重复整套安装教程。

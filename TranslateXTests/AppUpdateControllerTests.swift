@@ -161,6 +161,134 @@ private final class UpdateBackendFixture: AppUpdaterBackend {
 }
 
 extension AppUpdateControllerTests {
+    private func aboutUpdateFixture() -> (AppUpdateController, UpdateBackendFixture) {
+        let backend = UpdateBackendFixture()
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
+                                          recordsInstalledVersions: false, backend: backend)
+        updates.start()
+        updates.foundUpdate("2.0.0")
+        updates.finishedCheck()
+        return (updates, backend)
+    }
+
+    func testAboutUpdateDownloadsAndInstallsWithOneActionWithoutChangingAutomaticPreference() {
+        let (updates, backend) = aboutUpdateFixture()
+        var locations: [AppUpdateLocation] = []
+        updates.onPresentUpdate = { locations.append(updates.updateLocation) }
+        updates.performUpdateAction(in: .settings)
+        updates.performUpdateAction(in: .settings)
+        updates.showUpdateCheck(cancellation: {})
+        var choices: [SPUUserUpdateChoice] = []
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            userInitiated: true) { choices.append($0) }
+        XCTAssertEqual(backend.calls, ["start", "information", "update"])
+        XCTAssertEqual(choices, [.install])
+        XCTAssertTrue(updates.showsSettingsUpdate)
+        XCTAssertFalse(updates.showsMainUpdate)
+        updates.downloadStarted {}
+        updates.extractionStarted()
+        updates.readyToInstall { choices.append($0) }
+        XCTAssertEqual(choices, [.install, .install])
+        XCTAssertEqual(locations, [.settings])
+        XCTAssertFalse(updates.automaticUpdatesEnabled)
+        XCTAssertFalse(backend.automaticallyChecksForUpdates)
+        updates.installing()
+        updates.installationDismissed()
+        XCTAssertFalse(updates.showsSettingsUpdate)
+    }
+
+    func testAboutCheckWithoutKnownVersionOnlyChecksAndDoesNotAuthorizeInstallation() {
+        let (updates, backend) = aboutUpdateFixture()
+        updates.foundNoUpdate()
+        updates.performUpdateAction(in: .settings)
+        XCTAssertEqual(backend.calls, ["start", "information", "information"])
+        var choice: SPUUserUpdateChoice?
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            userInitiated: true) { choice = $0 }
+        XCTAssertNil(choice)
+        XCTAssertTrue(updates.showsSettingsUpdate)
+        updates.installPendingUpdate()
+        XCTAssertEqual(choice, .install)
+        XCTAssertFalse(updates.showsMainUpdate)
+    }
+
+    func testAboutDoesNotAutomaticallyInstallAChangedCandidateOrInformationOnlyUpdate() {
+        for (version, informationOnly) in [("2.0.1", false), ("2.0.0", true)] {
+            let (updates, _) = aboutUpdateFixture()
+            updates.performUpdateAction(in: .settings)
+            var choice: SPUUserUpdateChoice?
+            updates.offerUpdate(version: version, informationOnly: informationOnly,
+                                informationURL: URL(string: "https://example.invalid/update"),
+                                userInitiated: true) { choice = $0 }
+            updates.continueAutomaticUpdate()
+            XCTAssertNil(choice)
+            XCTAssertTrue(updates.showsSettingsUpdate)
+            XCTAssertFalse(updates.showsMainUpdate)
+        }
+    }
+
+    func testAboutCancellationClearsThePendingDirectInstallIntent() {
+        let (updates, _) = aboutUpdateFixture()
+        updates.performUpdateAction(in: .settings)
+        var cancellations = 0
+        updates.showUpdateCheck { cancellations += 1 }
+        updates.dismissUpdate()
+        XCTAssertEqual(cancellations, 1)
+        var choice: SPUUserUpdateChoice?
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            userInitiated: true) { choice = $0 }
+        XCTAssertNil(choice, "A late offer cannot reuse canceled install intent.")
+    }
+
+    func testAboutRetryStaysInSettingsAndRequiresANewExplicitAction() {
+        let (updates, backend) = aboutUpdateFixture()
+        updates.performUpdateAction(in: .settings)
+        updates.showUpdateCheck(cancellation: {})
+        updates.updateErrored()
+        XCTAssertEqual(updates.updatePresentation?.phase, .failed)
+        XCTAssertTrue(updates.showsSettingsUpdate)
+        XCTAssertEqual(backend.calls.filter { $0 == "update" }.count, 1)
+        updates.retryUpdate()
+        var choices: [SPUUserUpdateChoice] = []
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            userInitiated: true) { choices.append($0) }
+        XCTAssertEqual(choices, [.install])
+        XCTAssertEqual(backend.calls.filter { $0 == "update" }.count, 2)
+        updates.downloadStarted {}
+        updates.updateErrored()
+        updates.readyToInstall { choices.append($0) }
+        XCTAssertEqual(choices, [.install], "A failed attempt cannot authorize a late installation reply.")
+    }
+
+    func testMainEntryRefocusesAnAboutDownloadWithoutMovingItOrRestartingIt() {
+        let (updates, backend) = aboutUpdateFixture()
+        updates.performUpdateAction(in: .settings)
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            userInitiated: true, reply: { _ in })
+        updates.downloadStarted {}
+        var focusedLocation: AppUpdateLocation?
+        updates.onPresentUpdate = { focusedLocation = updates.updateLocation }
+        updates.performUpdateAction()
+        updates.checkForUpdates()
+        XCTAssertEqual(focusedLocation, .settings)
+        XCTAssertEqual(backend.calls.filter { $0 == "update" }.count, 1)
+        XCTAssertFalse(updates.showsMainUpdate)
+    }
+
+    func testAboutUsesAnExistingReadyReplyWithoutCheckingOrConfirmingAgain() {
+        let (updates, backend) = aboutUpdateFixture()
+        var choices: [SPUUserUpdateChoice] = []
+        updates.readyToInstall { choices.append($0) }
+        updates.presentUpdateInMainWindow()
+        XCTAssertTrue(updates.showsMainUpdate)
+        updates.performUpdateAction(in: .settings)
+        updates.performUpdateAction(in: .settings)
+        XCTAssertEqual(choices, [.install])
+        XCTAssertTrue(updates.showsSettingsUpdate)
+        XCTAssertFalse(updates.showsMainUpdate)
+        XCTAssertEqual(backend.calls, ["start", "information"])
+    }
+
     func testInstalledNotesReuseMainWindowAndPreserveDraftAndSettingsNavigation() async throws {
         let monitor = try isolateUnscriptedWindowInput()
         defer { NSEvent.removeMonitor(monitor) }

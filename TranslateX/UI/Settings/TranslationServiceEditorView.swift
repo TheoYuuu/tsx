@@ -573,8 +573,8 @@ private struct TranslationServiceEditorContent: View {
     }
 
     private var recipient: some View {
-        HStack(alignment: .top, spacing: 6) {
-            Image(systemName: isAccount ? "checkmark.shield" : "lock").font(.system(size: 11)).padding(.top, 2)
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: isAccount ? "checkmark.shield" : "lock").font(.system(size: 11))
             Text(isAccount ? L10n.string("Translation sends text to OpenAI. Saving does not change the current service.")
                  : String(format: L10n.string("Translation sends text to %@."), editor.receiver))
                 .fixedSize(horizontal: false, vertical: true)

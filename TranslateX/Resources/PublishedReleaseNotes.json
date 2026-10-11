@@ -1,8 +1,14 @@
 [
   {
+    "version": "1.2.1",
+    "notes": "## 中文\n\n- **关于页一键更新** 点击「更新到 v…」后直接下载并接续安装、重启，进度留在设置窗口，不再切换到主窗口重复确认。「检查更新」仍只检查，不改变自动更新偏好。\n- **更舒展的更新弹窗** 「发现新版本」弹窗随主窗口大小调整，在限定的最小与最大尺寸之间缩放；默认主窗口可展示较大尺寸，更新内容更易阅读。\n- **界面细节修复** 本机服务的文本接收提示使用易懂的名称，修正提示图标与文字对齐，并为「发现新版本」按钮补上悬停手型光标。\n\n## English\n\n- **One-click updates from About** Clicking Update to v… starts downloading and continues through installation and restart, with progress kept in Settings and no repeated confirmation in the main window. Check for Updates still only checks, without changing automatic-update preferences.\n- **More room for release notes** The New Version Available dialog adapts to the main window between defined minimum and maximum sizes. The default main window shows the larger dialog for easier reading.\n- **Interface fixes** Local-service text-recipient hints use a readable name, their icons align with the text, and the New Version Available button shows a pointing-hand cursor on hover.\n",
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.2.1"
+  },
+  {
     "version": "1.2.0",
     "notes": "## 中文\n\n- **更多 API 厂商预设** 新增 Kimi、GLM、Qwen、Gemini、Xiaomi MiMo、MiniMax、Doubao、StepFun、xAI、Mistral、SiliconFlow 和 OpenRouter，使用自己的 API Key 配置翻译服务。\n- **自定义服务与图标** 新增 New API 和自定义连接，支持兼容的 Chat Completions、Responses 与 Claude Messages 接口，以及完整请求地址和独立模型列表地址；添加和编辑时可切换服务商及品牌或通用图标。\n- **更一致的服务设置** 移除手填模型入口，新选择从获取的模型列表中完成；已有服务保留已保存模型。统一必填标记、输出上限下拉框、按钮与滚动条，修复服务商和图标需要重复点击才能更换的问题。\n- **更紧凑的权限与更新提示** 重排权限浮窗并统一窗口按钮尺寸；三个更新内容弹窗采用紧凑布局，显示发布时间与精确时间提示，省去常规安装说明。\n- **交互细节修复** 修复切换翻译服务后「正在使用」提示持续显示的问题，调整用量统计日期选择卡片的间距。\n\n## English\n\n- **More API provider presets** Added Kimi, GLM, Qwen, Gemini, Xiaomi MiMo, MiniMax, Doubao, StepFun, xAI, Mistral, SiliconFlow, and OpenRouter. Configure translation with your own API key.\n- **Custom services and icons** Added New API and custom connections for compatible Chat Completions, Responses, and Claude Messages endpoints, including full request URLs and separate model-list URLs. Change providers and choose brand or generic icons while adding or editing a service.\n- **Consistent service settings** Removed manual model entry: new selections come from fetched model lists, while existing services retain saved models. Unified required-field markers, output-limit menus, buttons, and scrollbars, and fixed provider and icon choices requiring a second click.\n- **Compact permission and update dialogs** Refined permission panels and matched window-control sizes. All three release-note dialogs use a compact layout with publication dates and precise-time tooltips, without routine installation instructions.\n- **Interaction fixes** Fixed the persistent In use tooltip after switching translation services and improved spacing in usage date-range cards.\n",
-    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.2.0"
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.2.0",
+    "publishedAt": "2026-10-10T19:34:42Z"
   },
   {
     "version": "1.1.2",

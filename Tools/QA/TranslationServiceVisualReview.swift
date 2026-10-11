@@ -254,7 +254,7 @@ final class TranslationServiceVisualReview: NSObject {
             coordinator = windows
             let updates = AppUpdateController.visualReview(previewAvailableUpdate: true)
             windows.updates = updates
-            updates.onPresentUpdate = { [weak windows] in windows?.showMainUpdate() }
+            updates.onPresentUpdate = { [weak windows] in windows?.showUpdate() }
             windows.inputModel.setAutomaticTranslation(false)
             windows.inputModel.text = "Constructed draft retained through update focus verification."
             let shortcuts = ShortcutSettings(preferences: preferences, manager: ShortcutManager(),
@@ -320,6 +320,26 @@ final class TranslationServiceVisualReview: NSObject {
                         && editors(in: surface).map(ObjectIdentifier.init) == originalEditors.map(ObjectIdentifier.init)
                         && originalEditors.map(\.string) == originalContents && windows.inputModel.text == originalDraft,
                         "Dismissal preserves the native editor instances and constructed draft")
+            windows.serviceNavigation.exitHandler = nil
+            windows.showAbout()
+            try await wait("About becomes key before the direct update") { settings.isKeyWindow && !main.isKeyWindow }
+            updates.performUpdateAction(in: .settings)
+            try await wait("One About action starts the constructed download") {
+                updates.updatePresentation?.phase == .downloading
+            }
+            try require(settings.isKeyWindow && !main.isKeyWindow && updates.showsSettingsUpdate
+                        && !updates.showsMainUpdate && surface.modalHostingView == nil,
+                        "About download stays in Settings without a main-window confirmation")
+            try await wait("The constructed download proceeds to installation without another action") {
+                updates.updatePresentation?.phase == .installing
+            }
+            try require(settings.isKeyWindow && !main.isKeyWindow,
+                        "Installation progress remains in Settings")
+            try await wait("The simulated install completes without replacing the real app") {
+                updates.updatePresentation == nil
+            }
+            try require(windows.inputModel.text == originalDraft && !updates.automaticUpdatesEnabled,
+                        "Direct installation preserves the draft and automatic-update preference")
         } catch ReviewFailure.assertion(let name) {
             failures.append(name)
         } catch {
@@ -480,23 +500,24 @@ final class TranslationServiceVisualReview: NSObject {
             return
         }
         if scene.hasPrefix("release-notes") || scene.hasPrefix("main-update") {
-            if scene.contains("minimum") {
-                preferences.rememberWindowSize(preferences.translationLayout.minimumSize(for: .main),
-                                               for: .main, layout: preferences.translationLayout)
-            }
+            // Do not inherit the review app's legacy autosaved window size.
+            preferences.rememberWindowSize(scene.contains("minimum")
+                ? preferences.translationLayout.minimumSize(for: .main)
+                : preferences.translationLayout.defaultSize(for: .main),
+                for: .main, layout: preferences.translationLayout)
             let windows = WindowCoordinator(preferences: preferences, services: services)
             let updates = AppUpdateController.visualReview(previewInstalledNotes: scene.hasPrefix("release-notes"),
                                                            shortReleaseNotes: scene.contains("short"),
                                                            previewAvailableUpdate: scene.hasPrefix("main-update"),
                                                            compactReleaseNotes: scene.contains("compact"))
             windows.updates = updates
-            updates.onPresentUpdate = { [weak windows] in windows?.showMainUpdate() }
+            updates.onPresentUpdate = { [weak windows] in windows?.showUpdate() }
             reviewWindows = windows
             if scene.contains("settings") {
                 let shortcuts = ShortcutSettings(preferences: preferences, manager: ShortcutManager(), onAction: { _ in }, onBindingsChanged: {})
                 windows.showSettings(shortcuts: shortcuts)
                 windows.showAbout()
-                updates.showRecentReleaseNotes()
+                if scene.hasPrefix("release-notes") { updates.showRecentReleaseNotes() }
             } else if scene.hasPrefix("main-update") {
                 windows.showMain()
                 if scene.contains("modal") { updates.performUpdateAction() }

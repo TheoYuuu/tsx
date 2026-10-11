@@ -1,11 +1,27 @@
 import SwiftUI
 
+enum UpdateDialogLayout {
+    static let minimumSize = CGSize(width: 520, height: 400)
+    static let maximumSize = CGSize(width: 620, height: 520)
+
+    static func size(in window: CGSize) -> CGSize {
+        let smallestWindow = TranslationLayout.sideBySide.minimumSize(for: .main)
+        return CGSize(
+            width: min(maximumSize.width, minimumSize.width + max(0, window.width - smallestWindow.width),
+                       max(0, window.width - 40)),
+            height: min(maximumSize.height, minimumSize.height + max(0, window.height - smallestWindow.height),
+                        max(0, window.height - 40)))
+    }
+}
+
 /// Shared geometry for available, installed and historical release notes.
 /// The scroll area alone yields space when the parent window is resized.
 struct CompactUpdateDialog<Content: View, Footer: View>: View {
     @Environment(\.translateXTheme) private var theme
     let title: String
     var maximumHeight: CGFloat? = nil
+    var minimumHeight: CGFloat = 0
+    var maximumWidth: CGFloat = 520
     var canDismiss = true
     let onDismiss: () -> Void
     @ViewBuilder let content: () -> Content
@@ -15,7 +31,8 @@ struct CompactUpdateDialog<Content: View, Footer: View>: View {
     @State private var footerHeight: CGFloat = 80
     private var p: ReleaseDialogPalette { .init(theme: theme) }
     private var scrollHeight: CGFloat {
-        min(contentHeight, max(0, (maximumHeight ?? 650) - headerHeight - footerHeight))
+        min(max(contentHeight, minimumHeight - headerHeight - footerHeight),
+            max(0, (maximumHeight ?? 650) - headerHeight - footerHeight))
     }
 
     var body: some View {
@@ -51,7 +68,7 @@ struct CompactUpdateDialog<Content: View, Footer: View>: View {
                 .serviceDesignMetric("update.actions")
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0 }
         }
-        .foregroundStyle(p.ink).frame(maxWidth: 520)
+        .foregroundStyle(p.ink).frame(maxWidth: maximumWidth)
         .background(p.paper, in: RoundedRectangle(cornerRadius: 17))
         .overlay { RoundedRectangle(cornerRadius: 17).strokeBorder(p.line).allowsHitTesting(false) }
         .shadow(color: .black.opacity(theme.isDark ? 0.21 : 0.08), radius: 30, y: 10)

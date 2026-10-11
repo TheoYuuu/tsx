@@ -405,7 +405,7 @@ struct TranslationServiceConfiguration: Codable, Equatable, Identifiable, Sendab
         return url
     }
 
-    private static func isLoopbackHost(_ host: String) -> Bool {
+    static func isLoopbackHost(_ host: String) -> Bool {
         if host == "localhost" || host == "[::1]" || host == "::1" { return true }
         let parts = host.split(separator: ".", omittingEmptySubsequences: false)
         guard parts.count == 4, parts[0] == "127" else { return false }

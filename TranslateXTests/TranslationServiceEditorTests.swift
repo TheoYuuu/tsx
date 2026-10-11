@@ -3,6 +3,34 @@ import XCTest
 
 @MainActor
 final class TranslationServiceEditorTests: XCTestCase {
+    func testRecipientDescribesLoopbackAddressesInBothLanguages() async throws {
+        let original = AppInterfaceLanguage(rawValue: L10n.currentLanguageIdentifier)!
+        defer { L10n.apply(original) }
+        try await withStore { store, credentials in
+            let editor = TranslationServiceEditor(configuration: .init(kind: .ollama), services: store)
+            defer { editor.close() }
+            let reads = credentials.reads
+            for (language, expected) in [(AppInterfaceLanguage.simplifiedChinese, "本机服务"), (.english, "a service on this Mac")] {
+                L10n.apply(language)
+                for endpoint in ["http://localhost:11434/v1", " http://LOCALHOST:11434/v1 ",
+                                 "http://127.0.0.1:11434/v1", "https://127.2.3.4/v1", "http://[::1]:11434/v1"] {
+                    editor.configuration.endpoint = endpoint
+                    XCTAssertEqual(editor.receiver, expected, endpoint)
+                }
+                // An Ollama preset can point at a remote host; its name must not imply local processing.
+                for host in ["models.example", "localhost.example", "127.0.0.1.example"] {
+                    editor.configuration.endpoint = "https://\(host)/v1"
+                    XCTAssertEqual(editor.receiver, host)
+                }
+                for endpoint in ["", "localhost", "http://models.example/v1", "https://user:fixture@models.example/v1"] {
+                    editor.configuration.endpoint = endpoint
+                    XCTAssertEqual(editor.receiver, L10n.string("the configured service"))
+                }
+            }
+            XCTAssertEqual(credentials.reads, reads)
+        }
+    }
+
     func testSavedUntestedServicePublishesSuccessBeforeReturningWithoutSaving() async throws {
         try await withStore { store, credentials in
             let configuration = TranslationServiceConfiguration(kind: .deepSeek)
