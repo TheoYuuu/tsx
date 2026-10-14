@@ -10,6 +10,7 @@ struct InputTranslationView: View {
     var editorReady: (NSTextView) -> Void = { _ in }
     var translationEditorReady: (NSTextView) -> Void = { _ in }
     var updates: AppUpdateController? = nil
+    var restorePrevious: () -> Void = {}
     @Environment(\.translateXTheme) private var theme
     @Environment(\.translationLayout) private var layout
 
@@ -29,7 +30,22 @@ struct InputTranslationView: View {
             HStack(spacing: 18) {
                 WindowTrafficLights().frame(width: 58, height: 14)
                     .serviceDesignMetric("main.trafficLights")
+                Text(model.sourceName.isEmpty ? L10n.string("Typed input") : model.sourceName)
+                    .font(.system(size: 11, weight: .medium)).foregroundStyle(theme.muted)
+                    .lineLimit(1).truncationMode(.middle)
+                    .translateXTooltip(model.sourceName.isEmpty ? L10n.string("Typed input") : model.sourceName)
+                    .accessibilityIdentifier("translation.source")
                 Spacer()
+                if model.canRestorePreviousWorkspace {
+                    Button(action: restorePrevious) {
+                        Label("Restore previous translation", systemImage: "clock.arrow.circlepath")
+                            .font(.system(size: 11)).lineLimit(1)
+                    }
+                    .buttonStyle(TranslateXButtonStyle(kind: .quiet))
+                    .disabled(model.isComposing)
+                    .translateXTooltip(L10n.string("Restore the content replaced by the last capture"))
+                    .accessibilityIdentifier("translation.restorePrevious")
+                }
                 if let updates, updates.isAvailable, updates.availableVersion != nil {
                     MainUpdateEntry(updates: updates)
                 }

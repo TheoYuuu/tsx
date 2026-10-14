@@ -18,6 +18,7 @@
 		0CA77A0CC11F7C9F4F68449F /* RemoteTranslationProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B56D1ADFBD85CB88038AFC7 /* RemoteTranslationProviderTests.swift */; };
 		0CFEA1D1CA157B0872CA146E /* CodexAccountControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DD643123C6995E892BD5F3E /* CodexAccountControllerTests.swift */; };
 		1155BCFBE1F08F1197CCE565 /* QuickHandoffWindowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57C21C7D50486546DD72569F /* QuickHandoffWindowTests.swift */; };
+		11605450C4F68EA0995D9518 /* ScreenshotOverlayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64E1135E3D16538ABC7E416F /* ScreenshotOverlayTests.swift */; };
 		1199B49D415ABA32E667047F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0AE55E5E1315CA142DC6BA49 /* Assets.xcassets */; };
 		13A5360ECE8772DD4D0091E0 /* SelectionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A67387A5C355F385F89681 /* SelectionService.swift */; };
 		145F1A511170F18C910F6597 /* LegacyPreferencesMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5F641C2E02D72AA42501592 /* LegacyPreferencesMigrationTests.swift */; };
@@ -34,6 +35,7 @@
 		2F44F27377C8ABE29A9D4B50 /* TranslationHTTPPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F5ECDC7A9D1C9FE6AE04C79 /* TranslationHTTPPolicy.swift */; };
 		30E53D758C227E32F1BDCB1A /* AXSelectionReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE56C3518C5569DEB8C806E0 /* AXSelectionReader.swift */; };
 		32555F1298C629848A5CD47C /* AboutSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D809E0C9999B4BD98EBF0A /* AboutSettingsView.swift */; };
+		334F9BFE17993774D1B30392 /* ScreenshotImageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5673A12FA819CBC332A7141A /* ScreenshotImageRenderer.swift */; };
 		341AC1944DDEC7AE307DC749 /* BoundedTranslationHTTPTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = BECFEDEB91D236EA17934A7A /* BoundedTranslationHTTPTransport.swift */; };
 		362C36EECA73DA421E7903D6 /* TranslateXScrollStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 227518A120C4F308B62352A4 /* TranslateXScrollStyle.swift */; };
 		370F5F78388F6DFF88C88257 /* TranslationServicesSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52B6470C5A25533C4C26E5A9 /* TranslationServicesSettingsView.swift */; };
@@ -130,6 +132,7 @@
 		B340B25022F27E89982FEBFC /* PublishedReleaseNotes.json in Resources */ = {isa = PBXBuildFile; fileRef = D4C1A9D73F4F34F1B99B74FA /* PublishedReleaseNotes.json */; };
 		B4BDD910FC348B03996E8E0C /* SelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29C7EAAC3881319AAAA1EB76 /* SelectionTests.swift */; };
 		B509BD115006226FD5EC3E5A /* ScreenCaptureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A18DB93F31CABF7FF04F94 /* ScreenCaptureTests.swift */; };
+		B749421BE1A4B7AAF4A825A9 /* ScreenshotImageRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A09C50297007798B38393621 /* ScreenshotImageRendererTests.swift */; };
 		B762C9728CF098E46B7E3594 /* ScreenshotFailureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50929072B8F7AD434B5A7B48 /* ScreenshotFailureTests.swift */; };
 		B8E77D4949C6165871F25EFC /* RemoteTranslationResponseParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B298C13EC0A3C6F85C8B7CA8 /* RemoteTranslationResponseParser.swift */; };
 		BA6527EECD9B9F1E4627A526 /* TranslationTextEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A0FE5A9B01A31225814301B /* TranslationTextEditorTests.swift */; };
@@ -161,6 +164,7 @@
 		E3799CF265880FA7F835E16A /* IsolatedWindowTestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CF5FB05F60346960FF35193 /* IsolatedWindowTestSupport.swift */; };
 		E3F0CA3F724762FCDF69BB3F /* TranslationModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41B7DF63574EBF4B8C4900EA /* TranslationModel.swift */; };
 		E491B93203870BE3AFBA6524 /* LanguageMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61D8306DC5AFF62065B1C913 /* LanguageMenu.swift */; };
+		E4B254FB7AAF633C0CE6DB80 /* ScreenshotOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D5F152572346E8FC882EABE /* ScreenshotOverlayView.swift */; };
 		E5632FEA4696B7D79D739821 /* UsageDatePopoverLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = BADB0EFF2F610A4CAD8F0529 /* UsageDatePopoverLayout.swift */; };
 		E6B2DFF4438981955905EB78 /* ShortcutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD4466CE202D523417C33BC0 /* ShortcutManager.swift */; };
 		E6E1B89298B1AB83FCEBF364 /* TranslationUsageStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49BF5EC41988B11F0F3EE27E /* TranslationUsageStoreTests.swift */; };
@@ -181,6 +185,7 @@
 		F82D20C7B55E897434DD64E7 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA5DEF69AF94ED1B7FED4022 /* AppDelegate.swift */; };
 		F9BE9A084E533BFE6B624576 /* TranslationServiceNavigationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EC07F3E3B7CA327D5CE38D3 /* TranslationServiceNavigationCoordinator.swift */; };
 		F9E7B5F1D572C6DB6EF1D0CA /* GitHubIconNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = EB29644DF8E7A64A4B362ECC /* GitHubIconNotices.txt */; };
+		FA7988816CFEF65A6E7AEE15 /* ScreenshotOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D88B82684D1DE942183F4C0 /* ScreenshotOverlayController.swift */; };
 		FAE5FA8080A591441C45ABF7 /* CaptureLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1BA9969B6F86E777D1C0892 /* CaptureLayoutTests.swift */; };
 		FB9BEC3EDB35BF5B1DC299A6 /* BuildConfigurationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A9583D495695DB64A3F5192 /* BuildConfigurationTests.swift */; };
 		FC0FF20B7CCA2A86B9AD086C /* ShortcutSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D19C0839821B53A61404E476 /* ShortcutSettings.swift */; };
@@ -267,12 +272,14 @@
 		52B6470C5A25533C4C26E5A9 /* TranslationServicesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServicesSettingsView.swift; sourceTree = "<group>"; };
 		5499AB41698A314C69187747 /* SparkleAppUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleAppUpdater.swift; sourceTree = "<group>"; };
 		563E2795324BF66791D69330 /* WindowPreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPreferencesTests.swift; sourceTree = "<group>"; };
+		5673A12FA819CBC332A7141A /* ScreenshotImageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotImageRenderer.swift; sourceTree = "<group>"; };
 		57C21C7D50486546DD72569F /* QuickHandoffWindowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickHandoffWindowTests.swift; sourceTree = "<group>"; };
 		58ED38C92114F1685C771E26 /* TranslationServiceEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceEditor.swift; sourceTree = "<group>"; };
 		5EC07F3E3B7CA327D5CE38D3 /* TranslationServiceNavigationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceNavigationCoordinator.swift; sourceTree = "<group>"; };
 		61A0678E3C9B4FF7BDF2CEDA /* RegionSelectionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSelectionController.swift; sourceTree = "<group>"; };
 		61D8306DC5AFF62065B1C913 /* LanguageMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageMenu.swift; sourceTree = "<group>"; };
 		62018D27C80B2EB27A788544 /* ReleaseNotesPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotesPresentation.swift; sourceTree = "<group>"; };
+		64E1135E3D16538ABC7E416F /* ScreenshotOverlayTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotOverlayTests.swift; sourceTree = "<group>"; };
 		65E3C89413076A3CE85D577B /* AppPreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferencesTests.swift; sourceTree = "<group>"; };
 		68217701F236895FB350AEE5 /* MaterialPreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialPreferencesTests.swift; sourceTree = "<group>"; };
 		688D26BF6D13A19DFAEAEEC8 /* ReleaseNotesPresentationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotesPresentationTests.swift; sourceTree = "<group>"; };
@@ -295,6 +302,8 @@
 		7A9583D495695DB64A3F5192 /* BuildConfigurationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildConfigurationTests.swift; sourceTree = "<group>"; };
 		7B56D1ADFBD85CB88038AFC7 /* RemoteTranslationProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteTranslationProviderTests.swift; sourceTree = "<group>"; };
 		7B592B936633B524D4F86982 /* TranslationAccountUsageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationAccountUsageLoader.swift; sourceTree = "<group>"; };
+		7D5F152572346E8FC882EABE /* ScreenshotOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotOverlayView.swift; sourceTree = "<group>"; };
+		7D88B82684D1DE942183F4C0 /* ScreenshotOverlayController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotOverlayController.swift; sourceTree = "<group>"; };
 		81E989132F5B782B4C73591A /* TranslationServiceModelCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceModelCatalogTests.swift; sourceTree = "<group>"; };
 		8213685E9A902100519EDF7E /* TranslationProviderFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationProviderFactory.swift; sourceTree = "<group>"; };
 		82C2A2CBAACBD966547F52B6 /* TranslationServiceStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceStoreTests.swift; sourceTree = "<group>"; };
@@ -310,6 +319,7 @@
 		93479E76425D2A19182E0C71 /* LanguageDetectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetectionTests.swift; sourceTree = "<group>"; };
 		96CD466F71734B6BC053F00E /* BidirectionalTranslationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BidirectionalTranslationTests.swift; sourceTree = "<group>"; };
 		996BF8A26FEF5C8F73EC2A72 /* TranslationServiceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceStore.swift; sourceTree = "<group>"; };
+		A09C50297007798B38393621 /* ScreenshotImageRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotImageRendererTests.swift; sourceTree = "<group>"; };
 		A26370913F17F7BA22AC1B75 /* TranslateXScrollStyleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslateXScrollStyleTests.swift; sourceTree = "<group>"; };
 		A36965475648C068E86959A4 /* QwenMTTranslationLanguages.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QwenMTTranslationLanguages.swift; sourceTree = "<group>"; };
 		A4EBBBC9818ECD3BD6C3F7F9 /* TranslationServiceIconTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceIconTests.swift; sourceTree = "<group>"; };
@@ -404,6 +414,7 @@
 				1A109BE454E2605EB631FEDD /* OCRReadingOrder.swift */,
 				3E69470978FC139B52EC4614 /* OCRService.swift */,
 				054756F3E5F0544B6FD4B72A /* ScreenshotDocument.swift */,
+				5673A12FA819CBC332A7141A /* ScreenshotImageRenderer.swift */,
 			);
 			path = OCR;
 			sourceTree = "<group>";
@@ -414,6 +425,7 @@
 				8E893CC2A925BB348E8E1D54 /* PanelPlacement.swift */,
 				61A0678E3C9B4FF7BDF2CEDA /* RegionSelectionController.swift */,
 				D2A3D71AD1098770DFAB1A57 /* RegionSelectionGeometry.swift */,
+				7D88B82684D1DE942183F4C0 /* ScreenshotOverlayController.swift */,
 				CA5442189BB965CA701657FB /* WindowCoordinator.swift */,
 				6AA4E185A85D32748BE0EEB6 /* WindowSurface.swift */,
 			);
@@ -498,6 +510,8 @@
 				B6A18DB93F31CABF7FF04F94 /* ScreenCaptureTests.swift */,
 				BF37E0F15A541C694F26370B /* ScreenshotDocumentTests.swift */,
 				50929072B8F7AD434B5A7B48 /* ScreenshotFailureTests.swift */,
+				A09C50297007798B38393621 /* ScreenshotImageRendererTests.swift */,
+				64E1135E3D16538ABC7E416F /* ScreenshotOverlayTests.swift */,
 				13DE55D7277E11122F4F0C01 /* ScreenshotWorkflowTests.swift */,
 				1AE35FAC75A550AE89FB6886 /* SelectionFailureTests.swift */,
 				29C7EAAC3881319AAAA1EB76 /* SelectionTests.swift */,
@@ -564,6 +578,7 @@
 			children = (
 				798DA75730CA37408A913210 /* InputTranslationView.swift */,
 				D7C9F99A0B7EEA761F4CF8F5 /* QuickTranslationView.swift */,
+				7D5F152572346E8FC882EABE /* ScreenshotOverlayView.swift */,
 				729CB935CA7567C8200F92FA /* ScreenshotTranslationWorkspace.swift */,
 				F00BE6946AEA55A2C466CAEF /* TranslationCommandBar.swift */,
 				EC080C4D1C36842322F3F2F0 /* TranslationResultView.swift */,
@@ -943,6 +958,9 @@
 				B8E77D4949C6165871F25EFC /* RemoteTranslationResponseParser.swift in Sources */,
 				669C0DDADFCB303F83F21797 /* ScreenCaptureService.swift in Sources */,
 				649308808A7B7D1058DC1E9E /* ScreenshotDocument.swift in Sources */,
+				334F9BFE17993774D1B30392 /* ScreenshotImageRenderer.swift in Sources */,
+				FA7988816CFEF65A6E7AEE15 /* ScreenshotOverlayController.swift in Sources */,
+				E4B254FB7AAF633C0CE6DB80 /* ScreenshotOverlayView.swift in Sources */,
 				FCABA81706171B9CA0502938 /* ScreenshotTranslationController.swift in Sources */,
 				95159A52B470C78D0901EC96 /* ScreenshotTranslationWorkspace.swift in Sources */,
 				D5C2FFB4FE7C92E1FA48D134 /* SelectionClipboard.swift in Sources */,
@@ -1046,6 +1064,8 @@
 				B509BD115006226FD5EC3E5A /* ScreenCaptureTests.swift in Sources */,
 				C527FD7C74C659BA22D515C6 /* ScreenshotDocumentTests.swift in Sources */,
 				B762C9728CF098E46B7E3594 /* ScreenshotFailureTests.swift in Sources */,
+				B749421BE1A4B7AAF4A825A9 /* ScreenshotImageRendererTests.swift in Sources */,
+				11605450C4F68EA0995D9518 /* ScreenshotOverlayTests.swift in Sources */,
 				591B49BFEAAA8D623058F2EE /* ScreenshotWorkflowTests.swift in Sources */,
 				4165339E1FA181B46A3E76E8 /* SelectionFailureTests.swift in Sources */,
 				B4BDD910FC348B03996E8E0C /* SelectionTests.swift in Sources */,
@@ -1284,7 +1304,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Config/TranslateX.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 97K37J92QD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1295,7 +1315,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.1;
+				MARKETING_VERSION = 1.3.0;
 				OTHER_CODE_SIGN_FLAGS = "$(inherited) --options runtime";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TRANSLATEX_APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = TranslateX;
@@ -1314,7 +1334,7 @@
 				CODE_SIGN_ENTITLEMENTS = Config/TranslateX.entitlements;
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 6;
+				CURRENT_PROJECT_VERSION = 7;
 				DEVELOPMENT_TEAM = 97K37J92QD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1325,7 +1345,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.1;
+				MARKETING_VERSION = 1.3.0;
 				OTHER_CODE_SIGN_FLAGS = "$(inherited) --options runtime";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TRANSLATEX_APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = TranslateX;

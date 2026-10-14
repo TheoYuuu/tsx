@@ -228,8 +228,8 @@ enum UsageCostFormat {
     static func compact(_ amount: Decimal?) -> String {
         guard let amount, !amount.isNaN, amount >= 0 else { return L10n.string("Unpriced") }
         if amount == 0 { return "$0.00" }
-        if amount < Decimal(string: "0.0001")! { return "<$0.0001" }
-        return "$" + amount.formatted(.number.precision(.fractionLength(2...(amount >= 1 ? 2 : 4))).locale(Locale(identifier: "en_US")))
+        if amount < Decimal(string: "0.01")! { return "<$0.01" }
+        return "$" + amount.formatted(.number.precision(.fractionLength(2)).locale(Locale(identifier: "en_US")))
     }
 
     static func precise(_ amount: Decimal) -> String { "$" + NSDecimalNumber(decimal: amount).stringValue }

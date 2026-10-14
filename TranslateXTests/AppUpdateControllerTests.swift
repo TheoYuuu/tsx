@@ -372,6 +372,54 @@ extension AppUpdateControllerTests {
     }
 
 
+    func testSettingsUpdateModalCoversGlassEdgesAndTracksPresentationLifecycle() async throws {
+        let monitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(monitor) }
+        let windows = try isolatedWindows()
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,
+                                          recordsInstalledVersions: false, backend: UpdateBackendFixture(),
+                                          releases: AppReleaseNotesStore(entries: [], allowsNetworkLoading: false))
+        windows.updates = updates
+        updates.start()
+        updates.finishedCheck()
+        defer { windows.shutdown() }
+        windows.preferences.material = .glass
+        let shortcuts = ShortcutSettings(preferences: windows.preferences, manager: ShortcutManager(),
+                                         onAction: { _ in }, onBindingsChanged: {})
+        // Presentation may be requested before the settings window is created.
+        updates.showRecentReleaseNotes()
+        windows.showSettings(shortcuts: shortcuts)
+        windows.showAbout()
+        let window = try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.settings" && $0.isVisible })
+        defer { window.close() }
+        let surface = try XCTUnwrap(window.contentView as? WindowSurface<SettingsView>)
+        let contentParent = surface.hostingView.superview
+        let overlay = try XCTUnwrap(surface.modalHostingView)
+        XCTAssertTrue(surface.subviews.last === overlay, "Dim above native glass edge highlights.")
+        XCTAssertTrue(overlay.superview === surface)
+        for size in [NSSize(width: 900, height: 600), NSSize(width: 1600, height: 1000)] {
+            window.setContentSize(size)
+            surface.layoutSubtreeIfNeeded()
+            XCTAssertEqual(overlay.frame, surface.bounds)
+            XCTAssertTrue(surface.hostingView.superview === contentParent)
+        }
+        updates.dismissReleaseNotes()
+        for _ in 0..<30 { await Task.yield() }
+        XCTAssertNil(surface.modalHostingView)
+        XCTAssertTrue(window.contentView === surface)
+
+        updates.checkForUpdates(in: .settings)
+        updates.showUpdateCheck(cancellation: {})
+        for _ in 0..<30 { await Task.yield() }
+        XCTAssertTrue(updates.showsSettingsUpdate)
+        XCTAssertTrue(surface.subviews.last === surface.modalHostingView)
+        XCTAssertNotNil(surface.modalHostingView)
+        updates.dismissUpdate()
+        for _ in 0..<30 { await Task.yield() }
+        XCTAssertNil(surface.modalHostingView)
+        XCTAssertTrue(surface.hostingView.superview === contentParent)
+    }
+
     private func releaseNotesWindowFixture() throws -> (WindowCoordinator, AppUpdateController, UserDefaults) {
         _ = NSApplication.shared
         let suite = "TSX.ReleaseNotesWindowTests.\(UUID().uuidString)"

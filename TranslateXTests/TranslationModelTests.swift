@@ -1,8 +1,200 @@
+import CoreGraphics
 import XCTest
 @testable import TranslateX
 
 @MainActor
 final class TranslationModelTests: XCTestCase {
+    func testExternalReplacementRestoresCompletedWorkspaceOnceWithoutResubmitting() async throws {
+        let model = TranslationModel(automaticallyTranslates: true)
+        model.source = "en"
+        model.target = "fr"
+        model.sourceName = "A constructed source application"
+        model.text = "A quiet morning."
+        model.submit()
+        await model.run(try XCTUnwrap(model.request), provider: ImmediateProvider(text: "Un matin calme."))
+        let completed = try XCTUnwrap(model.result)
+
+        model.beginExternalReplacement()
+        XCTAssertTrue(model.canRestorePreviousWorkspace)
+        XCTAssertEqual(model.text, "")
+        XCTAssertEqual(model.translatedText, "")
+        XCTAssertEqual(model.sourceName, "")
+        XCTAssertNil(model.request)
+        model.sourceName = "Another constructed application"
+        model.submitCapturedText("The replacement passage.", serviceRevision: model.captureServiceIntent())
+        model.clear()
+        XCTAssertTrue(model.undoWorkspaceChange(), "Clear retains its ordinary edit undo")
+        XCTAssertEqual(model.text, "The replacement passage.")
+
+        XCTAssertTrue(model.restorePreviousWorkspace())
+        await settleTasks()
+        XCTAssertEqual(model.text, "A quiet morning.")
+        XCTAssertEqual(model.translatedText, "Un matin calme.")
+        XCTAssertEqual(model.source, "en")
+        XCTAssertEqual(model.target, "fr")
+        XCTAssertEqual(model.sourceName, "A constructed source application")
+        XCTAssertEqual(model.result, completed)
+        XCTAssertEqual(model.phase, .completed)
+        XCTAssertNil(model.request)
+        XCTAssertNil(model.configuration)
+        XCTAssertFalse(model.canUndoWorkspaceChange)
+        XCTAssertFalse(model.canRedoWorkspaceChange)
+        XCTAssertFalse(model.canRestorePreviousWorkspace)
+        XCTAssertFalse(model.restorePreviousWorkspace())
+    }
+
+    func testEmptyAndFailedCapturesPreserveLastUsefulWorkspaceButEditableFailuresCanBeRecovered() {
+        let model = TranslationModel()
+        model.text = "The original editable draft."
+        XCTAssertTrue(model.beginExternalReplacement())
+        model.fail("Constructed empty-capture failure")
+        XCTAssertFalse(model.beginExternalReplacement())
+        model.beginRecognition()
+        model.fail("Constructed empty-capture failure")
+        XCTAssertFalse(model.beginExternalReplacement())
+        XCTAssertTrue(model.restorePreviousWorkspace())
+        XCTAssertEqual(model.text, "The original editable draft.")
+
+        model.beginExternalReplacement()
+        model.text = "A manually edited passage after a failed capture."
+        model.fail("Constructed service failure")
+        model.beginExternalReplacement()
+        XCTAssertTrue(model.restorePreviousWorkspace())
+        XCTAssertEqual(model.text, "A manually edited passage after a failed capture.")
+        XCTAssertEqual(model.phase, .failed("Constructed service failure"))
+    }
+
+    func testEachDeliveredReplacementKeepsOnlyTheImmediatelyPreviousWorkspace() {
+        let model = TranslationModel()
+        model.text = "The first passage."
+        model.beginExternalReplacement()
+        model.submitCapturedText("The second passage.", serviceRevision: 0)
+        model.beginExternalReplacement()
+        model.submitCapturedText("The third passage.", serviceRevision: 0)
+        XCTAssertTrue(model.restorePreviousWorkspace())
+        XCTAssertEqual(model.text, "The second passage.")
+        XCTAssertEqual(model.phase, .cancelled, "A captured in-flight request is restored stopped")
+        XCTAssertNil(model.request)
+        XCTAssertFalse(model.restorePreviousWorkspace())
+    }
+
+    func testRestoringPreviousWorkspaceRejectsLateResponsesFromBothReplacedRequests() async throws {
+        let model = TranslationModel()
+        model.source = "en"
+        model.text = "The first pending passage."
+        model.submit()
+        let firstProvider = SuspendedProvider()
+        let firstRequest = try XCTUnwrap(model.request)
+        let firstTask = Task { await model.run(firstRequest, provider: firstProvider) }
+        while firstProvider.continuation == nil { await Task.yield() }
+        model.beginExternalReplacement()
+        model.submitCapturedText("The second pending passage.", serviceRevision: 0)
+        let secondProvider = SuspendedProvider()
+        let secondRequest = try XCTUnwrap(model.request)
+        let secondTask = Task { await model.run(secondRequest, provider: secondProvider) }
+        while secondProvider.continuation == nil { await Task.yield() }
+
+        XCTAssertTrue(model.restorePreviousWorkspace())
+        firstProvider.continuation?.resume(returning: TranslationResult(text: "First late result", source: "en", target: "zh-Hans"))
+        secondProvider.continuation?.resume(returning: TranslationResult(text: "Second late result", source: "en", target: "zh-Hans"))
+        await firstTask.value
+        await secondTask.value
+        XCTAssertEqual(model.text, "The first pending passage.")
+        XCTAssertEqual(model.translatedText, "")
+        XCTAssertEqual(model.phase, .cancelled)
+        XCTAssertNil(model.result)
+        XCTAssertNil(model.request)
+        XCTAssertNil(model.configuration)
+    }
+
+    func testRestoringWaitingOrComposingInputDoesNotResumeAutomaticTranslation() async {
+        let sleeper = ControlledSleeper()
+        defer { sleeper.releaseAll() }
+        let model = TranslationModel(automaticallyTranslates: true, sleep: sleeper.sleep)
+        model.source = "en"
+        model.editingChanged("A waiting draft.", isComposing: false)
+        await sleeper.waitForCount(1)
+        model.beginExternalReplacement()
+        XCTAssertTrue(model.restorePreviousWorkspace())
+        sleeper.releaseFirst()
+        await settleTasks()
+        XCTAssertEqual(model.text, "A waiting draft.")
+        XCTAssertEqual(model.phase, .cancelled)
+        XCTAssertNil(model.request)
+
+        model.editingChanged("A composing draft", isComposing: true)
+        model.beginExternalReplacement()
+        XCTAssertFalse(model.isComposing)
+        XCTAssertTrue(model.restorePreviousWorkspace())
+        XCTAssertEqual(model.text, "A composing draft")
+        XCTAssertEqual(model.phase, .cancelled)
+        XCTAssertFalse(model.isComposing)
+        XCTAssertNil(model.request)
+    }
+
+    func testScreenshotWorkspaceRestoresPixelsRegionsTranslationsAndLocalizedSourceName() async throws {
+        let originalLanguage = try XCTUnwrap(AppInterfaceLanguage(rawValue: L10n.currentLanguageIdentifier))
+        defer { L10n.apply(originalLanguage) }
+        L10n.apply(.english)
+        let image = try recoveryImage()
+        let region = ScreenshotRegion(id: UUID(), text: "A clear screenshot passage.",
+            bounds: CGRect(x: 0.1, y: 0.3, width: 0.8, height: 0.2), confidence: 1, role: .paragraph, separator: "")
+        let model = TranslationModel()
+        model.source = "en"
+        model.useScreenshotSourceName()
+        model.submitCapturedDocument(ScreenshotDocument(image: image, regions: [region]), serviceRevision: 0)
+        await model.run(try XCTUnwrap(model.request), provider: ImmediateProvider(text: "清晰的截图段落。"))
+        let completed = model.result
+        let document = model.screenshot
+        model.beginExternalReplacement()
+        model.submitCapturedText("An unrelated passage.", serviceRevision: 0)
+        L10n.apply(.simplifiedChinese)
+        XCTAssertTrue(model.restorePreviousWorkspace())
+        XCTAssertEqual(model.screenshot, document)
+        XCTAssertTrue(model.screenshot?.image === image)
+        XCTAssertEqual(model.screenshot?.translations[region.id], "清晰的截图段落。")
+        XCTAssertEqual(model.translatedText, "清晰的截图段落。")
+        XCTAssertEqual(model.sourceName, "截图")
+        XCTAssertEqual(model.result, completed)
+        XCTAssertEqual(model.phase, .completed)
+        XCTAssertNil(model.request)
+        L10n.apply(.english)
+        XCTAssertEqual(model.sourceName, "Screenshot")
+    }
+
+    func testRecognitionReplacementAndRestoreCancelOCRWithoutReplacingUsefulRecovery() throws {
+        let model = TranslationModel()
+        let image = try recoveryImage()
+        var cancellations = 0
+        model.text = "The useful previous draft."
+        model.beginExternalReplacement()
+        model.beginRecognition(image: image, cancellation: { cancellations += 1 })
+        XCTAssertFalse(model.beginExternalReplacement())
+        XCTAssertEqual(cancellations, 1)
+        model.beginRecognition(image: image, cancellation: { cancellations += 1 })
+        XCTAssertTrue(model.restorePreviousWorkspace())
+        XCTAssertEqual(cancellations, 2)
+        XCTAssertEqual(model.text, "The useful previous draft.")
+        XCTAssertNil(model.screenshot)
+        XCTAssertFalse(model.isBusy)
+
+        model.clear()
+        model.useScreenshotSourceName()
+        model.beginRecognition(image: image, cancellation: { cancellations += 1 })
+        model.beginExternalReplacement()
+        XCTAssertEqual(cancellations, 3)
+        XCTAssertTrue(model.restorePreviousWorkspace())
+        XCTAssertTrue(model.screenshot?.image === image)
+        XCTAssertEqual(model.phase, .cancelled)
+        XCTAssertFalse(model.isBusy)
+    }
+
+    private func recoveryImage() throws -> CGImage {
+        let context = try XCTUnwrap(CGContext(data: nil, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 32,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        return try XCTUnwrap(context.makeImage())
+    }
+
     func testAppleTranslationRetainsOriginalLineAndParagraphBreaks() {
         for separator in ["\n", "\r\n", "\r", "\u{0085}", "\u{2028}", "\u{2029}"] {
             let source = "First.\(separator)123\(separator)\(separator)Last."

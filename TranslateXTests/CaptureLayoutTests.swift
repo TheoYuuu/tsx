@@ -52,12 +52,40 @@ final class CaptureLayoutTests: XCTestCase {
         }
     }
 
-    func testNotificationInvalidatesIntentEvenWhenCurrentMetadataHasReturnedToOriginal() throws {
+    func testUnchangedScreenNotificationKeepsCaptureIntentValid() throws {
         let snapshot = layout()
         let center = NotificationCenter()
         let guardValue = try CaptureLayoutGuard(notificationCenter: center, currentLayout: { snapshot })
         defer { guardValue.stop() }
         center.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        center.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        try guardValue.validate(referenceTop: snapshot.referenceTop)
+        XCTAssertEqual(try guardValue.validatedDisplays(snapshot.displays), snapshot.displays)
+    }
+
+    func testObservedLayoutChangeInvalidatesIntentEvenAfterMetadataReturnsToOriginal() throws {
+        let snapshot = layout()
+        let center = NotificationCenter()
+        let source = MutableLayoutSource(snapshot)
+        let guardValue = try CaptureLayoutGuard(notificationCenter: center, currentLayout: source.read)
+        defer { guardValue.stop() }
+        source.current = CaptureLayoutSnapshot(primaryDisplayID: 2, referenceTop: 900, displays: snapshot.displays)
+        center.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        source.current = snapshot
+        center.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        assertLayoutChanged { try guardValue.validate() }
+        assertLayoutChanged { _ = try guardValue.validatedDisplays(snapshot.displays) }
+    }
+
+    func testUnavailableLayoutNotificationPermanentlyInvalidatesIntent() throws {
+        let snapshot = layout()
+        let center = NotificationCenter()
+        let source = MutableLayoutSource(snapshot)
+        let guardValue = try CaptureLayoutGuard(notificationCenter: center, currentLayout: source.read)
+        defer { guardValue.stop() }
+        source.current = nil
+        center.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        source.current = snapshot
         assertLayoutChanged { try guardValue.validate() }
         assertLayoutChanged { _ = try guardValue.validatedDisplays(snapshot.displays) }
     }
@@ -92,7 +120,8 @@ final class CaptureLayoutTests: XCTestCase {
     func testLayoutChangeDuringSuspendedWorkDiscardsItsLateResult() async throws {
         let snapshot = layout()
         let center = NotificationCenter()
-        let guardValue = try CaptureLayoutGuard(notificationCenter: center, currentLayout: { snapshot })
+        let source = MutableLayoutSource(snapshot)
+        let guardValue = try CaptureLayoutGuard(notificationCenter: center, currentLayout: source.read)
         defer { guardValue.stop() }
         let work = SuspendedLayoutWork()
         var accepted: String?
@@ -103,6 +132,7 @@ final class CaptureLayoutTests: XCTestCase {
             accepted = result
         }
         await work.waitUntilStarted()
+        source.current = CaptureLayoutSnapshot(primaryDisplayID: 2, referenceTop: 900, displays: snapshot.displays)
         center.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
         work.complete("A synthetic late OCR result")
         do {
@@ -117,7 +147,8 @@ final class CaptureLayoutTests: XCTestCase {
     func testExplicitCancellationWinsOverLayoutFailureAndDoesNotAffectReplacement() async throws {
         let snapshot = layout()
         let center = NotificationCenter()
-        let old = try CaptureLayoutGuard(notificationCenter: center, currentLayout: { snapshot })
+        let source = MutableLayoutSource(snapshot)
+        let old = try CaptureLayoutGuard(notificationCenter: center, currentLayout: source.read)
         let work = SuspendedLayoutWork()
         let task = Task {
             try old.validate()
@@ -126,9 +157,11 @@ final class CaptureLayoutTests: XCTestCase {
         }
         await work.waitUntilStarted()
         task.cancel()
+        source.current = CaptureLayoutSnapshot(primaryDisplayID: 2, referenceTop: 900, displays: snapshot.displays)
         center.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
         old.stop()
-        let replacement = try CaptureLayoutGuard(notificationCenter: center, currentLayout: { snapshot })
+        source.current = snapshot
+        let replacement = try CaptureLayoutGuard(notificationCenter: center, currentLayout: source.read)
         defer { replacement.stop() }
         work.complete("A cancelled capture")
         do {
@@ -138,6 +171,9 @@ final class CaptureLayoutTests: XCTestCase {
             XCTAssertTrue(error is CancellationError)
         }
         try replacement.validate()
+        center.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
+        try replacement.validate()
+        source.current = CaptureLayoutSnapshot(primaryDisplayID: 2, referenceTop: 900, displays: snapshot.displays)
         center.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
         assertLayoutChanged { try replacement.validate() }
     }

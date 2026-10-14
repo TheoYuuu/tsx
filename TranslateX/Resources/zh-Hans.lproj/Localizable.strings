@@ -1067,6 +1067,18 @@
 "Screen Recording permission" = "屏幕录制权限";
 "Reads only when you use the shortcut. No background collection." = "仅在按下快捷键时读取，不在后台采集。";
 "Captures only the area you select. Screenshots stay in memory on your Mac." = "仅截取你选定的区域，截图只保留在本机内存中。";
+"Allow selection translation" = "允许选词翻译";
+"Allow screenshot translation" = "允许截图翻译";
+"TSX selection translation" = "TSX 选词翻译";
+"TSX screenshot translation" = "TSX 截图翻译";
+"Allow TSX to read selected text when you start a translation with a shortcut or menu action. After enabling access, start selection translation again." = "允许 TSX 在你通过快捷键或菜单发起翻译时读取选中文字。开启权限后，重新开始选词翻译即可。";
+"Allow TSX to capture the screen area you select and recognize its text. After enabling access, start screenshot translation again." = "允许 TSX 读取你主动框选的屏幕区域，识别并翻译其中的文字。开启权限后，重新开始截图即可。";
+"Only reads selected text when you start a translation." = "仅在你主动发起翻译时读取选中文字。";
+"Only captures the area you choose." = "仅在你主动框选时截取。";
+"No background monitoring or saved translation history." = "不在后台监控，不保存翻译历史。";
+"Screenshots stay in memory by default. Copying or saving is your choice." = "截图默认仅暂存内存，复制或保存由你主动操作。";
+"When you use an external service, the selected text is sent to that service." = "使用外部服务时，选中的文字会发送给所选服务。";
+"When you use an external service, recognized text is sent to that service. Screenshots are not uploaded." = "使用外部服务时，识别出的文字会发送给所选服务，截图不上传。";
 "Go to System Settings" = "前往系统设置";
 
 "Update complete" = "更新完成";
@@ -1098,3 +1110,26 @@
 "Downloading the update" = "正在下载更新";
 
 "Installing the update" = "正在安装更新";
+
+"Typed input" = "手动输入";
+"Restore previous translation" = "恢复上一条";
+"Restore the content replaced by the last capture" = "恢复上次取词或截图替换前的内容";
+
+// In-place screenshot translation
+"%d passages need the full-text view" = "有 %d 段译文需展开查看";
+"Copied" = "已复制";
+"Copy original image" = "复制原图";
+"Copy translated image" = "复制译图";
+"Image saved" = "图片已保存";
+"Long passages remain unchanged in the image. Open the full text to read their translations." = "过长的段落在图片中保留原文，可在这里阅读完整译文。";
+"More actions" = "更多操作";
+"Original image" = "原图";
+"Save original image" = "保存原图";
+"Save translated image" = "保存译图";
+"Screenshot full text" = "完整文字";
+"Translated image" = "译图";
+"Unable to copy. Try again." = "复制失败，请重试。";
+"Unable to prepare the image. Try again." = "无法生成图片，请重试。";
+"Unable to save the image. Choose another location." = "图片未能保存，请选择其他位置。";
+"Generating translated image…" = "正在生成译图…";
+"Failed to prepare translated image. Retry." = "译图生成失败，点击重试";

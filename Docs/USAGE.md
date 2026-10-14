@@ -16,6 +16,12 @@
 
 也可以从菜单栏访问这些入口。在设置中可以修改或停用快捷键；如果与其他应用冲突，请换用其他组合。已有用户的快捷键设置会保留，请以应用菜单或设置中显示的组合为准。
 
+## 一个窗口继续翻译
+
+输入和选中文字共用主窗口；截图结果可通过「在主窗口打开」进入同一工作区。横向和纵向布局分别保留尺寸。左上角红黄绿按钮右侧显示来源，例如应用名称、「截图」或「手动输入」。窗口失去焦点时仍然保留；快捷调用后按 Esc 可收起窗口，并返回仍在运行的来源应用。
+
+成功取得选中文字，或主动把截图结果送入主窗口后，新内容会替换当前工作区。点击标题栏的「恢复上一条」，可以找回最近一次替换前的原文、译文、图片和语言选择；恢复不会自动重新发送翻译请求，未完成的翻译也不会自动继续。仅保留一条恢复内容，使用后即消耗，退出应用后不保留。取消框选或未获得所需权限时，当前内容不会被替换。
+
 ## 首次使用与权限
 
 - 输入或粘贴翻译不需要辅助功能或屏幕录制权限。
@@ -28,7 +34,9 @@
 
 普通翻译的两侧文字都可以编辑。开启自动互译后，输入停顿会更新另一侧；关闭后可手动触发翻译。使用收费或有额度限制的服务时，自动请求也可能消耗额度。
 
-截图翻译提供文字模式和原图模式，可以修正识别文字、修改译文，并在原图位置进行对照。复杂表格、竖排文字和复杂背景可能影响识别或排版；原图对照不等于无痕修图或原字体重建。
+截图完成后，结果显示在所选区域附近，保持完整原图，并在对应文字位置生成译文；主窗口当前内容不受影响。开启所选服务的自动互译时，松开鼠标后自动翻译；关闭时点击「翻译」。工具栏可切换源语言与目标语言、交换语言、停止或重试、对照原图和查看全文。按 Esc 收起结果并返回来源应用；菜单、全文浮层或保存对话框打开时，Esc 优先关闭它们。
+
+可复制原文、译文、原图或译图，也可分别保存原图和译图为 PNG。图片按原始像素尺寸导出，不包含工具栏。需要编辑识别文字或译文时，选择「更多 → 在主窗口打开」，再使用文字模式或原图模式。复杂表格、竖排文字和复杂背景可能影响识别或排版；过长或重叠区域保留原图并提供完整译文，原图排版不等于无痕修图或原字体重建。
 
 ## 翻译服务与内容保留
 
@@ -40,7 +48,7 @@ API 服务使用自己的 API Key。选择预设厂商，或使用 New API／自
 
 ## 用量统计
 
-在「设置 → 用量统计」查看总成本、总请求数和消耗 Tokens，使用日期及服务筛选，并切换柱状图或热力图。下方「请求记录」按页展示近期请求，「定价」可刷新受支持官方模型的美元参考费率。成本属于估算，不能替代服务商账单；微小非零成本显示为 `<$0.0001`，悬停可查看完整值。Apple 本地翻译免费，不报告 Token 或 HTTP 状态码。
+在「设置 → 用量统计」查看总成本、总请求数和消耗 Tokens，使用日期及服务筛选，并切换柱状图或热力图。下方「请求记录」按页展示近期请求，「定价」可刷新受支持官方模型的美元参考费率。成本属于估算，不能替代服务商账单；费用保留两位小数，不足一美分的非零成本显示为 `<$0.01`，悬停可查看完整值。Apple 本地翻译免费，不报告 Token 或 HTTP 状态码。
 
 「翻译服务」中每个服务的「配置用量查询」可设置余额查询、自动查询间隔、超时与本机用量记录。这里只统计通过 TSX 发出的请求，不保存翻译内容；暂停不影响翻译和账户查询。近期明细最多保留 30 个自然日、10,000 条，更早或超额明细按天汇总，历史总量持续保留。清空统计需确认；删除服务也会删除其统计。
 
@@ -70,6 +78,12 @@ Choose the `TSX-version-macOS-universal.dmg` release asset for Apple silicon or 
 
 These actions are also available from the menu bar. Customize or disable shortcuts in Settings. Choose another combination if a shortcut conflicts with another app. Existing shortcut preferences are preserved; use the bindings shown in the app's menus or Settings.
 
+## Continue in one window
+
+Typed input and selected text share the main window. Choose Open in main window to bring a screenshot result into the same workspace. Side-by-side and stacked layouts remember their sizes separately. The source appears beside the traffic-light buttons at the upper left, such as an app name, Screenshot, or Typed input. The window stays open when it loses focus. After a shortcut opens it, press Esc to hide it and return to the source app if that app is still running.
+
+Once selected text is captured, or you choose to open a screenshot result in the main window, the new content replaces the current workspace. Choose Restore previous translation in the title bar to recover the text, translation, image, and language choices from before the most recent replacement. Restoring does not resend a translation request or resume an unfinished translation. Only one previous workspace is kept, it is consumed when restored, and it is discarded when the app quits. Cancelling region selection or lacking permission leaves the current content unchanged.
+
 ## Getting started and permissions
 
 - Typing or pasting text does not require Accessibility or Screen Recording permission.
@@ -82,7 +96,9 @@ These actions are also available from the menu bar. Customize or disable shortcu
 
 Both sides of a regular translation are editable. With automatic translation enabled, pausing after an edit updates the other side. Turn it off to translate manually. Automatic requests may use a service's allowance or incur charges.
 
-Screenshot translation offers text and original-image views. Correct recognized text, edit translations, and compare them at their original positions. Complex tables, vertical text, and intricate backgrounds may affect recognition and layout. The image view does not provide seamless image retouching or font reconstruction.
+After capture, the result appears near the selected region, preserving the full original image and placing translations over the corresponding text. The current main-window content stays intact. With automatic translation enabled for the selected service, translation starts after you release the mouse; otherwise, click Translate. The toolbar lets you select or swap languages, stop or retry, compare the original, and read the full text. Esc dismisses the result and returns to the source app; open menus, the full-text popover, and save dialogs handle Esc first.
+
+Copy the source text, translation, original image, or translated image, or save either image as PNG. Exports preserve the original pixel dimensions and exclude the toolbar. To edit recognized text or translations, choose More → Open in main window and use its text or image view. Complex tables, vertical text, and intricate backgrounds may affect recognition and layout. Regions with text that cannot fit or overlaps another region retain the original pixels and offer the full translation. Image layout does not provide seamless retouching or font reconstruction.
 
 ## Services and session content
 
@@ -94,7 +110,7 @@ Translation text and screenshots remain available only during the current app se
 
 ## Usage statistics
 
-Settings → Usage shows total cost, total requests, and consumed tokens. Filter by date or service, switch between bar charts and heatmaps, and page through recent request records. The Pricing tab refreshes USD reference rates for supported official models. Costs are estimates, not provider invoices. Tiny nonzero costs appear as `<$0.0001`; hover for the precise amount. Apple local translation is free and does not report tokens or HTTP status codes.
+Settings → Usage shows total cost, total requests, and consumed tokens. Filter by date or service, switch between bar charts and heatmaps, and page through recent request records. The Pricing tab refreshes USD reference rates for supported official models. Costs are estimates, not provider invoices. Costs use two decimal places; nonzero amounts below one cent appear as `<$0.01`; hover for the precise amount. Apple local translation is free and does not report tokens or HTTP status codes.
 
 Use Configure usage query on a service row to manage balance querying, intervals, timeouts, and local usage recording. Only requests made through TSX are counted; translation text is not stored. Pausing keeps history and does not affect translation or balance queries. Recent details are kept for up to 30 calendar days and 10,000 requests, with older or excess metrics aggregated by day. Clearing statistics requires confirmation; deleting a service also removes its statistics.
 

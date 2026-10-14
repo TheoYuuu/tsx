@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// One toolbar for both windows. Its center is independent of the widths of
+/// The workspace toolbar. Its center is independent of the widths of
 /// either action group; resizing keeps the existing editors mounted.
 struct TranslationCommandBar: View {
     @Bindable var model: TranslationModel
@@ -73,7 +73,7 @@ struct TranslationCommandBar: View {
         Button { if requesting { model.cancel() } else { model.submit() } } label: {
             HStack(spacing: 5) {
                 Text(model.workspaceActionTitle).font(.system(size: 11, weight: .medium))
-                if !tight { Text(requesting ? "esc" : "⌘ ↩").font(.system(size: 9)).opacity(0.7) }
+                if !tight && !requesting { Text("⌘ ↩").font(.system(size: 9)).opacity(0.7) }
             }
             .foregroundStyle(!requesting && canSubmit ? Color.white : theme.muted)
             .padding(.horizontal, tight ? 13 : 16)

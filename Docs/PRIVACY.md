@@ -7,7 +7,7 @@
 ## 本机处理
 
 - 默认通过 Apple 系统翻译能力处理文字；支持的语言及所需资源由系统提供，首次准备语言包可能需要联网。
-- 截图文字识别在本机完成。截图保存在运行内存中，不作为翻译请求上传，也不由 TSX 保存到磁盘。
+- 截图文字识别和译图合成在本机完成。截图默认保存在运行内存中，不作为翻译请求上传；只有主动选择复制或保存时，才写入剪贴板或你指定的图片文件。
 - TSX 不把翻译正文和译文保存为磁盘历史，也不将它们写入应用诊断日志。退出应用后不会恢复这些内容。
 - 偏好设置、服务地址、模型选择及服务测试的时间与结果状态会保存在本机。测试状态记录不包含翻译正文或完整响应。
 - API 密钥使用 macOS 钥匙串保存。可选账号登录使用独立的本机凭据存储；退出应用与退出账号是不同操作。
@@ -42,7 +42,7 @@ This notice describes data behavior in the current TSX source. For a published v
 ## Processing on your Mac
 
 - Apple system translation is the default. Supported languages and resources depend on the system; preparing language resources may require an internet connection.
-- Screenshot text recognition runs on your Mac. Images stay in runtime memory, are not uploaded as translation requests, and are not saved to disk by TSX.
+- Screenshot text recognition and translated-image composition run on your Mac. Images stay in runtime memory and are not uploaded as translation requests. Only explicit copy or save actions write text or images to the clipboard or an image file you choose.
 - TSX does not save translation text or results as disk history or include them in application diagnostic logs. They are not restored after quitting.
 - Preferences, service endpoints, model selections, and service-test timestamps and status are stored locally. Test status records do not include translation text or full responses.
 - API keys are stored in macOS Keychain. Optional account sign-in uses separate local credential storage. Quitting the app does not sign you out of an account.

@@ -10,14 +10,14 @@
   <a href="README.md">简体中文</a> · English
 </p>
 
-**TSX 1.2.0 · A free, open-source translation app for Mac.** This repository brings together application source, documentation, feedback, and official installers.
+**TSX 1.3.0 · A free, open-source translation app for Mac.** This repository brings together application source, documentation, feedback, and official installers.
 
 [Releases](https://github.com/TheoYuuu/tsx/releases) · [Usage guide](Docs/USAGE.md#english) · [Privacy and data](Docs/PRIVACY.md#english) · [Report an issue](https://github.com/TheoYuuu/tsx/issues/new/choose)
 
 ## Translation that fits your workflow
 
-- **Selected text**: translate a selection in another app with a shortcut and read the result in a floating window.
-- **Screenshot translation**: select a screen region, recognize text on your Mac, and read the translated text or compare it at its original position.
+- **One translation window**: typed input and selected text share the main window, with the source at the upper left. Restore the previous content after a shortcut replaces it.
+- **Screenshot translation**: show translations near the selected screen region, switch languages, compare the original, copy or save images, and open the result in the main window for further editing.
 - **Two-way editing**: edit either side, enable automatic translation when needed, switch languages, copy, and undo.
 - **Apple local translation by default**: translate supported languages on your Mac once the necessary language resources are ready.
 - **Your choice of service**: configure a translation API, compatible endpoint, or local model service.
@@ -34,7 +34,7 @@ See release notes for changes and known issues. Text selection depends on the so
 
 ## Downloads and updates
 
-Download **TSX-1.2.0-macOS-universal.dmg** from the [latest release](https://github.com/TheoYuuu/tsx/releases/latest), open it, and drag TSX into Applications. Official installers are signed with Developer ID and notarized by Apple.
+Download **TSX-1.3.0-macOS-universal.dmg** from the [latest release](https://github.com/TheoYuuu/tsx/releases/latest), open it, and drag TSX into Applications. Official installers are signed with Developer ID and notarized by Apple.
 
 GitHub's automatic **Source code (zip / tar.gz)** archives contain the project source at that version. They are **not installable TSX applications**; download the installer attached to the release.
 

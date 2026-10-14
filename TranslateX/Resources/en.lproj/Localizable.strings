@@ -1067,6 +1067,18 @@
 "Screen Recording permission" = "Screen Recording permission";
 "Reads only when you use the shortcut. No background collection." = "Reads only when you use the shortcut. No background collection.";
 "Captures only the area you select. Screenshots stay in memory on your Mac." = "Captures only the area you select. Screenshots stay in memory on your Mac.";
+"Allow selection translation" = "Allow selection translation";
+"Allow screenshot translation" = "Allow screenshot translation";
+"TSX selection translation" = "TSX selection translation";
+"TSX screenshot translation" = "TSX screenshot translation";
+"Allow TSX to read selected text when you start a translation with a shortcut or menu action. After enabling access, start selection translation again." = "Allow TSX to read selected text when you start a translation with a shortcut or menu action. After enabling access, start selection translation again.";
+"Allow TSX to capture the screen area you select and recognize its text. After enabling access, start screenshot translation again." = "Allow TSX to capture the screen area you select and recognize its text. After enabling access, start screenshot translation again.";
+"Only reads selected text when you start a translation." = "Only reads selected text when you start a translation.";
+"Only captures the area you choose." = "Only captures the area you choose.";
+"No background monitoring or saved translation history." = "No background monitoring or saved translation history.";
+"Screenshots stay in memory by default. Copying or saving is your choice." = "Screenshots stay in memory by default. Copying or saving is your choice.";
+"When you use an external service, the selected text is sent to that service." = "When you use an external service, the selected text is sent to that service.";
+"When you use an external service, recognized text is sent to that service. Screenshots are not uploaded." = "When you use an external service, recognized text is sent to that service. Screenshots are not uploaded.";
 "Go to System Settings" = "Go to System Settings";
 
 "Update complete" = "Update complete";
@@ -1098,3 +1110,26 @@
 "Downloading the update" = "Downloading the update";
 
 "Installing the update" = "Installing the update";
+
+"Typed input" = "Typed input";
+"Restore previous translation" = "Restore previous";
+"Restore the content replaced by the last capture" = "Restore the content replaced by the last capture";
+
+// In-place screenshot translation
+"%d passages need the full-text view" = "%d passages need the full-text view";
+"Copied" = "Copied";
+"Copy original image" = "Copy original image";
+"Copy translated image" = "Copy translated image";
+"Image saved" = "Image saved";
+"Long passages remain unchanged in the image. Open the full text to read their translations." = "Long passages remain unchanged in the image. Open the full text to read their translations.";
+"More actions" = "More actions";
+"Original image" = "Original image";
+"Save original image" = "Save original image";
+"Save translated image" = "Save translated image";
+"Screenshot full text" = "Screenshot full text";
+"Translated image" = "Translated image";
+"Unable to copy. Try again." = "Unable to copy. Try again.";
+"Unable to prepare the image. Try again." = "Unable to prepare the image. Try again.";
+"Unable to save the image. Choose another location." = "Unable to save the image. Choose another location.";
+"Generating translated image…" = "Generating translated image…";
+"Failed to prepare translated image. Retry." = "Failed to prepare translated image. Retry.";

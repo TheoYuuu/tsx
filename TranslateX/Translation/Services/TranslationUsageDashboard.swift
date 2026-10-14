@@ -1,5 +1,28 @@
 import Foundation
 
+enum UsageRequestTimeFormat {
+    static func date(_ date: Date, locale: Locale, timeZone: TimeZone = .current) -> String {
+        format(date, template: "yMMMd", locale: locale, timeZone: timeZone)
+    }
+
+    static func time(_ date: Date, locale: Locale, timeZone: TimeZone = .current) -> String {
+        format(date, template: "HHmmss", locale: locale, timeZone: timeZone)
+    }
+
+    static func detail(_ date: Date, locale: Locale, timeZone: TimeZone = .current) -> String {
+        format(date, template: "yMMMMdHHmmssZZZZ", locale: locale, timeZone: timeZone)
+    }
+
+    private static func format(_ date: Date, template: String, locale: Locale, timeZone: TimeZone) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = timeZone
+        formatter.setLocalizedDateFormatFromTemplate(template)
+        return formatter.string(from: date)
+    }
+}
+
 /// Combines retained request details with older daily totals, without fabricating
 /// request rows or treating unreported API metrics as zero.
 struct TranslationUsageDashboard {

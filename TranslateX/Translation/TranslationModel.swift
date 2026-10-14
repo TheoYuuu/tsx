@@ -116,6 +116,15 @@ final class TranslationModel {
     @ObservationIgnored private var verifiedSnapshot: WorkspaceSnapshot?
     private var undoSnapshot: WorkspaceSnapshot?
     private var redoSnapshot: WorkspaceSnapshot?
+    private var previousWorkspace: ExternalWorkspaceSnapshot?
+
+    /// One in-memory recovery slot for replacement by a shortcut. This is
+    /// separate from editing undo and never retains a request or task.
+    private struct ExternalWorkspaceSnapshot {
+        let content: TranslationHandoff
+        let sourceName: String
+        let isScreenshotSource: Bool
+    }
 
     private struct WorkspaceSnapshot: Equatable {
         let text: String
@@ -171,6 +180,7 @@ final class TranslationModel {
     var canClear: Bool { !isComposing && (!text.isEmpty || !translatedText.isEmpty || screenshot != nil) }
     var canUndoWorkspaceChange: Bool { !isComposing && !isBusy && undoSnapshot != nil }
     var canRedoWorkspaceChange: Bool { !isComposing && !isBusy && redoSnapshot != nil }
+    var canRestorePreviousWorkspace: Bool { previousWorkspace != nil }
     var displayedResult: TranslationResult? { result ?? previousResult }
     var serviceDisplayName: String { serviceConfiguration?.name ?? L10n.string("Apple Translation") }
     var availableServices: [TranslationServiceConfiguration] { services?.configurations ?? [] }
@@ -312,7 +322,8 @@ final class TranslationModel {
         submit()
     }
 
-    func submitCapturedDocument(_ document: ScreenshotDocument, serviceRevision capturedRevision: Int) {
+    func submitCapturedDocument(_ document: ScreenshotDocument, serviceRevision capturedRevision: Int,
+                                startAutomatically: Bool = true, respectAutomaticPreference: Bool = false) {
         synchronizeService()
         recognitionCancellation = nil
         clear(keepingUndo: false)
@@ -323,7 +334,7 @@ final class TranslationModel {
             fail(localized: "The translation service changed. Translate again to use the selected service.")
             return
         }
-        submit()
+        if startAutomatically { submit(automatic: respectAutomaticPreference) }
     }
 
     /// Screenshot edits remain attached to stable region coordinates. Editing
@@ -557,6 +568,33 @@ final class TranslationModel {
         if wasBusy { phase = .cancelled; statusMessageKey = "" }
     }
 
+    @discardableResult func beginExternalReplacement() -> Bool {
+        let hasText = !(text + translatedText).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        // An empty/error-only capture, or a second capture while OCR has not
+        // delivered text, must not discard the previous useful workspace.
+        // Failed translations with editable source text are still recoverable.
+        let hasImage = screenshot != nil && (previousWorkspace == nil || screenshot?.regions.isEmpty == false)
+        let savesWorkspace = hasText || hasImage
+        if savesWorkspace {
+            previousWorkspace = ExternalWorkspaceSnapshot(content: contentHandoff(),
+                sourceName: storedSourceName, isScreenshotSource: isScreenshotSource)
+        }
+        clear(keepingUndo: false)
+        isComposing = false
+        sourceName = ""
+        return savesWorkspace
+    }
+
+    @discardableResult func restorePreviousWorkspace() -> Bool {
+        guard let previousWorkspace else { return false }
+        self.previousWorkspace = nil
+        acceptHandoff(previousWorkspace.content)
+        storedSourceName = previousWorkspace.sourceName
+        isScreenshotSource = previousWorkspace.isScreenshotSource
+        statusMessageKey = "Restored · Continue editing"
+        return true
+    }
+
     func clear(keepingUndo: Bool = true) {
         let previous = snapshot()
         cancelRecognition()
@@ -596,6 +634,17 @@ final class TranslationModel {
         phase = .empty
         statusMessageKey = "Swapped · Edit or translate to continue"
         undoSnapshot = previous; redoSnapshot = nil
+    }
+
+    /// A screenshot always keeps the captured pixels and OCR as its source.
+    /// Exchanging language choices must not turn the image into a text workspace.
+    func swapScreenshotLanguages() {
+        guard screenshot != nil, canSwapLanguages, let newTarget = resolvedSource else { return }
+        isUpdatingContext = true
+        source = target
+        target = LanguageCatalog.canonicalIdentifier(newTarget)
+        isUpdatingContext = false
+        languageChanged()
     }
 
     @discardableResult func undoWorkspaceChange() -> Bool {
@@ -647,6 +696,12 @@ final class TranslationModel {
     private func languageChanged() {
         if phase == .recognizing { return }
         invalidateRequest(); forgetUndo()
+        if screenshot != nil {
+            screenshot?.translations.removeAll()
+            setText("", on: .target)
+            partialSide = nil
+            translationWasEdited = false
+        }
         result = nil; verifiedSnapshot = nil; previousResult = nil
         phase = .empty; statusMessageKey = ""
         if inputSide == .source { detectedSource = Self.detectLanguage(text, target: target) }
@@ -672,6 +727,10 @@ final class TranslationModel {
 
     func makeHandoff() -> TranslationHandoff? {
         guard !isComposing, screenshot != nil || !(text + translatedText).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        return contentHandoff()
+    }
+
+    private func contentHandoff() -> TranslationHandoff {
         var completed: TranslationResult?
         if isServiceCurrent, phase == .completed, verifiedSnapshot == snapshot(), let result {
             let expectedTarget = inputSide == .source ? target : resolvedSource
@@ -687,6 +746,7 @@ final class TranslationModel {
     func acceptHandoff(_ handoff: TranslationHandoff?) {
         guard let handoff else { return }
         synchronizeService()
+        cancelRecognition()
         invalidateRequest(); forgetUndo()
         isComposing = false
         restore(WorkspaceSnapshot(text: handoff.text, translatedText: handoff.translatedText, source: handoff.source, target: handoff.target,
@@ -701,7 +761,7 @@ final class TranslationModel {
                 result = completed; phase = .completed; verifiedSnapshot = snapshot()
             } else {
                 switch handoff.phase {
-                case .waiting, .translating, .preparingLanguages: phase = .cancelled
+                case .waiting, .composing, .recognizing, .translating, .preparingLanguages: phase = .cancelled
                 case .completed: phase = .empty
                 default:
                     phase = handoff.phase
@@ -709,7 +769,7 @@ final class TranslationModel {
                 }
             }
         } else { phase = .empty }
-        // Expanding a window never resends content or turns a fragment into a result.
+        // Restoring a workspace never resends content or turns a fragment into a result.
     }
 
     static func isSameLanguage(_ source: String, _ target: String) -> Bool {

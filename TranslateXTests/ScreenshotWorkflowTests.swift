@@ -71,7 +71,7 @@ final class ScreenshotWorkflowTests: XCTestCase {
         for _ in 0..<3 {
             let inherited = state.restorationForRestart
             state.cancel() // start() cancels the preceding task.
-            state.cancel() // closeQuick() invokes the operation-cancel callback as well.
+            state.cancel() // cancelCapturedOperation() invokes the operation-cancel callback as well.
             XCTAssertNil(state.finish(current), "The preceding task must not restore a window after restart", file: file, line: line)
             current = state.begin(restoration: .none, inheritedRestoration: inherited)
         }

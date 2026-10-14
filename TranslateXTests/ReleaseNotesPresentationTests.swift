@@ -2,12 +2,12 @@ import XCTest
 @testable import TranslateX
 
 final class ReleaseNotesPresentationTests: XCTestCase {
-    func testAvailableUpdateDialogFitsMinimumAndReachesMaximumAtDefaultWindowSizes() {
+    func testAvailableUpdateDialogFitsMinimumDefaultAndLargeWindowSizes() {
         XCTAssertEqual(UpdateDialogLayout.size(in: TranslationLayout.sideBySide.minimumSize(for: .main)),
-                       CGSize(width: 520, height: 400))
+                       CGSize(width: 520, height: 360))
         for layout in TranslationLayout.allCases {
             XCTAssertEqual(UpdateDialogLayout.size(in: layout.defaultSize(for: .main)),
-                           CGSize(width: 620, height: 520))
+                           CGSize(width: 620, height: layout == .sideBySide ? 518 : 520))
         }
         XCTAssertEqual(UpdateDialogLayout.size(in: CGSize(width: 2_000, height: 1_200)),
                        CGSize(width: 620, height: 520))
@@ -17,17 +17,28 @@ final class ReleaseNotesPresentationTests: XCTestCase {
         let sizes = [CGSize(width: 660, height: 440), CGSize(width: 710, height: 500),
                      CGSize(width: 760, height: 560), CGSize(width: 980, height: 598)]
         let dialogs = sizes.map { UpdateDialogLayout.size(in: $0) }
-        XCTAssertEqual(dialogs[1], CGSize(width: 570, height: 460))
+        XCTAssertEqual(dialogs[1], CGSize(width: 570, height: 420))
         for (window, dialog) in zip(sizes, dialogs) {
             XCTAssertLessThanOrEqual(dialog.width, window.width - 40)
-            XCTAssertLessThanOrEqual(dialog.height, window.height - 40)
+            XCTAssertLessThanOrEqual(dialog.height, window.height - 80)
         }
         XCTAssertEqual(UpdateDialogLayout.size(in: CGSize(width: 980, height: 440)),
-                       CGSize(width: 620, height: 400))
+                       CGSize(width: 620, height: 360))
         XCTAssertEqual(UpdateDialogLayout.size(in: CGSize(width: 660, height: 780)),
                        CGSize(width: 520, height: 520))
         XCTAssertEqual(UpdateDialogLayout.size(in: CGSize(width: 500, height: 350)),
-                       CGSize(width: 460, height: 310))
+                       CGSize(width: 460, height: 270))
+    }
+
+    func testReleaseNotesHeightCapsAt520AndKeepsVerticalMargins() {
+        for height: CGFloat in [0, 60, 350, 440, 598, 600, 700, 1200, 2160] {
+            let window = CGSize(width: 1100, height: height)
+            let limit = UpdateDialogLayout.maximumHeight(in: window)
+            XCTAssertGreaterThanOrEqual(limit, 0)
+            XCTAssertLessThanOrEqual(limit, 520)
+            XCTAssertLessThanOrEqual(limit, max(0, height - 80))
+            if height >= 600 { XCTAssertEqual(limit, 520) }
+        }
     }
 
     private let now = Date(timeIntervalSince1970: 1_791_662_400) // A fixed instant, independent of the test machine.

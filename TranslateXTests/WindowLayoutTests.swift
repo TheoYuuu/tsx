@@ -4,52 +4,55 @@ import XCTest
 
 @MainActor
 final class WindowLayoutTests: XCTestCase {
-    func testQuickSizeSurvivesDismissalNewCaptureAndCoordinatorRestart() async throws {
+    func testSharedSizeSurvivesDismissalNewCaptureAndCoordinatorRestart() async throws {
         _ = NSApplication.shared
         let preferences = try preferences()
         let windows = try isolatedWindows(preferences: preferences)
-        windows.quickModel.text = "Constructed sample"
-        windows.showQuick(source: nil)
-        let panel = try window("translatex.quick")
+        windows.inputModel.text = "Constructed sample"
+        windows.showCapturedTranslation(source: nil)
+        let panel = try window("translatex.main")
         let chosen = NSSize(width: 810, height: 510)
         resize(panel, to: chosen, coordinator: windows)
-        windows.closeQuick(restoreFocus: false)
-        windows.prepareQuickTranslation()
-        windows.quickModel.text = "Another constructed sample"
-        windows.showQuick(source: nil)
+        windows.dismissTranslation(restoreFocus: false)
+        windows.prepareCapturedTranslation()
+        windows.inputModel.text = "Another constructed sample"
+        windows.showCapturedTranslation(source: nil)
         XCTAssertEqual(panel.frame.size, chosen)
         windows.shutdown()
 
         let restarted = try isolatedWindows(preferences: preferences)
         defer { restarted.shutdown() }
-        restarted.quickModel.text = "Restored reading workspace"
-        restarted.showQuick(source: nil)
-        XCTAssertEqual(try window("translatex.quick").frame.size, chosen)
+        restarted.inputModel.text = "Restored reading workspace"
+        restarted.showCapturedTranslation(source: nil)
+        XCTAssertEqual(try window("translatex.main").frame.size, chosen)
     }
 
-    func testPermissionAndRecognitionSizesNeverOverwriteTheReadingSize() async throws {
+    func testPermissionSizeIsSeparateAndRecognitionKeepsTheRememberedMainSize() async throws {
         _ = NSApplication.shared
         let preferences = try preferences()
         let chosen = NSSize(width: 830, height: 540)
-        preferences.rememberWindowSize(chosen, for: .quick, layout: .sideBySide)
+        preferences.rememberWindowSize(chosen, for: .main, layout: .sideBySide)
         let windows = try isolatedWindows(preferences: preferences)
         defer { windows.shutdown() }
-        windows.showQuick(source: nil, permission: .accessibility)
-        let panel = try window("translatex.quick")
-        resize(panel, to: NSSize(width: 440, height: 380), coordinator: windows)
-        windows.closeQuick(restoreFocus: false)
-        windows.prepareQuickTranslation()
-        windows.quickModel.beginRecognition()
-        windows.showQuick(source: nil)
-        XCTAssertEqual(panel.frame.size, NSSize(width: 392, height: 315))
-        windows.quickModel.text = "Recognized constructed sample"
-        windows.quickModel.cancel()
-        try await Task.sleep(for: .milliseconds(200))
-        XCTAssertEqual(panel.frame.size, chosen)
-        XCTAssertEqual(preferences.windowSize(for: .quick, layout: .sideBySide), chosen)
+        windows.showPermission(.accessibility, source: nil)
+        let permission = try window("translatex.permission")
+        resize(permission, to: NSSize(width: 440, height: 380), coordinator: windows)
+        windows.closePermission()
+        windows.prepareCapturedTranslation()
+        windows.inputModel.beginRecognition()
+        windows.showCapturedTranslation(source: nil)
+        let main = try window("translatex.main")
+        XCTAssertEqual(main.frame.size, chosen)
+        XCTAssertEqual(main.minSize, TranslationLayout.sideBySide.minimumSize(for: .main))
+        windows.inputModel.text = "Recognized constructed sample"
+        windows.inputModel.cancel()
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertEqual(main.frame.size, chosen)
+        XCTAssertEqual(preferences.windowSize(for: .main, layout: .sideBySide), chosen)
+        XCTAssertFalse(permission.isVisible)
     }
 
-    func testEachLayoutRestoresItsOwnQuickSizeAndKeepsEditorComposition() async throws {
+    func testEachLayoutRestoresItsOwnSharedSizeAndKeepsEditorComposition() async throws {
         _ = NSApplication.shared
         let inputMonitor = try isolateUnscriptedWindowInput()
         defer { NSEvent.removeMonitor(inputMonitor) }
@@ -58,11 +61,11 @@ final class WindowLayoutTests: XCTestCase {
         defer { windows.shutdown() }
         let service = TranslationServiceConfiguration(kind: .openAI)
         try windows.services.save(service, apiKey: "constructed-invalid-key")
-        windows.quickModel.selectService(service.id)
-        windows.quickModel.text = "Editable source "
-        windows.showQuick(source: nil)
+        windows.inputModel.selectService(service.id)
+        windows.inputModel.text = "Editable source "
+        windows.showCapturedTranslation(source: nil)
         try await Task.sleep(for: .milliseconds(150))
-        let panel = try window("translatex.quick")
+        let panel = try window("translatex.main")
         let editor = try XCTUnwrap(findEditor(try XCTUnwrap(panel.contentView)))
         let horizontal = NSSize(width: 800, height: 500)
         resize(panel, to: horizontal, coordinator: windows)
@@ -72,15 +75,15 @@ final class WindowLayoutTests: XCTestCase {
 
         preferences.translationLayout = .stacked
         try await Task.sleep(for: .milliseconds(200))
-        XCTAssertEqual(panel.frame.size, TranslationLayout.stacked.defaultSize(for: .quick))
+        XCTAssertEqual(panel.frame.size, TranslationLayout.stacked.defaultSize(for: .main))
         XCTAssertTrue(findEditor(try XCTUnwrap(panel.contentView)) === editor)
         XCTAssertTrue(editor.hasMarkedText(), "Changing orientation must not abandon input method composition")
-        XCTAssertTrue(windows.quickModel.isComposing)
+        XCTAssertTrue(windows.inputModel.isComposing)
         editor.insertText("你好", replacementRange: NSRange(location: NSNotFound, length: 0))
-        XCTAssertEqual(windows.quickModel.text, "Editable source 你好")
+        XCTAssertEqual(windows.inputModel.text, "Editable source 你好")
         XCTAssertTrue(try XCTUnwrap(editor.undoManager).canUndo)
-        XCTAssertNil(windows.quickModel.request)
-        let vertical = NSSize(width: 570, height: 680)
+        XCTAssertNil(windows.inputModel.request)
+        let vertical = NSSize(width: 700, height: 740)
         resize(panel, to: vertical, coordinator: windows)
         preferences.translationLayout = .sideBySide
         try await Task.sleep(for: .milliseconds(150))
@@ -122,16 +125,16 @@ final class WindowLayoutTests: XCTestCase {
         _ = NSApplication.shared
         let preferences = try preferences()
         let preferred = NSSize(width: 12000, height: 9000)
-        preferences.rememberWindowSize(preferred, for: .quick, layout: .sideBySide)
+        preferences.rememberWindowSize(preferred, for: .main, layout: .sideBySide)
         let windows = try isolatedWindows(preferences: preferences)
-        windows.quickModel.text = "Constructed sample"
-        windows.showQuick(source: nil)
-        let panel = try window("translatex.quick")
+        windows.inputModel.text = "Constructed sample"
+        windows.showCapturedTranslation(source: nil)
+        let panel = try window("translatex.main")
         let visible = try XCTUnwrap(panel.screen).visibleFrame
         XCTAssertLessThanOrEqual(panel.frame.width, visible.width)
         XCTAssertLessThanOrEqual(panel.frame.height, visible.height)
         windows.shutdown()
-        XCTAssertEqual(preferences.windowSize(for: .quick, layout: .sideBySide), preferred)
+        XCTAssertEqual(preferences.windowSize(for: .main, layout: .sideBySide), preferred)
     }
 
     private func preferences() throws -> AppPreferences {

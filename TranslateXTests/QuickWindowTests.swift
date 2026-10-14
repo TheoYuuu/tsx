@@ -4,186 +4,345 @@ import XCTest
 
 @MainActor
 final class QuickWindowTests: XCTestCase {
-    func testBothPermissionPromptsUseTheCompactPanelWithoutExpandingIt() async throws {
+    func testBothPermissionPromptsReuseTheCompactPanelWithoutChangingTheMainWorkspace() async throws {
         _ = NSApplication.shared
         let windows = try isolatedWindows()
         defer { windows.shutdown() }
+        windows.inputModel.text = "An existing editable passage."
+        windows.showMain()
+        let main = try mainWindow()
+        let host = main.contentView
+        let frame = main.frame
+        var previousPanel: NSWindow?
         for permission in [SystemPermission.accessibility, .screenCapture] {
-            windows.showQuick(source: nil, permission: permission)
-            let panel = try quickPanel()
-            try await Task.sleep(for: .milliseconds(200))
-            XCTAssertEqual(panel.title, "TSX")
-            XCTAssertEqual(panel.accessibilityTitle(), "TSX")
-            XCTAssertEqual(panel.titleVisibility, .hidden)
-            XCTAssertEqual(panel.frame.size, NSSize(width: 440, height: 320),
-                           "Hosted content must retain the compact permission size")
-            XCTAssertGreaterThanOrEqual(panel.frame.height, panel.minSize.height)
+            windows.showPermission(permission, source: nil)
+            let panel = try permissionPanel()
+            try await Task.sleep(for: .milliseconds(100))
+            XCTAssertEqual(panel.title, permission.name)
+            XCTAssertEqual(panel.accessibilityTitle(), permission.name)
+            XCTAssertEqual(panel.titleVisibility, .visible)
+            XCTAssertEqual(panel.frame.size, PermissionPromptView.permissionWindowSize)
+            XCTAssertEqual(panel.minSize, PermissionPromptView.minimumWindowSize)
+            XCTAssertEqual(panel.maxSize, PermissionPromptView.maximumWindowSize)
+            XCTAssertTrue(panel.styleMask.contains([.titled, .closable, .miniaturizable, .resizable]))
+            XCTAssertFalse(panel.styleMask.contains(.fullSizeContentView))
+            XCTAssertFalse(panel.styleMask.contains(.nonactivatingPanel))
+            XCTAssertFalse(panel.titlebarAppearsTransparent)
+            for buttonType in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+                let button = try XCTUnwrap(panel.standardWindowButton(buttonType))
+                XCTAssertFalse(button.isHidden)
+                XCTAssertTrue(button.isEnabled)
+            }
+            let content = try XCTUnwrap(panel.contentView)
+            XCTAssertLessThan(content.frame.height, panel.frame.height, "Content must stay below the native titlebar")
+            if let previousPanel { XCTAssertTrue(panel === previousPanel) }
+            previousPanel = panel
+            windows.closePermission()
+            XCTAssertFalse(panel.isVisible)
+            XCTAssertTrue(main.isVisible)
+            XCTAssertTrue(main.contentView === host)
+            XCTAssertEqual(main.frame, frame)
+            XCTAssertEqual(windows.inputModel.text, "An existing editable passage.")
+            XCTAssertFalse(windows.inputModel.canRestorePreviousWorkspace)
         }
     }
 
-    func testReplacingHostedContentPreservesPanelResizeMinimum() async throws {
+    func testNativePermissionCloseAndEscapePreserveTheRunningTranslationAndPreviousWorkspace() async throws {
         _ = NSApplication.shared
         let windows = try isolatedWindows()
         defer { windows.shutdown() }
+        windows.inputModel.text = "Keep this earlier draft."
+        windows.prepareCapturedTranslation()
+        windows.inputModel.source = "en"
+        windows.inputModel.text = "A bright window helps you focus."
+        windows.inputModel.submit()
+        let request = try XCTUnwrap(windows.inputModel.request)
+        var permissionRequests = 0
+        windows.onPermission = { _ in permissionRequests += 1 }
 
-        for permission in [SystemPermission.screenCapture, nil, .accessibility, nil] {
-            windows.showQuick(source: nil, permission: permission)
-            let panel = try XCTUnwrap(NSApp.windows.first {
-                $0.identifier?.rawValue == "translatex.quick" && $0.isVisible
-            })
-            // Keep the just-presented panel before yielding to external mouse
-            // events. This test checks hosting geometry, not outside dismissal.
-            try await Task.sleep(for: .milliseconds(200))
-            XCTAssertEqual(panel.minSize, permission == nil ? NSSize(width: 600, height: 340) : NSSize(width: 340, height: 300),
-                           "A replacement hosting view must not remove the panel's user-resize limits")
-        }
-    }
+        windows.showPermission(.screenCapture, source: nil)
+        let panel = try permissionPanel()
+        let close = try XCTUnwrap(panel.standardWindowButton(.closeButton))
+        close.performClick(nil)
+        XCTAssertFalse(panel.isVisible, "The real traffic light must route through coordinator cleanup")
+        XCTAssertEqual(windows.inputModel.request, request)
+        XCTAssertEqual(windows.inputModel.phase, .translating)
+        XCTAssertTrue(windows.inputModel.canRestorePreviousWorkspace)
 
-    func testRecognitionResultGrowsPanelWhileKeepingItsTopEdgeOnScreen() async throws {
-        _ = NSApplication.shared
-        let handoff = try await completedHandoff()
-        let windows = try isolatedWindows()
-        defer { windows.shutdown() }
-        windows.quickModel.beginRecognition()
-        windows.showQuick(source: nil)
-        try await Task.sleep(for: .milliseconds(100))
-        let panel = try quickPanel()
-        XCTAssertEqual(panel.frame.size, NSSize(width: 392, height: 315))
-        let visibleFrame = try XCTUnwrap(panel.screen ?? NSScreen.main).visibleFrame
-        // Move without resizing: the last automatically chosen size still belongs
-        // to the coordinator. Put the right edge close enough to exercise clamping.
-        let initialFrame = NSRect(x: visibleFrame.maxX - 12 - panel.frame.width,
-                                  y: visibleFrame.maxY - 40 - panel.frame.height,
-                                  width: panel.frame.width, height: panel.frame.height)
-        panel.setFrame(initialFrame, display: true)
-        let initialTop = panel.frame.maxY
-
-        windows.quickModel.acceptHandoff(handoff)
-        try await waitForPanelSize(NSSize(width: 720, height: 430), panel: panel)
-
-        XCTAssertEqual(windows.quickModel.phase, .completed)
-        XCTAssertNil(windows.quickModel.request, "Completed handoff must not start a live Apple session in this test")
-        XCTAssertEqual(panel.frame.maxY, initialTop, accuracy: 0.5)
-        XCTAssertGreaterThanOrEqual(panel.frame.minX, visibleFrame.minX)
-        XCTAssertLessThanOrEqual(panel.frame.maxX, visibleFrame.maxX)
-        XCTAssertGreaterThanOrEqual(panel.frame.minY, visibleFrame.minY)
-        XCTAssertLessThanOrEqual(panel.frame.maxY, visibleFrame.maxY)
-    }
-
-    func testRecognitionResultDoesNotReplaceTheUsersResizedPanel() async throws {
-        _ = NSApplication.shared
-        let handoff = try await completedHandoff()
-        let windows = try isolatedWindows()
-        defer { windows.shutdown() }
-        windows.quickModel.beginRecognition()
-        windows.showQuick(source: nil)
-        try await Task.sleep(for: .milliseconds(100))
-        let panel = try quickPanel()
-        XCTAssertEqual(panel.frame.size, NSSize(width: 392, height: 315))
-        let visibleFrame = try XCTUnwrap(panel.screen ?? NSScreen.main).visibleFrame
-        let userFrame = NSRect(x: visibleFrame.midX - 320, y: visibleFrame.maxY - 530,
-                               width: 640, height: 490)
-        panel.setFrame(userFrame, display: true)
-        XCTAssertEqual(panel.frame.size, userFrame.size)
-
-        windows.quickModel.acceptHandoff(handoff)
-        try await Task.sleep(for: .milliseconds(200))
-
-        XCTAssertEqual(windows.quickModel.phase, .completed)
-        XCTAssertNil(windows.quickModel.request)
-        XCTAssertEqual(panel.frame, userFrame, "A result may update content but must respect a user's custom panel size and position")
-    }
-
-    func testNarrowRecognitionPanelOnlyGrowsToTheEditableWorkspaceMinimum() async throws {
-        _ = NSApplication.shared
-        let handoff = try await completedHandoff()
-        let windows = try isolatedWindows()
-        defer { windows.shutdown() }
-        windows.quickModel.beginRecognition()
-        windows.showQuick(source: nil)
-        let panel = try quickPanel()
-        // Hold the presented object before yielding to legitimate outside-click
-        // dismissal. This test verifies sizing, not global mouse interaction.
-        try await Task.sleep(for: .milliseconds(100))
-        let oldTop = try XCTUnwrap(panel.screen ?? NSScreen.main).visibleFrame.maxY - 40
-        panel.setFrame(NSRect(x: panel.frame.minX, y: oldTop - 320, width: 360, height: 320), display: true)
-        windows.quickModel.acceptHandoff(handoff)
-        try await waitForPanelSize(NSSize(width: 600, height: 340), panel: panel)
-        XCTAssertEqual(panel.frame.maxY, oldTop, accuracy: 0.5)
-        XCTAssertEqual(panel.minSize, NSSize(width: 600, height: 340))
-        windows.quickModel.fail("Constructed retry state")
-        try await Task.sleep(for: .milliseconds(150))
-        XCTAssertEqual(panel.frame.size, NSSize(width: 600, height: 340), "Later status changes must keep the user's size after enforcing the workspace minimum")
-    }
-
-    func testQueuedResultObservationCannotResizeANewPermissionPresentation() async throws {
-        _ = NSApplication.shared
-        let handoff = try await completedHandoff()
-        let windows = try isolatedWindows()
-        defer { windows.shutdown() }
-        windows.quickModel.beginRecognition()
-        windows.showQuick(source: nil)
-        try await Task.sleep(for: .milliseconds(100))
-
-        // Completion schedules an observation callback. Replace its presentation
-        // synchronously before yielding so that callback sees the permission page.
-        windows.quickModel.acceptHandoff(handoff)
-        windows.showQuick(source: nil, permission: .accessibility)
-        let panel = try quickPanel()
-        let permissionFrame = panel.frame
-        XCTAssertEqual(permissionFrame.size, NSSize(width: 440, height: 320))
-        try await Task.sleep(for: .milliseconds(200))
-
-        XCTAssertEqual(windows.quickModel.phase, .completed)
-        XCTAssertEqual(panel.frame, permissionFrame)
-        windows.quickModel.beginRecognition()
-        try await Task.sleep(for: .milliseconds(100))
-        XCTAssertEqual(panel.frame, permissionFrame, "Underlying model activity must not change the current permission presentation")
-    }
-
-    func testEscapeStopsPendingTranslationButCloseAlwaysDismissesThePanel() async throws {
-        _ = NSApplication.shared
-        let windows = try isolatedWindows()
-        defer { windows.shutdown() }
-        windows.showQuick(source: nil)
-        let panel = try XCTUnwrap(quickPanel() as? QuickPanel)
-        windows.quickModel.editingChanged("A pending translation.", isComposing: false)
-        XCTAssertEqual(windows.quickModel.phase, .waiting)
+        windows.showPermission(.accessibility, source: nil)
+        XCTAssertTrue(try permissionPanel() === panel)
         panel.cancelOperation(nil)
-        XCTAssertEqual(windows.quickModel.phase, .cancelled)
-        XCTAssertTrue(panel.isVisible)
-        windows.quickModel.editingChanged("Another pending translation.", isComposing: false)
-        panel.performClose(nil)
         XCTAssertFalse(panel.isVisible)
-        XCTAssertEqual(windows.quickModel.phase, .cancelled)
+        XCTAssertEqual(windows.inputModel.request, request)
+        XCTAssertEqual(permissionRequests, 0, "Showing or dismissing guidance must never request system access")
+        windows.restorePreviousTranslation()
+        XCTAssertEqual(windows.inputModel.text, "Keep this earlier draft.")
     }
 
-    func testEscapeClosesNativeMenusBeforeDismissingTheQuickWorkspace() async throws {
+    func testPermissionPanelReopensAfterNativeMinimization() async throws {
         _ = NSApplication.shared
         let windows = try isolatedWindows()
         defer { windows.shutdown() }
-        windows.showQuick(source: nil)
-        let panel = try XCTUnwrap(quickPanel() as? QuickPanel)
-        let menu = NSMenu()
-        let submenu = NSMenu()
+        windows.showPermission(.screenCapture, source: nil)
+        let panel = try permissionPanel()
+        panel.miniaturize(nil)
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertTrue(panel.isMiniaturized)
+        windows.showPermission(.accessibility, source: nil)
+        try await Task.sleep(for: .milliseconds(200))
+        XCTAssertFalse(panel.isMiniaturized)
+        XCTAssertTrue(panel.isVisible)
+        XCTAssertTrue(try permissionPanel() === panel)
+        XCTAssertEqual(panel.title, SystemPermission.accessibility.name)
+        XCTAssertEqual(panel.frame.size, PermissionPromptView.permissionWindowSize)
+    }
+
+    func testNativePermissionZoomStaysCompactAndRestoresThePreviousFrame() async throws {
+        _ = NSApplication.shared
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        windows.showPermission(.screenCapture, source: nil)
+        let panel = try permissionPanel()
+        let original = panel.frame
+        panel.performZoom(nil)
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertLessThanOrEqual(panel.frame.width, PermissionPromptView.maximumWindowSize.width)
+        XCTAssertLessThanOrEqual(panel.frame.height, PermissionPromptView.maximumWindowSize.height)
+        XCTAssertNotEqual(panel.frame.size, original.size, "The native green button should still zoom")
+        panel.performZoom(nil)
+        try await Task.sleep(for: .milliseconds(300))
+        XCTAssertEqual(panel.frame, original, "A second native zoom restores the previous size and position")
+    }
+
+    func testPermissionTitleFollowsTheInterfaceLanguageWithoutReplacingThePanel() async throws {
+        _ = NSApplication.shared
+        let originalLanguage = try XCTUnwrap(AppInterfaceLanguage(rawValue: L10n.currentLanguageIdentifier))
+        let windows = try isolatedWindows()
+        defer {
+            windows.shutdown()
+            L10n.apply(originalLanguage)
+        }
+        windows.preferences.interfaceLanguage = .english
+        windows.applyInterfaceLanguage()
+        windows.showPermission(.screenCapture, source: nil)
+        let panel = try permissionPanel()
+        XCTAssertEqual(panel.title, "Screen Recording permission")
+        windows.preferences.interfaceLanguage = .simplifiedChinese
+        windows.applyInterfaceLanguage()
+        try await Task.sleep(for: .milliseconds(80))
+        XCTAssertEqual(panel.title, "屏幕录制权限")
+        XCTAssertTrue(try permissionPanel() === panel)
+    }
+
+    func testRecognitionAndItsResultUseTheMainWindowSizeAndTheSameHost() async throws {
+        _ = NSApplication.shared
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        let preferred = NSSize(width: 920, height: 560)
+        windows.preferences.rememberWindowSize(preferred, for: .main, layout: .sideBySide)
+        windows.prepareCapturedTranslation()
+        windows.inputModel.beginRecognition()
+        windows.showCapturedTranslation(source: nil)
+        let main = try mainWindow()
+        let host = main.contentView
+        let frame = main.frame
+        XCTAssertEqual(frame.size, preferred)
+        XCTAssertEqual(main.minSize, TranslationLayout.sideBySide.minimumSize(for: .main))
+        windows.inputModel.acceptHandoff(try await completedHandoff())
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertEqual(windows.inputModel.phase, .completed)
+        XCTAssertNil(windows.inputModel.request)
+        XCTAssertTrue(main.contentView === host)
+        XCTAssertEqual(main.frame, frame, "OCR completion updates content without resizing the shared workspace")
+        XCTAssertFalse(NSApp.windows.contains { $0.identifier?.rawValue == "translatex.quick" && $0.isVisible })
+    }
+
+    func testAnotherCaptureAndResultRespectTheUsersWindowSizeAndPosition() async throws {
+        _ = NSApplication.shared
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        windows.showMain()
+        let main = try mainWindow()
+        let visible = try XCTUnwrap(main.screen ?? NSScreen.main).visibleFrame
+        let chosen = NSRect(x: visible.minX + 30, y: visible.maxY - 610, width: 900, height: 560)
+        main.setFrame(chosen, display: true)
+        windows.windowDidEndLiveResize(Notification(name: NSWindow.didEndLiveResizeNotification, object: main))
+        windows.prepareCapturedTranslation()
+        windows.inputModel.beginRecognition()
+        windows.showCapturedTranslation(source: nil, bounds: CGRect(x: 20, y: 20, width: 100, height: 30))
+        XCTAssertEqual(main.frame, chosen, "A visible shared window should not jump back to the selection")
+        windows.inputModel.acceptHandoff(try await completedHandoff())
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertEqual(main.frame, chosen)
+        XCTAssertEqual(windows.preferences.windowSize(for: .main, layout: .sideBySide), chosen.size)
+    }
+
+    func testQueuedResultCannotResizeOrReplaceTheSeparatePermissionPrompt() async throws {
+        _ = NSApplication.shared
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        windows.showMain()
+        windows.inputModel.beginRecognition()
+        windows.inputModel.acceptHandoff(try await completedHandoff())
+        windows.showPermission(.accessibility, source: nil)
+        let panel = try permissionPanel()
+        let host = panel.contentView
+        let frame = panel.frame
+        try await Task.sleep(for: .milliseconds(150))
+        XCTAssertEqual(panel.frame, frame)
+        XCTAssertTrue(panel.contentView === host)
+        XCTAssertEqual(windows.inputModel.phase, .completed)
+        windows.showTranslationWindow()
+        XCTAssertFalse(panel.isVisible)
+        XCTAssertTrue(try mainWindow().isVisible)
+        XCTAssertEqual(windows.inputModel.phase, .completed)
+    }
+
+    func testEscapeAndCloseDismissTheSharedWindowAndCancelPendingWorkWithoutClearingText() throws {
+        _ = NSApplication.shared
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        windows.showCapturedTranslation(source: nil)
+        let main = try mainWindow()
+        var cancellations = 0
+        windows.onQuickOperationCancelled = { cancellations += 1 }
+        windows.inputModel.editingChanged("A pending translation.", isComposing: false)
+        XCTAssertEqual(windows.inputModel.phase, .waiting)
+        main.cancelOperation(nil)
+        XCTAssertFalse(main.isVisible)
+        XCTAssertEqual(windows.inputModel.phase, .cancelled)
+        XCTAssertEqual(windows.inputModel.text, "A pending translation.")
+        XCTAssertEqual(cancellations, 1)
+        windows.showTranslationWindow()
+        XCTAssertTrue(try mainWindow() === main)
+        windows.inputModel.editingChanged("Another pending translation.", isComposing: false)
+        main.performClose(nil)
+        XCTAssertFalse(main.isVisible)
+        XCTAssertEqual(windows.inputModel.phase, .cancelled)
+        XCTAssertEqual(windows.inputModel.text, "Another pending translation.")
+        XCTAssertEqual(cancellations, 2)
+    }
+
+    func testEscapeClosesNativeMenusBeforeDismissingTheSharedWorkspace() throws {
+        _ = NSApplication.shared
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        windows.showCapturedTranslation(source: nil)
+        let main = try mainWindow()
+        let menu = NSMenu(), submenu = NSMenu()
         for item in [menu, submenu] {
             NotificationCenter.default.post(name: NSMenu.didBeginTrackingNotification, object: item)
         }
-        panel.cancelOperation(nil)
-        XCTAssertTrue(panel.isVisible, "An open menu must own Escape before the translation panel")
+        main.cancelOperation(nil)
+        XCTAssertTrue(main.isVisible)
         NotificationCenter.default.post(name: NSMenu.didEndTrackingNotification, object: submenu)
-        panel.cancelOperation(nil)
-        XCTAssertTrue(panel.isVisible, "Finishing a submenu must not discard the parent menu's protection")
+        main.cancelOperation(nil)
+        XCTAssertTrue(main.isVisible, "The parent menu still owns Escape")
         NotificationCenter.default.post(name: NSMenu.didEndTrackingNotification, object: menu)
-        panel.cancelOperation(nil)
-        XCTAssertFalse(panel.isVisible, "Escape must dismiss the panel after all menus have closed")
-
-        windows.showQuick(source: nil)
-        XCTAssertFalse(panel.isTrackingMenu, "A new presentation cannot inherit menu tracking from its predecessor")
+        main.cancelOperation(nil)
+        XCTAssertFalse(main.isVisible)
+        windows.showTranslationWindow()
+        XCTAssertFalse(main.isTrackingMenu)
     }
 
-    private func quickPanel() throws -> NSWindow {
-        try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.quick" && $0.isVisible })
+    func testLosingKeyStatusLeavesTheSharedTranslationVisible() throws {
+        _ = NSApplication.shared
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        windows.inputModel.text = "Continue editing after another app is focused."
+        windows.showCapturedTranslation(source: nil)
+        let main = try mainWindow()
+        windows.windowDidResignKey(Notification(name: NSWindow.didResignKeyNotification, object: main))
+        XCTAssertTrue(main.isVisible)
+        XCTAssertEqual(windows.inputModel.text, "Continue editing after another app is focused.")
+    }
+
+    func testCancellingExternalCaptureAndShowingPermissionKeepTheCurrentTranslationRunning() async throws {
+        _ = NSApplication.shared
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        windows.inputModel.source = "en"
+        windows.inputModel.text = "A bright window helps you focus."
+        windows.inputModel.submit()
+        let request = try XCTUnwrap(windows.inputModel.request)
+        var externalCancellations = 0
+        windows.onQuickOperationCancelled = { externalCancellations += 1 }
+
+        windows.cancelExternalCapture()
+        windows.showPermission(.screenCapture, source: nil)
+        XCTAssertEqual(externalCancellations, 1)
+        XCTAssertEqual(windows.inputModel.request, request)
+        XCTAssertEqual(windows.inputModel.phase, .translating)
+        XCTAssertFalse(windows.inputModel.canRestorePreviousWorkspace)
+        let permission = try permissionPanel()
+        windows.cancelExternalCapture()
+        XCTAssertFalse(permission.isVisible, "A subsequent capture must not include the previous permission prompt")
+        await windows.inputModel.run(request, provider: QuickWindowResultProvider())
+        XCTAssertEqual(windows.inputModel.phase, .completed)
+        XCTAssertEqual(windows.inputModel.translatedText, "明亮的窗户让你更专注。")
+        XCTAssertEqual(windows.inputModel.request, request)
+    }
+
+    func testExternalCaptureCancellationKeepsScheduledEditingUntilContentIsDelivered() throws {
+        _ = NSApplication.shared
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        windows.inputModel.source = "en"
+        windows.inputModel.editingChanged("A scheduled editable passage.", isComposing: false)
+        XCTAssertEqual(windows.inputModel.phase, .waiting)
+        windows.cancelExternalCapture()
+        XCTAssertEqual(windows.inputModel.phase, .waiting)
+        XCTAssertEqual(windows.inputModel.text, "A scheduled editable passage.")
+        XCTAssertFalse(windows.inputModel.canRestorePreviousWorkspace)
+        windows.prepareCapturedTranslation()
+        XCTAssertEqual(windows.inputModel.phase, .empty)
+        XCTAssertTrue(windows.inputModel.canRestorePreviousWorkspace)
+        XCTAssertNil(windows.inputModel.request)
+    }
+
+    func testCancellingOldRecognitionCannotCancelTheNextScreenshotWorkflowOnDelivery() throws {
+        _ = NSApplication.shared
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        var workflow = ScreenshotWorkflowState()
+        var recognitionCancellations = 0
+        windows.onQuickOperationCancelled = { workflow.cancel() }
+        let old = workflow.begin(restoration: .input, inheritedRestoration: nil)
+        windows.inputModel.beginRecognition(cancellation: {
+            recognitionCancellations += 1
+            workflow.cancel()
+        })
+        windows.cancelExternalCapture()
+        XCTAssertEqual(recognitionCancellations, 1)
+        XCTAssertNil(workflow.requestID)
+        XCTAssertEqual(windows.inputModel.phase, .cancelled)
+
+        let current = workflow.begin(restoration: .input, inheritedRestoration: nil)
+        XCTAssertNotEqual(current, old)
+        windows.prepareCapturedTranslation()
+        XCTAssertEqual(workflow.requestID, current, "The old OCR callback must already have been detached")
+        let image = try XCTUnwrap(CGContext(data: nil, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 32,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)?.makeImage())
+        let region = ScreenshotRegion(id: UUID(), text: "A clear captured passage.",
+            bounds: CGRect(x: 0.1, y: 0.2, width: 0.8, height: 0.2), confidence: 1, role: .paragraph, separator: "")
+        windows.inputModel.beginRecognition(image: image, cancellation: {
+            recognitionCancellations += 1
+            workflow.cancel()
+        })
+        windows.inputModel.submitCapturedDocument(ScreenshotDocument(image: image, regions: [region]),
+                                                   serviceRevision: windows.inputModel.captureServiceIntent())
+        XCTAssertEqual(recognitionCancellations, 1, "Successful OCR delivery releases its callback without cancelling itself")
+        XCTAssertEqual(workflow.requestID, current)
+        XCTAssertEqual(windows.inputModel.phase, .translating)
+        XCTAssertEqual(workflow.finish(current), .input)
+    }
+
+    private func mainWindow() throws -> TranslationWindow {
+        try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" && $0.isVisible } as? TranslationWindow)
+    }
+
+    private func permissionPanel() throws -> NSWindow {
+        try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.permission" && $0.isVisible })
     }
 
     private func completedHandoff() async throws -> TranslationHandoff {
@@ -193,16 +352,7 @@ final class QuickWindowTests: XCTestCase {
         donor.text = "A bright window helps you focus."
         donor.submit()
         await donor.run(try XCTUnwrap(donor.request), provider: QuickWindowResultProvider())
-        XCTAssertEqual(donor.phase, .completed)
         return try XCTUnwrap(donor.makeHandoff())
-    }
-
-    private func waitForPanelSize(_ size: NSSize, panel: NSWindow) async throws {
-        for _ in 0..<50 {
-            if panel.frame.size == size { return }
-            try await Task.sleep(for: .milliseconds(10))
-        }
-        XCTAssertEqual(panel.frame.size, size, "The completed result did not receive its automatic reading size")
     }
 }
 

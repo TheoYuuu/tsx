@@ -1,5 +1,6 @@
 import AppKit
 import Darwin
+import ImageIO
 import SwiftUI
 
 // The visual binary excludes the real catalog implementation. These matching
@@ -66,8 +67,52 @@ final class TranslationServiceVisualReview: NSObject {
     private var frames: [String: CGRect] = [:]
     private var defaults: UserDefaults?
     private var fixture: VisualCodexAccount?
-    private var quickModel: TranslationModel?
+    private var workspaceModel: TranslationModel?
     private var reviewWindows: WindowCoordinator?
+    private var reviewSourceApplication: NSRunningApplication?
+    private var unifiedObservationTimer: Timer?
+    private var unifiedObservationChanges: [UnifiedWindowObservation] = []
+    private var screenshotOverlay: ScreenshotOverlayController?
+    private var screenshotCapture: ScreenshotTranslationController?
+    private var screenshotObservationTimer: Timer?
+    private var screenshotRequestTask: Task<Void, Never>?
+    private var screenshotObservationChanges: [[String: Any]] = []
+    private var screenshotLastObservation: Data?
+    private var screenshotDraft = ""
+    private var screenshotDraftTranslation = ""
+    private var screenshotScene = "normal"
+    private var screenshotDocumentID: UUID?
+    private var screenshotExportedTranslation: String?
+    private var screenshotManualHandoffObserved = false
+    private var screenshotManualRestoreObserved = false
+    private var screenshotRealCaptureStarted = false
+    private var screenshotOutput: URL?
+    private var screenshotPasteboardChangeCount = NSPasteboard.general.changeCount
+    private var screenshotExpectedClipboardText: [String: String] = [:]
+    private var screenshotExpectedClipboardPNG: [String: Data] = [:]
+    private var screenshotClipboardChecks: [String: Bool] = ["changedSinceReviewStart": false]
+    private var permissionObservationTimer: Timer?
+    private var permissionObservationChanges: [[String: Any]] = []
+    private var permissionLastObservation: Data?
+    private var permissionRequestCount = 0
+    private var permissionSourceActivationCount = 0
+    private var permissionObservationOutput: URL?
+    private var reviewPermission: SystemPermission = .screenCapture
+
+    private struct UnifiedWindowObservation: Equatable {
+        let mainVisible: Bool
+        let mainIsKey: Bool
+        let reviewAppActive: Bool
+        let sourceIsFrontmost: Bool
+        let canRestorePrevious: Bool
+        let mainFrameSize: [String: Double]
+
+        var report: [String: Any] {
+            ["mainVisible": mainVisible, "mainIsKey": mainIsKey, "reviewAppActive": reviewAppActive,
+             "sourceIsFrontmost": sourceIsFrontmost, "canRestorePrevious": canRestorePrevious,
+             "mainFrameSize": mainFrameSize]
+        }
+    }
 
     static func start() {
         let review = TranslationServiceVisualReview()
@@ -88,6 +133,18 @@ final class TranslationServiceVisualReview: NSObject {
         let fileMenu = NSMenu(title: "File")
         let reopen = fileMenu.addItem(withTitle: "打开翻译窗口", action: #selector(reopenWorkspace), keyEquivalent: "n")
         reopen.target = self
+        let capture = fileMenu.addItem(withTitle: "模拟快捷翻译（构造文本）", action: #selector(replaceWithSelection), keyEquivalent: "k")
+        capture.target = self
+        if CommandLine.arguments.contains("--permission-window-review") {
+            let permission = fileMenu.addItem(withTitle: "重新打开构造权限提示", action: #selector(reopenPermission), keyEquivalent: "r")
+            permission.target = self
+        }
+        if CommandLine.arguments.contains("--screenshot-overlay-review") {
+            fileMenu.autoenablesItems = false
+            let realCapture = fileMenu.addItem(withTitle: "真实框选（仅选择构造样例）", action: #selector(captureConstructedScreen), keyEquivalent: "r")
+            realCapture.target = self
+            realCapture.isEnabled = ScreenCaptureService.hasPermission
+        }
         fileItem.submenu = fileMenu
         bar.addItem(fileItem)
         let editItem = NSMenuItem()
@@ -109,9 +166,493 @@ final class TranslationServiceVisualReview: NSObject {
     }
 
     @objc private func reopenWorkspace() { reviewWindows?.showTranslationWindow() }
+    @objc private func replaceWithSelection() { Task { await replaceWithSelectionFixture() } }
+
+    @objc private func reopenPermission() {
+        reviewWindows?.showPermission(reviewPermission, source: reviewSourceApplication)
+        window = NSApp.windows.first { $0.identifier?.rawValue == "translatex.permission" && $0.isVisible }
+    }
+
+    /// Uses the shipping permission window with a counter instead of TCC or
+    /// System Settings. Manual UI actions are observed without storing content.
+    private func presentPermissionFixture(output: URL) async {
+        let sourceBundle = argument("--review-source-bundle", fallback: "")
+        reviewSourceApplication = sourceBundle.isEmpty ? nil
+            : NSRunningApplication.runningApplications(withBundleIdentifier: sourceBundle).first
+        let scene = argument("--review-scene", fallback: "quick-permission-screen")
+        reviewPermission = scene.contains("screen") ? .screenCapture : .accessibility
+        await present(scene: scene, theme: argument("--review-theme", fallback: "light"))
+        reviewWindows?.onPermission = { [weak self] _ in self?.permissionRequestCount += 1 }
+        permissionObservationOutput = output
+        NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(permissionSourceActivated(_:)),
+            name: NSWorkspace.didActivateApplicationNotification, object: nil)
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification] {
+            NotificationCenter.default.addObserver(self, selector: #selector(permissionKeyChanged(_:)), name: name, object: window)
+        }
+        recordPermissionObservation(output: output)
+        permissionObservationTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.recordPermissionObservation(output: output) }
+        }
+    }
+
+    @objc private func permissionSourceActivated(_ notification: Notification) {
+        if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+           app.processIdentifier == reviewSourceApplication?.processIdentifier {
+            permissionSourceActivationCount += 1
+        }
+        if let permissionObservationOutput { recordPermissionObservation(output: permissionObservationOutput) }
+    }
+
+    @objc private func permissionKeyChanged(_ notification: Notification) {
+        if let permissionObservationOutput { recordPermissionObservation(output: permissionObservationOutput) }
+    }
+
+    private func recordPermissionObservation(output: URL) {
+        guard let window else { return }
+        let content = window.contentRect(forFrameRect: window.frame)
+        let report: [String: Any] = [
+            "visible": window.isVisible, "key": window.isKeyWindow,
+            "miniaturized": window.isMiniaturized, "active": NSApp.isActive,
+            "sourceIsFrontmost": reviewSourceApplication.map {
+                !$0.isTerminated && NSWorkspace.shared.frontmostApplication?.processIdentifier == $0.processIdentifier
+            } ?? false,
+            "mainVisible": NSApp.windows.contains { $0.identifier?.rawValue == "translatex.main" && $0.isVisible },
+            "permissionRequestCount": permissionRequestCount,
+            "sourceAvailable": reviewSourceApplication != nil,
+            "sourceActivationCount": permissionSourceActivationCount,
+            "nativeTitleVisible": window.titleVisibility == .visible,
+            "nativeControlsVisible": [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton].allSatisfy {
+                window.standardWindowButton($0).map { !$0.isHidden } ?? false
+            },
+            "contentSize": ["width": content.width, "height": content.height],
+            "frameSize": ["width": window.frame.width, "height": window.frame.height]
+        ]
+        guard let data = try? JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]),
+              data != permissionLastObservation else { return }
+        permissionLastObservation = data
+        permissionObservationChanges.append(report)
+        if permissionObservationChanges.count > 20 { permissionObservationChanges.removeFirst() }
+        var payload = report
+        payload["recentChanges"] = permissionObservationChanges
+        writeScreenshotReport(payload, name: "permission-window-observation.json", output: output)
+    }
+
+    private func replaceWithSelectionFixture() async {
+        guard let windows = reviewWindows else { return }
+        windows.prepareCapturedTranslation()
+        let model = windows.inputModel
+        model.source = "en"
+        model.sourceName = reviewSourceApplication?.localizedName ?? "Constructed source app"
+        model.submitCapturedText("A new selection replaces the previous translation.", serviceRevision: model.serviceRevision)
+        if let request = model.request {
+            await model.run(request, provider: FixtureProvider(output: "新的选区替换上一条翻译。"))
+        }
+        model.cancel()
+        windows.showCapturedTranslation(source: reviewSourceApplication)
+    }
+
+    /// Keep the real coordinator and shipping controls available for manual Esc,
+    /// restore and reopen checks. The report covers constructed lifecycle calls;
+    /// it does not stand in for keyboard or cross-application focus verification.
+    private func presentUnifiedWindowFixture(output: URL) async {
+        let sourceBundle = argument("--review-source-bundle", fallback: "")
+        reviewSourceApplication = sourceBundle.isEmpty
+            ? NSWorkspace.shared.frontmostApplication.flatMap { $0.processIdentifier == ProcessInfo.processInfo.processIdentifier ? nil : $0 }
+            : NSRunningApplication.runningApplications(withBundleIdentifier: sourceBundle).first
+        let domain = "TranslateX.TranslationServiceVisualReview.Unified.Ephemeral"
+        let defaults = UserDefaults(suiteName: domain)!
+        defaults.removePersistentDomain(forName: domain)
+        self.defaults = defaults
+        let preferences = AppPreferences(defaults: defaults)
+        preferences.appearance = argument("--review-theme", fallback: "light") == "dark" ? .dark : .light
+        preferences.interfaceLanguage = argument("--review-interface-language", fallback: "zh-Hans") == "en" ? .english : .simplifiedChinese
+        let services = TranslationServiceStore(defaults: defaults, credentials: VisualCredentialStore())
+        let windows = WindowCoordinator(preferences: preferences, services: services)
+        windows.applyAppearance()
+        reviewWindows = windows
+        windows.onSelection = { [weak self] in self?.replaceWithSelection() }
+        let model = windows.inputModel
+        model.setAutomaticTranslation(false)
+        model.source = "en"
+        model.target = "zh-Hans"
+        model.text = "The previous draft remains recoverable."
+        model.submit()
+        if let request = model.request {
+            await model.run(request, provider: FixtureProvider(output: "上一份草稿仍然可以恢复。"))
+        }
+        model.cancel()
+        let originalText = model.text
+        let originalTranslation = model.translatedText
+        windows.showMain()
+        let originalWindow = NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" && $0.isVisible }
+        await replaceWithSelectionFixture()
+        var checks: [String: Bool] = [
+            "captureReusesMainWindow": originalWindow != nil
+                && NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" && $0.isVisible } === originalWindow,
+            "onlyOneTranslationWindowVisible": NSApp.windows.filter { $0.identifier?.rawValue == "translatex.main" && $0.isVisible }.count == 1
+                && !NSApp.windows.contains { $0.identifier?.rawValue == "translatex.quick" && $0.isVisible },
+            "previousWorkspaceAvailable": model.canRestorePreviousWorkspace,
+            "constructedCaptureCompleted": model.phase == .completed && model.request == nil
+        ]
+        let capturedText = model.text
+        let capturedTranslation = model.translatedText
+        windows.dismissTranslation(restoreFocus: false)
+        checks["dismissHidesMainWindow"] = originalWindow?.isVisible == false
+        windows.showTranslationWindow()
+        checks["reopenReusesMainWindow"] = originalWindow?.isVisible == true
+            && NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" && $0.isVisible } === originalWindow
+        checks["reopenPreservesResultWithoutRequest"] = model.text == capturedText
+            && model.translatedText == capturedTranslation && model.request == nil
+        windows.restorePreviousTranslation()
+        checks["restoreRecoversOriginalPairWithoutRequest"] = model.text == originalText
+            && model.translatedText == originalTranslation && model.sourceName.isEmpty
+            && model.request == nil && !model.canRestorePreviousWorkspace
+        await replaceWithSelectionFixture()
+        window = originalWindow
+        let report: [String: Any] = ["passed": checks.values.allSatisfy { $0 }, "checks": checks,
+            "manualChecks": ["Press Esc and confirm focus returns to the specified source app", "Reopen with File > 打开翻译窗口", "Use the production restore-previous button", "Use File > 模拟快捷翻译（构造文本） to repeat"]]
+        if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: output.appendingPathComponent("unified-window-results.json"), options: .atomic)
+        }
+        observeUnifiedWindow(output: output)
+    }
+
+    /// Passive evidence for manual CUA interaction. Only state flags and window
+    /// dimensions leave memory; source identity and workspace contents do not.
+    private func observeUnifiedWindow(output: URL) {
+        unifiedObservationTimer?.invalidate()
+        unifiedObservationChanges = []
+        recordUnifiedWindowObservation(output: output)
+        unifiedObservationTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.recordUnifiedWindowObservation(output: output) }
+        }
+    }
+
+    private func recordUnifiedWindowObservation(output: URL) {
+        let sourceIsFrontmost: Bool
+        if let source = reviewSourceApplication, !source.isTerminated {
+            sourceIsFrontmost = NSWorkspace.shared.frontmostApplication?.processIdentifier == source.processIdentifier
+        } else { sourceIsFrontmost = false }
+        let state = UnifiedWindowObservation(
+            mainVisible: window?.isVisible == true,
+            mainIsKey: window?.isKeyWindow == true,
+            reviewAppActive: NSApp.isActive,
+            sourceIsFrontmost: sourceIsFrontmost,
+            canRestorePrevious: reviewWindows?.inputModel.canRestorePreviousWorkspace == true,
+            mainFrameSize: ["width": Double(window?.frame.width ?? 0), "height": Double(window?.frame.height ?? 0)]
+        )
+        guard unifiedObservationChanges.last != state else { return }
+        unifiedObservationChanges.append(state)
+        if unifiedObservationChanges.count > 10 { unifiedObservationChanges.removeFirst() }
+        var report = state.report
+        report["recentChanges"] = unifiedObservationChanges.map(\.report)
+        if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: output.appendingPathComponent("unified-window-observation.json"), options: .atomic)
+        }
+    }
+
+    /// Shipping overlay/controller with original constructed pixels and real
+    /// Vision OCR. Only translation execution is supplied by a local fixture.
+    private func presentScreenshotOverlayFixture(output: URL) async {
+        screenshotOutput = output
+        let requestedScene = argument("--review-screenshot-scene", fallback: "normal")
+        let supported = ["normal", "menu", "dense", "gradient", "dark", "manual", "error", "oversized", "overflow"]
+        screenshotScene = supported.contains(requestedScene) ? requestedScene : "normal"
+        let sourceBundle = argument("--review-source-bundle", fallback: "")
+        reviewSourceApplication = sourceBundle.isEmpty ? nil
+            : NSRunningApplication.runningApplications(withBundleIdentifier: sourceBundle).first
+        let domain = "TranslateX.TranslationServiceVisualReview.ScreenshotOverlay.Ephemeral"
+        let defaults = UserDefaults(suiteName: domain)!
+        defaults.removePersistentDomain(forName: domain)
+        self.defaults = defaults
+        let preferences = AppPreferences(defaults: defaults)
+        preferences.appearance = argument("--review-theme", fallback: screenshotScene == "dark" ? "dark" : "light") == "dark" ? .dark : .light
+        preferences.interfaceLanguage = argument("--review-interface-language", fallback: "zh-Hans") == "en" ? .english : .simplifiedChinese
+        let services = TranslationServiceStore(defaults: defaults, credentials: VisualCredentialStore())
+        let windows = WindowCoordinator(preferences: preferences, services: services)
+        windows.applyAppearance()
+        reviewWindows = windows
+        let draft = windows.inputModel
+        draft.setAutomaticTranslation(false)
+        draft.source = "en"
+        draft.target = "zh-Hans"
+        draft.text = "This constructed draft must survive screenshot translation."
+        draft.submit()
+        if let request = draft.request { await draft.run(request, provider: FixtureProvider(output: "这份构造草稿应在截图翻译后保留。")) }
+        draft.cancel()
+        screenshotDraft = draft.text
+        screenshotDraftTranslation = draft.translatedText
+        let model = TranslationModel(automaticallyTranslates: false, services: services)
+        let overlay = ScreenshotOverlayController(windows: windows, model: model)
+        screenshotOverlay = overlay
+        let document: ScreenshotDocument
+        do {
+            document = try await ScreenshotReviewFixture.document(menu: screenshotScene == "menu", dense: screenshotScene == "dense",
+                background: screenshotScene == "dark" ? .dark : screenshotScene == "gradient" ? .gradient : .plain, edgeMarkers: true)
+        } catch {
+            writeScreenshotReport(["passed": false, "stage": "constructedVisionOCR", "scene": screenshotScene],
+                name: "screenshot-overlay-results.json", output: output)
+            return
+        }
+        screenshotDocumentID = document.id
+        let screen = NSScreen.main ?? NSScreen.screens.first
+        let visible = screen?.visibleFrame ?? CGRect(x: 0, y: 0, width: 1280, height: 800)
+        let maximumHeight = max(220, min(660, visible.height - 180))
+        let scale = maximumHeight / document.pixelSize.height
+        let size = CGSize(width: document.pixelSize.width * scale, height: maximumHeight)
+        let selection = screenshotScene == "oversized"
+            ? CGRect(x: visible.minX - 120, y: visible.minY - 80, width: document.pixelSize.width * 1.5, height: document.pixelSize.height * 1.5)
+            : CGRect(x: visible.midX - size.width / 2, y: visible.midY - size.height / 2 + 40, width: size.width, height: size.height)
+        let placement = ScreenshotOverlayPlacement(selection: selection, visibleFrame: visible)
+        model.source = "en"
+        model.target = "zh-Hans"
+        model.useScreenshotSourceName()
+        model.submitCapturedDocument(document, serviceRevision: model.serviceRevision)
+        if let request = model.request { await model.run(request, provider: ScreenshotReviewProvider()) }
+        model.cancel()
+        var checks = [
+            "realVisionOCRProducedRegions": !document.regions.isEmpty,
+            "mainDraftUnchangedBeforeHandoff": screenshotDraftMatches(draft),
+            "constructedTranslationCompleted": model.phase == .completed && model.request == nil,
+            "placementPreservesImageAspect": abs(placement.imageFrame.width / placement.imageFrame.height - document.pixelSize.width / document.pixelSize.height) < 0.001,
+            "wholeOverlayFitsVisibleScreen": visible.contains(placement.frame)
+        ]
+        // Exercise native lifecycle calls separately from the subsequent manual
+        // run. This does not claim any button, keyboard or focus verification.
+        overlay.present(source: reviewSourceApplication, selection: selection)
+        checks["overlayDoesNotOpenMain"] = !NSApp.windows.contains { $0.identifier?.rawValue == "translatex.main" && $0.isVisible }
+        overlay.editInMain()
+        checks["handoffUsesMainAndPreservesImage"] = draft.screenshot?.id == document.id && draft.canRestorePreviousWorkspace
+            && !overlay.isVisible && draft.request == nil
+        windows.restorePreviousTranslation()
+        checks["restoreRecoversDraftWithoutRequest"] = screenshotDraftMatches(draft)
+            && draft.screenshot == nil && draft.request == nil && !draft.canRestorePreviousWorkspace
+        windows.dismissTranslation(restoreFocus: false)
+
+        model.source = "en"
+        model.useScreenshotSourceName()
+        model.submitCapturedDocument(document, serviceRevision: model.serviceRevision, startAutomatically: screenshotScene != "manual")
+        if let request = model.request {
+            await model.run(request, provider: ScreenshotReviewProvider(fails: screenshotScene == "error",
+                forcesOverflow: screenshotScene == "overflow"))
+        }
+        model.cancel()
+        overlay.present(source: reviewSourceApplication, selection: selection)
+        window = NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" }
+        checks["mainDraftUnchangedWhileOverlayVisible"] = screenshotDraftMatches(draft) && window?.isVisible != true
+        checks["finalScenarioReady"] = screenshotScene == "manual" ? model.request == nil && model.screenshot?.translations.isEmpty == true
+            : screenshotScene == "error" ? model.hasTranslationFailure : model.phase == .completed
+        let exports = exportScreenshotFixture(output: output)
+        checks["originalPNGKeepsPixelDimensions"] = exports["originalPNGKeepsPixelDimensions"] as? Bool == true
+        checks["translatedPNGKeepsPixelDimensions"] = exports["translatedPNGKeepsPixelDimensions"] as? Bool == true
+        checks["fourImageEdgesRemainIntact"] = exports["fourImageEdgesRemainIntact"] as? Bool == true
+        if screenshotScene == "overflow" {
+            checks["overflowFallbackRequired"] = model.screenshot.flatMap { ScreenshotImageRenderer.render($0) }?.overflowRegionIDs.isEmpty == false
+            checks["overflowKeepsCompleteTranslation"] = model.screenshot?.translatedText.contains(ScreenshotReviewProvider.overflowTranslation) == true
+        }
+        writeScreenshotReport(["passed": checks.values.allSatisfy { $0 }, "scene": screenshotScene, "checks": checks,
+            "exports": exports, "screenCapturePermission": ScreenCaptureService.hasPermission,
+            "scope": "Constructed pixels, real Vision OCR and shipping lifecycle calls; translation is local fixture output.",
+            "manualChecks": ["Compare original/translation and inspect all four colored edges", "Open copy/save menus and exercise the real buttons", "Manual scene: click Translate", "Error scene: inspect status and Retry", "Open in main window, then restore previous draft", "Press Esc and check source focus; changing focus must keep the overlay visible", "If already authorized, File > 真实框选（仅选择构造样例） exercises the real selector with offline QA translation"]],
+            name: "screenshot-overlay-results.json", output: output)
+        observeScreenshotOverlay(output: output)
+    }
+
+    private func screenshotDraftMatches(_ model: TranslationModel) -> Bool {
+        model.text == screenshotDraft && model.translatedText == screenshotDraftTranslation
+    }
+
+    /// The observer never clicks or sends keyboard events. When a person presses
+    /// Translate, this QA worker replaces the excluded Apple translation host.
+    private func observeScreenshotOverlay(output: URL) {
+        screenshotObservationTimer?.invalidate()
+        screenshotObservationChanges = []
+        screenshotLastObservation = nil
+        recordScreenshotObservation(output: output)
+        screenshotObservationTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.recordScreenshotObservation(output: output)
+                guard !self.screenshotRealCaptureStarted, self.screenshotRequestTask == nil,
+                      let model = self.screenshotOverlay?.model, let request = model.request else { return }
+                self.screenshotRequestTask = Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    await model.run(request, provider: ScreenshotReviewProvider(fails: self.screenshotScene == "error",
+                        forcesOverflow: self.screenshotScene == "overflow"))
+                    if model.request?.id == request.id { model.cancel() }
+                    self.screenshotRequestTask = nil
+                    self.recordScreenshotObservation(output: output)
+                }
+            }
+        }
+    }
+
+    private func recordScreenshotObservation(output: URL) {
+        guard let windows = reviewWindows, let overlay = screenshotOverlay else { return }
+        let main = NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" }
+        let panel = NSApp.windows.first { $0.identifier?.rawValue == "translatex.screenshotResult" && $0.isVisible }
+        let model = overlay.model
+        recordScreenshotClipboardChecks()
+        let draftUnchanged = screenshotDraftMatches(windows.inputModel)
+        if windows.inputModel.screenshot?.id == screenshotDocumentID { screenshotManualHandoffObserved = true }
+        if screenshotManualHandoffObserved, draftUnchanged, windows.inputModel.screenshot == nil,
+           !windows.inputModel.canRestorePreviousWorkspace { screenshotManualRestoreObserved = true }
+        let phase: String
+        switch model.phase {
+        case .empty: phase = "empty"
+        case .waiting: phase = "waiting"
+        case .composing: phase = "composing"
+        case .recognizing: phase = "recognizing"
+        case .translating: phase = "translating"
+        case .preparingLanguages: phase = "preparingLanguages"
+        case .completed: phase = "completed"
+        case .unchanged: phase = "unchanged"
+        case .noText: phase = "noText"
+        case .cancelled: phase = "cancelled"
+        case .failed: phase = "failed"
+        }
+        let state: [String: Any] = [
+            "scene": screenshotScene, "overlayVisible": panel != nil, "overlayIsKey": panel?.isKeyWindow == true,
+            "mainVisible": main?.isVisible == true, "mainIsKey": main?.isKeyWindow == true,
+            "reviewAppActive": NSApp.isActive,
+            "sourceIsFrontmost": reviewSourceApplication.map { !$0.isTerminated && NSWorkspace.shared.frontmostApplication?.processIdentifier == $0.processIdentifier } ?? false,
+            "screenCapturePermission": ScreenCaptureService.hasPermission,
+            "mainDraftUnchanged": draftUnchanged, "canRestorePrevious": windows.inputModel.canRestorePreviousWorkspace,
+            "mainRequestPending": windows.inputModel.request != nil,
+            "manualHandoffObserved": screenshotManualHandoffObserved, "manualRestoreObserved": screenshotManualRestoreObserved,
+            "phase": screenshotRealCaptureStarted ? "observedThroughNativeUI" : phase,
+            "realCaptureStarted": screenshotRealCaptureStarted,
+            "clipboardChecks": screenshotClipboardChecks,
+            "requestPending": model.request != nil, "regionCount": model.screenshot?.regions.count ?? 0,
+            "translatedRegionCount": model.screenshot?.translations.count ?? 0,
+            "saveSheetVisible": panel?.attachedSheet != nil,
+            "overlayFrame": ["x": Double(panel?.frame.minX ?? 0), "y": Double(panel?.frame.minY ?? 0),
+                             "width": Double(panel?.frame.width ?? 0), "height": Double(panel?.frame.height ?? 0)]
+        ]
+        guard let serialized = try? JSONSerialization.data(withJSONObject: state, options: [.sortedKeys]),
+              serialized != screenshotLastObservation else { return }
+        screenshotLastObservation = serialized
+        screenshotObservationChanges.append(state)
+        if screenshotObservationChanges.count > 40 { screenshotObservationChanges.removeFirst() }
+        var report = state
+        report["recentChanges"] = screenshotObservationChanges
+        writeScreenshotReport(report, name: "screenshot-overlay-observation.json", output: output)
+        // Only the known fixture document is eligible for automatic QA export.
+        // A real capture selected manually remains in memory until explicit UI copy/save.
+        if !screenshotRealCaptureStarted, model.screenshot?.id == screenshotDocumentID,
+           model.phase == .completed, screenshotExportedTranslation != model.translatedText {
+            screenshotExportedTranslation = model.translatedText
+            writeScreenshotReport(exportScreenshotFixture(output: output), name: "screenshot-overlay-exports.json", output: output)
+        }
+    }
+
+    private func exportScreenshotFixture(output: URL) -> [String: Any] {
+        guard let overlay = screenshotOverlay, overlay.model.screenshot?.id == screenshotDocumentID,
+              let original = overlay.image(for: .originalImage), let translated = overlay.image(for: .translatedImage) else {
+            return ["exportAvailable": false]
+        }
+        var report: [String: Any] = ["exportAvailable": true, "width": original.width, "height": original.height,
+            "fourImageEdgesRemainIntact": screenshotEdgesMatch(original, translated)]
+        screenshotExpectedClipboardText = ["original": overlay.model.screenshot?.sourceText ?? "",
+                                           "translated": overlay.model.screenshot?.translatedText ?? ""]
+        for (name, image) in [("original", original), ("translated", translated)] {
+            let file = output.appendingPathComponent("screenshot-overlay-\(screenshotScene)-\(name).png")
+            do {
+                guard let png = ScreenshotImageExport.pngData(image) else { report["\(name)PNGKeepsPixelDimensions"] = false; continue }
+                screenshotExpectedClipboardPNG[name] = png
+                try png.write(to: file, options: .atomic)
+                let source = CGImageSourceCreateWithURL(file as CFURL, nil)
+                let decoded = source.flatMap { CGImageSourceCreateImageAtIndex($0, 0, nil) }
+                report["\(name)PNGKeepsPixelDimensions"] = decoded?.width == original.width && decoded?.height == original.height
+            } catch { report["\(name)PNGKeepsPixelDimensions"] = false }
+        }
+        return report
+    }
+
+    /// Observe a real Copy action without writing the clipboard or recording its
+    /// contents. Compare only after changeCount advances, against known fixtures.
+    private func recordScreenshotClipboardChecks() {
+        let pasteboard = NSPasteboard.general
+        guard pasteboard.changeCount != screenshotPasteboardChangeCount else { return }
+        screenshotPasteboardChangeCount = pasteboard.changeCount
+        screenshotClipboardChecks = ["changedSinceReviewStart": true]
+        let text = pasteboard.string(forType: .string)
+        let png = pasteboard.data(forType: .png)
+        for name in ["original", "translated"] {
+            let expected = screenshotExpectedClipboardText[name] ?? ""
+            screenshotClipboardChecks["matchesFixture\(name.capitalized)Text"] = !expected.isEmpty && text == expected
+            screenshotClipboardChecks["matchesFixture\(name.capitalized)PNG"] = png != nil && png == screenshotExpectedClipboardPNG[name]
+        }
+    }
+
+    private func screenshotEdgesMatch(_ original: CGImage, _ translated: CGImage) -> Bool {
+        guard original.width == translated.width, original.height == translated.height else { return false }
+        let w = original.width, h = original.height
+        guard w >= 80, h >= 80 else { return false }
+        // colorAt() interprets the fixture's deviceRGB and the renderer's sRGB
+        // representations differently, even after a lossless PNG round trip.
+        // Normalize both through the same pixel context before comparing them.
+        func normalized(_ image: CGImage) -> CGContext? {
+            guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+                  let context = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8,
+                    bytesPerRow: w * 4, space: space,
+                    bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue) else { return nil }
+            context.setBlendMode(.copy)
+            context.interpolationQuality = .none
+            context.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+            return context
+        }
+        guard let first = normalized(original), let second = normalized(translated),
+              let firstData = first.data, let secondData = second.data else { return false }
+        let a = firstData.assumingMemoryBound(to: UInt8.self)
+        let b = secondData.assumingMemoryBound(to: UInt8.self)
+        // Check every pixel in all four 10px edge strips and the corner markers,
+        // not only midpoints that could miss a partial crop or misplaced canvas.
+        let areas = [(0, 0, w, 10), (0, h - 10, w, 10), (0, 10, 10, h - 20), (w - 10, 10, 10, h - 20),
+                     (14, 14, 26, 26), (w - 40, 14, 26, 26), (14, h - 40, 26, 26), (w - 40, h - 40, 26, 26)]
+        return withExtendedLifetime((first, second)) {
+            areas.allSatisfy { x, y, width, height in
+                for row in y..<(y + height) {
+                    for column in x..<(x + width) {
+                        let offset = (row * w + column) * 4
+                        for channel in 0..<4 where abs(Int(a[offset + channel]) - Int(b[offset + channel])) > 2 { return false }
+                    }
+                }
+                return true
+            }
+        }
+    }
+
+    private func writeScreenshotReport(_ report: [String: Any], name: String, output: URL) {
+        if let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]) {
+            try? data.write(to: output.appendingPathComponent(name), options: .atomic)
+        }
+    }
+
+    @objc private func captureConstructedScreen() {
+        // Never requests authorization. The shipping workflow can be entered
+        // only after the reviewer clicks this menu and preflight already passes.
+        guard ScreenCaptureService.hasPermission, let windows = reviewWindows else { return }
+        screenshotRequestTask?.cancel(); screenshotRequestTask = nil
+        screenshotCapture?.cancel()
+        screenshotOverlay?.dismiss(restoreFocus: false)
+        var configuration = TranslationServiceConfiguration(kind: .openAI)
+        configuration.name = "Offline QA fixture"
+        configuration.automaticallyTranslates = screenshotScene != "manual"
+        do {
+            try windows.services.save(configuration, apiKey: "constructed-visual-key-never-valid")
+            try windows.services.select(configuration.id)
+        } catch { return }
+        screenshotRealCaptureStarted = true
+        // RemoteTranslationProvider is replaced by the in-memory QA provider in
+        // this executable. Neither real account credentials nor networking exist.
+        screenshotCapture = ScreenshotTranslationController(windows: windows)
+        screenshotCapture?.start(source: reviewSourceApplication)
+        if let screenshotOutput { recordScreenshotObservation(output: screenshotOutput) }
+    }
 
     /// Real window lifecycle with constructed pixels/results, for leaving the
-    /// app, dismissing the panel and reopening it through the shipping entry.
+    /// app, dismissing the shared window and reopening it through the shipping entry.
     private func presentResumeFixture() async {
         let domain = "TranslateX.TranslationServiceVisualReview.Resume.Ephemeral"
         let defaults = UserDefaults(suiteName: domain)!
@@ -122,21 +663,36 @@ final class TranslationServiceVisualReview: NSObject {
         let services = TranslationServiceStore(defaults: defaults, credentials: VisualCredentialStore())
         let windows = WindowCoordinator(preferences: preferences, services: services)
         reviewWindows = windows
-        windows.showMain()
-        windows.inputModel.text = "An independent main-window draft."
+        windows.inputModel.text = "The draft before the screenshot remains recoverable."
         guard let document = try? await ScreenshotReviewFixture.document(dense: true) else { return }
-        windows.quickModel.source = "en"
-        windows.quickModel.submitCapturedDocument(document, serviceRevision: windows.quickModel.serviceRevision)
-        if let request = windows.quickModel.request {
-            await windows.quickModel.run(request, provider: ScreenshotReviewProvider())
+        windows.prepareCapturedTranslation()
+        windows.inputModel.source = "en"
+        windows.inputModel.useScreenshotSourceName()
+        windows.inputModel.submitCapturedDocument(document, serviceRevision: windows.inputModel.serviceRevision)
+        if let request = windows.inputModel.request {
+            await windows.inputModel.run(request, provider: ScreenshotReviewProvider())
         }
-        windows.quickModel.cancel()
-        windows.showQuick(source: nil)
+        windows.inputModel.cancel()
+        windows.showCapturedTranslation(source: nil)
     }
 
     private func run() async {
-        let output = URL(fileURLWithPath: argument("--review-output", fallback: "/tmp/TranslateXTranslationServiceReview"))
+        let defaultOutput = CommandLine.arguments.contains("--screenshot-overlay-review")
+            ? FileManager.default.currentDirectoryPath + "/.build/QA/ScreenshotOverlayReview" : "/tmp/TranslateXTranslationServiceReview"
+        let output = URL(fileURLWithPath: argument("--review-output", fallback: defaultOutput))
         try? FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        if CommandLine.arguments.contains("--permission-window-review") {
+            await presentPermissionFixture(output: output)
+            return
+        }
+        if CommandLine.arguments.contains("--screenshot-overlay-review") {
+            await presentScreenshotOverlayFixture(output: output)
+            return
+        }
+        if CommandLine.arguments.contains("--unified-window-review") {
+            await presentUnifiedWindowFixture(output: output)
+            return
+        }
         if CommandLine.arguments.contains("--review-update-focus") {
             await verifyUpdateFocus(output: output)
             return
@@ -449,6 +1005,23 @@ final class TranslationServiceVisualReview: NSObject {
     }
 
     private func closeReviewWindow() {
+        NSWorkspace.shared.notificationCenter.removeObserver(self, name: NSWorkspace.didActivateApplicationNotification, object: nil)
+        for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification] {
+            NotificationCenter.default.removeObserver(self, name: name, object: window)
+        }
+        permissionObservationOutput = nil
+        permissionObservationTimer?.invalidate()
+        permissionObservationTimer = nil
+        unifiedObservationTimer?.invalidate()
+        unifiedObservationTimer = nil
+        screenshotObservationTimer?.invalidate()
+        screenshotObservationTimer = nil
+        screenshotRequestTask?.cancel()
+        screenshotRequestTask = nil
+        screenshotCapture?.cancel()
+        screenshotCapture = nil
+        screenshotOverlay?.dismiss(restoreFocus: false)
+        screenshotOverlay = nil
         if let window {
             for sheet in window.sheets { window.endSheet(sheet); sheet.orderOut(nil) }
             window.close()
@@ -456,7 +1029,7 @@ final class TranslationServiceVisualReview: NSObject {
     }
 
     private func present(scene: String, theme: String) async {
-        quickModel?.cancel()
+        workspaceModel?.cancel()
         session?.close()
         fixture?.cancelAll()
         closeReviewWindow()
@@ -488,10 +1061,10 @@ final class TranslationServiceVisualReview: NSObject {
         if scene.hasPrefix("quick-permission") {
             // Exercise the real panel sizing and handoff without requesting TCC access.
             let windows = WindowCoordinator(preferences: preferences, services: services)
-            windows.quickModel.sourceName = "Google Chrome"
+            windows.inputModel.sourceName = "Google Chrome"
             reviewWindows = windows
-            windows.showQuick(source: nil, permission: scene.contains("screen") ? .screenCapture : .accessibility)
-            window = NSApp.windows.first { $0.identifier?.rawValue == "translatex.quick" && $0.isVisible }
+            windows.showPermission(scene.contains("screen") ? .screenCapture : .accessibility, source: reviewSourceApplication)
+            window = NSApp.windows.first { $0.identifier?.rawValue == "translatex.permission" && $0.isVisible }
             if scene.contains("minimum"), let window {
                 window.setFrame(NSRect(origin: window.frame.origin, size: window.minSize), display: true)
             }
@@ -591,8 +1164,8 @@ final class TranslationServiceVisualReview: NSObject {
             interfaceLanguageChanged: { L10n.apply(preferences.interfaceLanguage) }, services: services,
             serviceNavigation: navigation, updates: AppUpdateController.visualReview(), serviceSession: session, tab: pageTabs[scene] ?? 3)
         let size: NSSize = isQuick || isMain
-            ? (scene.contains("minimum") ? preferences.translationLayout.minimumSize(for: isMain ? .main : .quick)
-                : preferences.translationLayout.defaultSize(for: isMain ? .main : .quick))
+            ? (scene.contains("minimum") ? preferences.translationLayout.minimumSize(for: .main)
+                : preferences.translationLayout.defaultSize(for: .main))
             : (scene.contains("minimum") ? NSSize(width: 900, height: 600) : NSSize(width: 1100, height: 700))
         let rect = NSRect(origin: .zero, size: size)
         let window = NSWindow(contentRect: rect,
@@ -613,11 +1186,11 @@ final class TranslationServiceVisualReview: NSObject {
             let model = TranslationModel(automaticallyTranslates: true, services: services, remoteProvider: { _, _, partial in
                 WorkspaceReviewProvider(source: reviewSource, target: reviewTarget, partial: partial, fragment: scene.contains("partial"))
             })
-            quickModel = model
+            workspaceModel = model
             let unresolvedInput = scene.contains("numeric") || scene.contains("uncertain") || scene.contains("same-language")
             model.source = unresolvedInput ? "auto" : "en"
             model.target = "zh-Hans"
-            model.sourceName = "Google Chrome"
+            model.sourceName = isQuick ? "Google Chrome" : ""
             let source = scene.contains("numeric") ? "123\n456.78" : scene.contains("same-language") ? "123\n哈哈" : scene.contains("uncertain") ? "今日仕事" : reviewSource
             let translated = reviewTarget
             model.text = scene.contains("long") ? Array(repeating: source, count: 15).joined(separator: "\n\n") : source
@@ -651,27 +1224,20 @@ final class TranslationServiceVisualReview: NSObject {
             if scene.contains("capture") {
                 let document = try? await ScreenshotReviewFixture.document(menu: scene.contains("menu"), dense: scene.contains("dense"))
                 if let document {
+                    model.useScreenshotSourceName()
                     model.submitCapturedDocument(document, serviceRevision: model.serviceRevision)
                     if let request = model.request { await model.run(request, provider: ScreenshotReviewProvider()) }
                     if scene.contains("recognizing") { model.beginRecognition(image: document.image) }
                     if scene.contains("failed") { model.fail(L10n.string("Text recognition couldn’t finish. Try selecting the area again.")) }
                 }
             }
-            if isMain {
-                let main = InputTranslationView(model: model, catalog: LanguageCatalog(), translateSelection: {}, translateScreenshot: {}, openSettings: {})
-                if scene.contains("motion") {
-                    window.contentView = WindowSurface(preferences: preferences, content: ServiceReviewSurface(content: main.environment(\.translationReviewReduceMotion, scene.contains("reduced")), report: { [weak self] in self?.frames = $0 }))
-                } else {
-                    window.contentView = WindowSurface(preferences: preferences, content: ServiceReviewSurface(content: main.environment(\.translationReviewCaptureMode, scene.contains("original") ? "original" : scene.contains("image") ? "image" : "text"), report: { [weak self] in self?.frames = $0 }))
-                }
+            // Legacy quick-* scene names remain useful fixtures for captured
+            // content, but always render the one shipping translation workspace.
+            let main = InputTranslationView(model: model, catalog: LanguageCatalog(), translateSelection: {}, translateScreenshot: {}, openSettings: {})
+            if scene.contains("motion") {
+                window.contentView = WindowSurface(preferences: preferences, content: ServiceReviewSurface(content: main.environment(\.translationReviewReduceMotion, scene.contains("reduced")), report: { [weak self] in self?.frames = $0 }))
             } else {
-                let quick = QuickTranslationView(model: model, close: {}, openInput: {}, canOpenInput: { true }, permission: nil,
-                    requestPermission: {}, cancel: { model.cancel() }, retry: {}, catalog: LanguageCatalog())
-                if scene.contains("motion") {
-                    window.contentView = WindowSurface(preferences: preferences, content: ServiceReviewSurface(content: quick.environment(\.translationReviewReduceMotion, scene.contains("reduced")), report: { [weak self] in self?.frames = $0 }))
-                } else {
-                    window.contentView = WindowSurface(preferences: preferences, content: ServiceReviewSurface(content: quick.environment(\.translationReviewCaptureMode, scene.contains("original") ? "original" : scene.contains("image") ? "image" : "text"), report: { [weak self] in self?.frames = $0 }))
-                }
+                window.contentView = WindowSurface(preferences: preferences, content: ServiceReviewSurface(content: main.environment(\.translationReviewCaptureMode, scene.contains("original") ? "original" : scene.contains("image") ? "image" : "text"), report: { [weak self] in self?.frames = $0 }))
             }
         } else {
             window.contentView = WindowSurface(preferences: preferences, content: ServiceReviewSurface(

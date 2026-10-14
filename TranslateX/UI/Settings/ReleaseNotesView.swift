@@ -102,7 +102,7 @@ struct MainReleaseNotesOverlay: View {
                             .frame(width: dialogSize.width)
                     } else if let mode = updates.mainReleaseNotesPresentation {
                         ReleaseNotesView(updates: updates, mode: mode, location: .mainWindow,
-                                     maximumHeight: max(0, geometry.size.height - 40), onDismiss: onDismiss)
+                                     maximumHeight: UpdateDialogLayout.maximumHeight(in: geometry.size), onDismiss: onDismiss)
                         .frame(width: min(520, max(0, geometry.size.width - 40)))
                     }
                 }

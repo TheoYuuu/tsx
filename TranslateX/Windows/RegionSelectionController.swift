@@ -53,9 +53,17 @@ final class CaptureLayoutGuard: NSObject {
         notificationCenter.removeObserver(self)
     }
 
-    @objc private func layoutChanged() { invalidated = true }
+    @objc private func layoutChanged() {
+        guard !stopped, !invalidated else { return }
+        // Activation and menu-bar changes also emit this notification. Only
+        // a changed (or unavailable) coordinate snapshot invalidates capture.
+        guard let current = try? currentLayout(), current == original else {
+            invalidated = true
+            return
+        }
+    }
 
-    private static func readCurrentLayout() throws -> CaptureLayoutSnapshot {
+    static func readCurrentLayout() throws -> CaptureLayoutSnapshot {
         let screens = NSScreen.screens
         guard let primary = screens.first,
               let primaryID = primary.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else {
@@ -83,6 +91,7 @@ final class RegionSelectionController: NSObject {
     private var sessionID: UUID?
     private var panels: [RegionSelectionPanel] = []
     private var geometry: RegionSelectionGeometry?
+    private var initialLayout: CaptureLayoutSnapshot?
     private var referenceTop: CGFloat = 0
     private var hasPushedCursor = false
 
@@ -98,12 +107,15 @@ final class RegionSelectionController: NSObject {
         guard !isSelecting else { throw RegionSelectionError.busy }
         let screens = NSScreen.screens
         guard let primary = screens.first else { throw RegionSelectionError.noScreens }
+        let layout = try CaptureLayoutGuard.readCurrentLayout()
+        guard layout.referenceTop == primary.frame.maxY else { throw RegionSelectionError.screenConfigurationChanged }
         let id = UUID()
         return try await withTaskCancellationHandler {
             try Task.checkCancellation()
             return try await withCheckedThrowingContinuation { continuation in
                 self.continuation = continuation
                 sessionID = id
+                initialLayout = layout
                 referenceTop = primary.frame.maxY
                 geometry = RegionSelectionGeometry(screenFrames: screens.map(\.frame))
                 presentOverlays(on: screens)
@@ -125,6 +137,7 @@ final class RegionSelectionController: NSObject {
             name: NSApplication.didChangeScreenParametersNotification, object: nil
         )
         for screen in screens {
+            guard isSelecting else { return }
             let panel = RegionSelectionPanel(
                 contentRect: screen.frame, styleMask: [.borderless, .nonactivatingPanel],
                 backing: .buffered, defer: false
@@ -160,6 +173,7 @@ final class RegionSelectionController: NSObject {
         let pointer = NSEvent.mouseLocation
         let activePanel = panels.first { $0.frame.contains(pointer) } ?? panels.first
         activePanel?.makeKeyAndOrderFront(nil)
+        guard isSelecting else { return }
         NSCursor.crosshair.push()
         hasPushedCursor = true
     }
@@ -182,6 +196,8 @@ final class RegionSelectionController: NSObject {
     }
 
     @objc private func screenConfigurationChanged() {
+        guard isSelecting else { return }
+        if let initialLayout, let current = try? CaptureLayoutGuard.readCurrentLayout(), current == initialLayout { return }
         finish(.failure(RegionSelectionError.screenConfigurationChanged))
     }
 
@@ -190,6 +206,7 @@ final class RegionSelectionController: NSObject {
         continuation = nil
         sessionID = nil
         geometry = nil
+        initialLayout = nil
         NotificationCenter.default.removeObserver(self, name: NSApplication.didChangeScreenParametersNotification, object: nil)
         for panel in panels {
             panel.orderOut(nil)

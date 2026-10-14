@@ -8,19 +8,35 @@ enum SystemPermission: Equatable {
     }
 
     var title: String {
-        L10n.string(self == .accessibility ? "Enable selection translation" : "Enable screenshot translation")
+        L10n.string(self == .accessibility ? "Allow selection translation" : "Allow screenshot translation")
+    }
+
+    var featureName: String {
+        L10n.string(self == .accessibility ? "TSX selection translation" : "TSX screenshot translation")
     }
 
     var explanation: String {
         L10n.string(self == .accessibility
-            ? "Allow TSX in System Settings → Accessibility to translate selected text with your shortcut."
-            : "Allow TSX in System Settings → Screen Recording, then start Screenshot Translation again.")
+            ? "Allow TSX to read selected text when you start a translation with a shortcut or menu action. After enabling access, start selection translation again."
+            : "Allow TSX to capture the screen area you select and recognize its text. After enabling access, start screenshot translation again.")
+    }
+
+    var triggerNote: String {
+        L10n.string(self == .accessibility
+            ? "Only reads selected text when you start a translation."
+            : "Only captures the area you choose.")
     }
 
     var privacyNote: String {
         L10n.string(self == .accessibility
-            ? "Reads only when you use the shortcut. No background collection."
-            : "Captures only the area you select. Screenshots stay in memory on your Mac.")
+            ? "No background monitoring or saved translation history."
+            : "Screenshots stay in memory by default. Copying or saving is your choice.")
+    }
+
+    var serviceNote: String {
+        L10n.string(self == .accessibility
+            ? "When you use an external service, the selected text is sent to that service."
+            : "When you use an external service, recognized text is sent to that service. Screenshots are not uploaded.")
     }
 
     var actionTitle: String {

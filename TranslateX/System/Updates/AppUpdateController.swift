@@ -57,6 +57,7 @@ final class AppUpdateController {
     var showsMainUpdate: Bool { updateLocation == .mainWindow && mainUpdatePresentationApproved && updatePresentation != nil }
     var showsSettingsUpdate: Bool { updateLocation == .settings && updatePresentation != nil }
     var isPresentingMainModal: Bool { showsMainUpdate || mainReleaseNotesPresentation != nil }
+    var isPresentingSettingsModal: Bool { showsSettingsUpdate || releaseNotesPresentation != nil }
     @ObservationIgnored var onPresentUpdate: (() -> Void)?
     @ObservationIgnored var onPresentReleaseNotes: (() -> Void)?
     @ObservationIgnored private var backend: (any AppUpdaterBackend)?

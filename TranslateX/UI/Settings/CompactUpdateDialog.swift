@@ -4,13 +4,17 @@ enum UpdateDialogLayout {
     static let minimumSize = CGSize(width: 520, height: 400)
     static let maximumSize = CGSize(width: 620, height: 520)
 
+    static func maximumHeight(in window: CGSize) -> CGFloat {
+        min(maximumSize.height, max(0, window.height - 80))
+    }
+
     static func size(in window: CGSize) -> CGSize {
         let smallestWindow = TranslationLayout.sideBySide.minimumSize(for: .main)
         return CGSize(
             width: min(maximumSize.width, minimumSize.width + max(0, window.width - smallestWindow.width),
                        max(0, window.width - 40)),
             height: min(maximumSize.height, minimumSize.height + max(0, window.height - smallestWindow.height),
-                        max(0, window.height - 40)))
+                        maximumHeight(in: window)))
     }
 }
 
@@ -32,7 +36,8 @@ struct CompactUpdateDialog<Content: View, Footer: View>: View {
     private var p: ReleaseDialogPalette { .init(theme: theme) }
     private var scrollHeight: CGFloat {
         min(max(contentHeight, minimumHeight - headerHeight - footerHeight),
-            max(0, (maximumHeight ?? 650) - headerHeight - footerHeight))
+            max(0, min(maximumHeight ?? UpdateDialogLayout.maximumSize.height,
+                       UpdateDialogLayout.maximumSize.height) - headerHeight - footerHeight))
     }
 
     var body: some View {

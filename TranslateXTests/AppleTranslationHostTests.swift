@@ -23,22 +23,21 @@ final class AppleTranslationHostTests: XCTestCase {
                              bounds: CGRect(x: 0.1, y: 0.8 - Double(index) * 0.3, width: 0.6, height: 0.1),
                              confidence: 1, role: .paragraph, separator: index == 0 ? "" : "\n\n")
         })
-        windows.prepareQuickTranslation()
-        windows.quickModel.beginRecognition(image: image)
-        windows.showQuick(source: nil)
+        windows.prepareCapturedTranslation()
+        windows.inputModel.beginRecognition(image: image)
+        windows.showCapturedTranslation(source: nil)
         try await Task.sleep(for: .milliseconds(100))
         // Guard the real framework call: a regression must not download a new
         // language during this test or block on its system permission sheet.
         XCTAssertEqual(TranslationModel.detectLanguage(document.sourceText, target: "zh-Hans"), "en")
         guard TranslationModel.detectLanguage(document.sourceText, target: "zh-Hans") == "en" else { return }
-        windows.quickModel.submitCapturedDocument(document, serviceRevision: windows.services.revision)
-        XCTAssertEqual(windows.quickModel.request?.source, "en")
-        try await assertCompleted(windows.quickModel)
-        XCTAssertEqual(windows.quickModel.screenshot?.translations.count, labels.count)
-        // Closing a completed quick panel clears its live request, while the
-        // translated result keeps the language actually used by the session.
-        XCTAssertEqual(windows.quickModel.result?.source, "en")
-        XCTAssertEqual(windows.quickModel.source, "auto")
+        windows.inputModel.submitCapturedDocument(document, serviceRevision: windows.services.revision)
+        XCTAssertEqual(windows.inputModel.request?.source, "en")
+        try await assertCompleted(windows.inputModel)
+        XCTAssertEqual(windows.inputModel.screenshot?.translations.count, labels.count)
+        // The shared workspace keeps the language actually used by the session.
+        XCTAssertEqual(windows.inputModel.result?.source, "en")
+        XCTAssertEqual(windows.inputModel.source, "auto")
     }
 
     func testViewOwnedSessionCompletesSuccessiveRequestsAfterMountAndCancellation() async throws {

@@ -4,7 +4,7 @@ import XCTest
 
 @MainActor
 final class WindowPreferencesTests: XCTestCase {
-    func testDefaultTargetStartsNewQuickIntentsWithoutChangingAnActiveInputPair() throws {
+    func testDefaultTargetAndCapturedReplacementPreserveTheCurrentTargetAndRecoverPreviousPair() throws {
         _ = NSApplication.shared
         let suite = "TranslateX.WindowPreferencesTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -13,17 +13,21 @@ final class WindowPreferencesTests: XCTestCase {
         let preferences = AppPreferences(defaults: defaults)
         preferences.setDefaultTarget("en")
         let windows = try isolatedWindows(preferences: preferences)
+        defer { windows.shutdown() }
         XCTAssertEqual(windows.inputModel.target, "en")
+        windows.inputModel.source = "fr"
         windows.inputModel.text = "Keep my current language pair."
         preferences.setDefaultTarget("ja")
         windows.applyDefaultTarget()
         XCTAssertEqual(windows.inputModel.target, "en")
-        windows.quickModel.text = "Discard this old selection."
-        windows.quickModel.source = "en"
-        windows.prepareQuickTranslation()
-        XCTAssertEqual(windows.quickModel.target, "ja")
-        XCTAssertEqual(windows.quickModel.source, "auto")
-        XCTAssertTrue(windows.quickModel.text.isEmpty)
+        windows.prepareCapturedTranslation()
+        XCTAssertEqual(windows.inputModel.target, "en", "A shortcut uses the target selected in the shared workspace")
+        XCTAssertEqual(windows.inputModel.source, "auto")
+        XCTAssertTrue(windows.inputModel.text.isEmpty)
+        windows.restorePreviousTranslation()
+        XCTAssertEqual(windows.inputModel.source, "fr")
+        XCTAssertEqual(windows.inputModel.target, "en")
+        XCTAssertEqual(windows.inputModel.text, "Keep my current language pair.")
         windows.inputModel.clear()
         windows.applyDefaultTarget()
         XCTAssertEqual(windows.inputModel.target, "ja")

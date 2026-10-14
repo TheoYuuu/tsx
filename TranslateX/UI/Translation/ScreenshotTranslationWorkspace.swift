@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 /// Both capture modes share the same local image and editable region records.
-/// The provider receives text only; there is no background repair or image upload.
+/// Background repair and typesetting stay local; the provider receives text only.
 struct ScreenshotTranslationWorkspace: View {
     @Bindable var model: TranslationModel
     let catalog: LanguageCatalog?
@@ -18,6 +18,15 @@ struct ScreenshotTranslationWorkspace: View {
     @State private var editsSource = false
     @State private var zoom: CGFloat = 1
     @State private var selectedRegion: UUID?
+    @State private var renderedImage: ScreenshotRenderedImage?
+    @State private var isRendering = false
+    @State private var renderFailed = false
+    @State private var renderRetry = 0
+
+    private struct RenderRequest: Equatable {
+        let document: ScreenshotDocument?
+        let retry: Int
+    }
 
     var body: some View {
         if let document = model.screenshot {
@@ -29,6 +38,19 @@ struct ScreenshotTranslationWorkspace: View {
                         Image(systemName: "arrow.right").font(.system(size: 10)).foregroundStyle(theme.faint).accessibilityHidden(true)
                         language(.target)
                         Spacer(minLength: 0)
+                        renderFeedback
+                        if let renderedImage, !renderedImage.overflowRegionIDs.isEmpty {
+                            Button {
+                                selectedRegion = document.regions.first { renderedImage.overflowRegionIDs.contains($0.id) }?.id
+                            } label: {
+                                Label(String(format: L10n.string("%d passages need the full-text view"), renderedImage.overflowRegionIDs.count),
+                                      systemImage: "text.badge.plus")
+                                    .font(.system(size: 10)).lineLimit(1)
+                            }
+                            .buttonStyle(.plain).translateXControlCursor()
+                            .foregroundStyle(theme.isDark ? Color.orange : Color(red: 0.58, green: 0.31, blue: 0.02))
+                            .accessibilityIdentifier("screenshot.overflowNotice")
+                        }
                         CopyButton(text: model.translatedText, label: "Copy translation", size: 26).disabled(model.isComposing)
                     }.frame(height: 28).padding(.horizontal, 10)
                 }
@@ -54,10 +76,46 @@ struct ScreenshotTranslationWorkspace: View {
                 showsOriginal = reviewCaptureMode == "original"
             }
             #endif
-            .onChange(of: imageMode) { selectedRegion = nil }
+            .onChange(of: imageMode) {
+                selectedRegion = nil
+            }
+            .task(id: RenderRequest(document: imageMode ? document : nil, retry: renderRetry)) {
+                guard imageMode, !document.translations.isEmpty else {
+                    renderedImage = nil; isRendering = false; renderFailed = false
+                    return
+                }
+                isRendering = true
+                renderFailed = false
+                let rendered = await ScreenshotImageRenderer.renderPreview(document)
+                guard !Task.isCancelled else { return }
+                renderedImage = rendered
+                isRendering = false
+                renderFailed = rendered == nil
+            }
             .onChange(of: showsOriginal) { selectedRegion = nil }
             .onChange(of: zoom) { selectedRegion = nil }
-            .onChange(of: document.id) { zoom = 1; selectedRegion = nil; showsOriginal = false; editsSource = false }
+            .onChange(of: document.id) { zoom = 1; selectedRegion = nil; showsOriginal = false; editsSource = false; renderedImage = nil }
+        }
+    }
+
+    @ViewBuilder private var renderFeedback: some View {
+        if !showsOriginal, model.screenshot?.translations.isEmpty == false {
+            if isRendering {
+                HStack(spacing: 4) {
+                    ProgressView().controlSize(.mini).scaleEffect(0.7).frame(width: 10, height: 10)
+                    Text(L10n.string("Generating translated image…")).lineLimit(1)
+                }
+                .font(.system(size: 10)).foregroundStyle(theme.muted)
+                .accessibilityIdentifier("screenshot.rendering")
+            } else if renderFailed {
+                Button { renderRetry += 1 } label: {
+                    Label(L10n.string("Failed to prepare translated image. Retry."), systemImage: "arrow.clockwise")
+                        .font(.system(size: 10)).lineLimit(1)
+                }
+                .buttonStyle(.plain).translateXControlCursor().foregroundStyle(Color.orange)
+                .translateXTooltip(L10n.string("Failed to prepare translated image. Retry."))
+                .accessibilityIdentifier("screenshot.retryRender")
+            }
         }
     }
 
@@ -183,7 +241,8 @@ struct ScreenshotTranslationWorkspace: View {
                 available: CGSize(width: max(1, geometry.size.width - 20), height: max(1, geometry.size.height - 20)), zoom: overlays ? zoom : 1)
             ScrollView([.horizontal, .vertical]) {
                 ZStack(alignment: .topLeading) {
-                    Image(nsImage: NSImage(cgImage: document.image, size: document.pixelSize))
+                    Image(nsImage: NSImage(cgImage: overlays && !showsOriginal && !document.translations.isEmpty ? renderedImage?.image ?? document.image : document.image,
+                                          size: document.pixelSize))
                         .resizable().frame(width: size.width, height: size.height)
                         .accessibilityLabel(Text(L10n.string("Captured image")))
                     if overlays {
@@ -204,25 +263,20 @@ struct ScreenshotTranslationWorkspace: View {
         let translated = document.translations[region.id]
         let metrics = ScreenshotOverlayMetrics(region: region, imageSize: size)
         let card = metrics.frame
+        let overflows = !showsOriginal && renderedImage?.overflowRegionIDs.contains(region.id) == true
         return Button { selectedRegion = region.id } label: {
-            Group {
-                if !showsOriginal, let translated, translated != region.text {
-                    Text(translated).font(.system(size: metrics.fontSize))
-                        .lineSpacing(metrics.lineSpacing).lineLimit(metrics.lineLimit).truncationMode(.tail)
-                        .foregroundStyle(theme.ink).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                        .padding(.horizontal, 3).padding(.vertical, 2)
-                        // The mask must hide source glyphs even in glass mode.
-                        .background(theme.isDark ? Color(white: 0.12) : Color.white)
-                } else { Color.clear }
-            }
+            Color.clear
             .frame(width: card.width, height: card.height)
-            .clipShape(RoundedRectangle(cornerRadius: 3))
-            .overlay(RoundedRectangle(cornerRadius: 3).stroke(theme.accent.opacity(showsOriginal ? 0 : 0.18), lineWidth: 0.7))
+            .overlay {
+                if overflows {
+                    Rectangle().strokeBorder(Color.orange, style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+                }
+            }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain).translateXControlCursor()
         .accessibilityLabel(Text(showsOriginal ? region.text : translated ?? L10n.string("Translation pending")))
-        .translateXTooltip(L10n.string("Edit region"))
+        .translateXTooltip(L10n.string(overflows ? "Screenshot full text" : "Edit region"))
         .position(x: card.midX, y: card.midY)
         .popover(isPresented: Binding(get: { selectedRegion == region.id }, set: { if !$0 { selectedRegion = nil } }), arrowEdge: .trailing) {
             regionDetail(region, translated: translated ?? "")

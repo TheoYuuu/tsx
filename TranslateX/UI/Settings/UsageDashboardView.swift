@@ -404,9 +404,12 @@ struct UsageDashboardView: View {
         let widths = requestColumnWidths
         return HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 3) {
-                Text(record.completedAt.formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute().second())).monospacedDigit()
-                Text(shortDate(record.completedAt) + (record.purpose == .sampleTest ? " · " + L10n.string("Test") : "")).font(.system(size: 11)).foregroundStyle(palette.muted)
+                Text(UsageRequestTimeFormat.date(record.completedAt, locale: L10n.currentLocale)).lineLimit(1)
+                Text(UsageRequestTimeFormat.time(record.completedAt, locale: L10n.currentLocale)
+                     + (record.purpose == .sampleTest ? " · " + L10n.string("Test") : ""))
+                    .monospacedDigit().font(.system(size: 11)).foregroundStyle(palette.muted)
             }.frame(width: widths[0], alignment: .leading)
+                .translateXTooltip(UsageRequestTimeFormat.detail(record.completedAt, locale: L10n.currentLocale))
             VStack(alignment: .leading, spacing: 3) {
                 Text(serviceName(id: record.configurationID, fallback: record.serviceName)).lineLimit(1)
                 Text(record.configurationID == nil ? L10n.string("Local") : record.model.isEmpty ? "—" : record.model).font(.system(size: 11)).foregroundStyle(palette.muted).lineLimit(1)

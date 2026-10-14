@@ -3,6 +3,36 @@ import XCTest
 
 @MainActor
 final class TranslationServiceRoutingTests: XCTestCase {
+    func testPreviousWorkspaceRestoresTextButNotCompletedResultAfterServiceRevisionChanges() async throws {
+        let services = try store(), recorder = RoutingRecorder()
+        let model = TranslationModel(services: services, remoteProvider: recorder.make)
+        model.source = "en"
+        model.target = "zh-Hans"
+        model.text = "The saved original passage."
+        model.submit()
+        await settle()
+        recorder.finishAll()
+        await settle()
+        XCTAssertEqual(model.phase, .completed)
+        let savedOutput = model.translatedText
+        XCTAssertTrue(model.beginExternalReplacement())
+
+        var configuration = try XCTUnwrap(services.selectedConfiguration)
+        configuration.model = "another-constructed-model"
+        try services.save(configuration, apiKey: nil)
+        XCTAssertTrue(model.restorePreviousWorkspace(), "Restoration must synchronize even before the observation task runs")
+        await settle()
+        XCTAssertEqual(model.text, "The saved original passage.")
+        XCTAssertEqual(model.translatedText, savedOutput)
+        XCTAssertEqual(model.serviceConfiguration?.model, configuration.model)
+        XCTAssertEqual(model.phase, .empty)
+        XCTAssertNil(model.result)
+        XCTAssertNil(model.displayedResult)
+        XCTAssertNil(model.request)
+        XCTAssertNil(model.configuration)
+        XCTAssertEqual(recorder.requests.count, 1, "Recovery never resends text to a changed service")
+    }
+
     func testStatisticsAndWebsiteEditsDoNotInterruptActiveTranslation() async throws {
         let services = try store(), recorder = RoutingRecorder()
         let model = TranslationModel(services: services, remoteProvider: recorder.make)

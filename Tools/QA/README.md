@@ -66,6 +66,10 @@ Scripts/build-screen-fixture.sh
 
 ## 双材质原生视觉目录
 
+权限窗口可用 `--translation-services-review --permission-window-review --review-scene quick-permission-screen --review-interface-language zh-Hans --review-theme light --review-output .build/QA/PermissionReview` 启动独立场景。将场景改为 `quick-permission` 检查辅助功能，附加 `-minimum` 检查最小尺寸；语言 `en` 和主题 `dark` 可分别覆盖英文、深色。
+
+该模式使用正式权限视图和窗口控制器，但「前往系统设置」仅累计一次模拟请求，不打开设置或申请 TCC。按 ⌘R 重新显示同一权限窗口，供实际检查关闭、最小化后复开与 Esc；可通过 `--review-source-bundle` 指定正在运行的构造来源应用来验证焦点返回。`permission-window-observation.json` 仅记录窗口尺寸、可见性、原生控件、焦点和点击次数，不记录正文或来源身份。原生界面操作与真实系统首次授权仍是不同验证项目。
+
 `Scripts/prepare-visual-catalog.sh` 构建 `.build/NativeVisualReview/TranslateX Visual Review.app`，不启动或安装。构建前先退出旧视觉目录实例。它直接编译正式 UI、窗口控制器与偏好实现，仅替换 Apple translation host，并用固定原创句子构造状态，不能作为真实翻译通过证据。
 
 启动后通过“场景”菜单检查主窗、空白、长文、浮窗、三页设置、两种权限说明、语言准备/识别/错误/取消/同语言/无文字、截图覆盖层、关于和最小尺寸；同一菜单切换材质与明暗。设置使用独立临时域，退出清理，不写用户的产品偏好。屏幕背景和选区均为构造内容；目录中的截图提示不调用屏幕捕获。
@@ -100,6 +104,27 @@ open -n -W '.build/NativeVisualReview/TranslateX Visual Review.app' \
 ```
 
 该入口核对真实主窗 → 设置确认 → 主窗更新弹窗的键窗口切换、延迟确认、重复请求、原生编辑器禁用与恢复，以及构造草稿保留。结果写入 `focus-results.json`，失败返回非零退出码，结束关闭 QA 窗口并清理临时偏好。检查期间会激活 QA 应用并拦截其窗口内输入，勿与 XCTest 或其他界面自动化同时运行；此检查不证明正式版本间的安装替换或重启链路。
+
+### 截图结果浮层
+
+视觉目录的 `--screenshot-overlay-review` 入口使用构造像素、正式 Vision OCR、正式截图浮层与窗口控制器，翻译由离线夹具提供。`--review-screenshot-scene` 支持 `normal`、`menu`、`dense`、`gradient`、`dark`、`manual`、`error`、`oversized` 和 `overflow`，分别检查普通排版、菜单、长段落、渐变、暗色、手动翻译、失败、超出屏幕的选区及全文兜底。`manual` 等待点击翻译；`error` 固定返回构造错误；`overflow` 将普通样例的标题译成超出可读排版容量的长文，供检查原图保留、全文入口和完整内容。它们不调用真实 API，也不证明翻译质量。
+
+完成视觉目录及上文 `ScreenFixture.app` 的构建后，可从仓库根目录启动：
+
+```sh
+open '.build/QA/ScreenFixture.app'
+open -n '.build/NativeVisualReview/TranslateX Visual Review.app' \
+  --args --translation-services-review --screenshot-overlay-review \
+  --review-screenshot-scene normal \
+  --review-source-bundle com.theoyuuu.TranslateX.ScreenFixture \
+  --review-output "$PWD/.build/QA/ScreenshotOverlayReview/normal"
+```
+
+`screenshot-overlay-results.json` 的 13 项基础断言覆盖：OCR 产生区域、构造翻译完成、转入主窗前草稿不变、图像比例、浮层位于可见屏幕内、不自动打开主窗、转入主窗保留图像、恢复草稿且不重发、浮层显示期间草稿不变、场景就绪、原图 PNG 尺寸、译图 PNG 尺寸、完整四边及角标保留。`overflow` 另加两项布尔断言，确认渲染器确实标记溢出区域，且文档保留完整构造长文。这些是构造数据与控制器调用的检查，按钮、菜单、Esc、失焦和跨应用焦点须另行操作验证。
+
+`screenshot-overlay-observation.json` 被动记录窗口可见性、键窗口、前台来源、草稿恢复、请求与区域数量、保存面板、屏幕访问预检及最近状态变化，不生成键鼠事件。剪贴板仅在变化后与已知夹具文本或 PNG 比较，报告只保留匹配布尔值。构造图自动导出为 `screenshot-overlay-<scene>-original.png` 和 `screenshot-overlay-<scene>-translated.png`；完成状态另写 `screenshot-overlay-exports.json`。所有产物保留在忽略目录；未完成场景的译图文件不代表已经获得译文。
+
+真实框选使用独立的 `ScreenFixture.app` 浮动样例窗口及上述来源参数。在视觉目录中按 ⌘R，或选择 File →「真实框选（仅选择构造样例）」，进入正式选区、ScreenCaptureKit、OCR 与结果浮层流程。仅在视觉目录已有屏幕访问授权时启用此入口；工具不申请权限、不修改 TCC。只框选样例目标矩形，核对原文及区域边界；翻译仍为离线替身。真实框选图片不会自动写入 QA 报告目录，只有明确的复制、保存操作会输出图像。退出两个测试应用即可结束核查。
 
 ## 真实本地模型固定样例
 

@@ -27,7 +27,7 @@ struct SettingsView: View {
 
     private var p: TranslationServicePalette { .init(theme: theme) }
     private var showsUpdateModal: Bool {
-        tab == 5 && (updates?.showsSettingsUpdate == true || updates?.releaseNotesPresentation != nil)
+        updates?.isPresentingSettingsModal == true
     }
 
     var body: some View {
@@ -50,7 +50,6 @@ struct SettingsView: View {
                 }
             }
             .disabled(showsUpdateModal).accessibilityHidden(showsUpdateModal)
-            if showsUpdateModal, let updates { SettingsUpdateOverlay(updates: updates) }
         }
         .foregroundStyle(p.ink)
         .background(theme.isGlass ? Color.clear : theme.isDark ? p.color(0x232833) : Color.white)

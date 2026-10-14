@@ -49,9 +49,11 @@ final class TranslationUsageDashboardTests: XCTestCase {
         XCTAssertEqual(UsageChartMetric.tokens.value(in: localDay), 0)
     }
 
-    func testDollarFormattingPreservesSmallNonzeroAmountsAndExactDetail() {
-        for (raw, displayed) in [("0", "$0.00"), ("0.00000012", "<$0.0001"), ("0.0001", "$0.0001"),
-                                 ("0.001248", "$0.0012"), ("0.15", "$0.15"), ("1.23456", "$1.23"), ("16079.77", "$16,079.77")] {
+    func testDollarFormattingUsesTwoDecimalsWithoutLosingSmallCostsOrExactDetail() {
+        for (raw, displayed) in [("0", "$0.00"), ("0.00000012", "<$0.01"), ("0.0001", "<$0.01"),
+                                 ("0.001248", "<$0.01"), ("0.009999", "<$0.01"), ("0.01", "$0.01"),
+                                 ("0.0199", "$0.02"), ("0.15", "$0.15"), ("1.23456", "$1.23"),
+                                 ("1.236", "$1.24"), ("16079.77", "$16,079.77")] {
             XCTAssertEqual(UsageCostFormat.compact(Decimal(string: raw)), displayed)
         }
         XCTAssertEqual(UsageCostFormat.precise(Decimal(string: "0.000056592")!), "$0.000056592")
@@ -59,6 +61,26 @@ final class TranslationUsageDashboardTests: XCTestCase {
         let oldCNY = record(id: UUID(), price: price(currency: "CNY"), usage: .init(inputTokens: 100, outputTokens: 20))
         XCTAssertNotNil(oldCNY.estimatedCost)
         XCTAssertNil(oldCNY.estimatedUSD, "Never relabel a saved CNY amount as dollars without an exchange rate.")
+    }
+
+    func testRequestDatesUseLocalizedMonthNamesAnd24HourTimeInTheSameZone() throws {
+        let date = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-10-11T02:20:01Z"))
+        let utc = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
+        let chinese = Locale(identifier: "zh-Hans")
+        let english = Locale(identifier: "en_US")
+        XCTAssertEqual(UsageRequestTimeFormat.date(date, locale: chinese, timeZone: utc), "2026年10月11日")
+        XCTAssertEqual(UsageRequestTimeFormat.date(date, locale: english, timeZone: utc), "Oct 11, 2026")
+        for locale in [chinese, english] {
+            XCTAssertEqual(UsageRequestTimeFormat.time(date, locale: locale, timeZone: utc), "02:20:01")
+            let detail = UsageRequestTimeFormat.detail(date, locale: locale, timeZone: utc)
+            XCTAssertTrue(detail.contains("2026"))
+            XCTAssertTrue(detail.contains("02:20:01"))
+            XCTAssertTrue(detail.contains("GMT"))
+        }
+        let pacific = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
+        XCTAssertEqual(UsageRequestTimeFormat.date(date, locale: english, timeZone: pacific), "Oct 10, 2026")
+        XCTAssertEqual(UsageRequestTimeFormat.time(date, locale: english, timeZone: pacific), "19:20:01")
+        XCTAssertTrue(UsageRequestTimeFormat.detail(date, locale: english, timeZone: pacific).contains("GMT-07:00"))
     }
 
     func testRefreshingPricesBackfillsOnlyMissingEstimatesAndPersistsTheirBasis() throws {

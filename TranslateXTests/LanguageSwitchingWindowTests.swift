@@ -191,7 +191,7 @@ final class LanguageSwitchingWindowTests: XCTestCase {
                 XCTAssertEqual(settings.title, L10n.string("Settings"))
                 XCTAssertTrue(settings.contentView === settingsContent)
                 XCTAssertNil(windows.inputModel.request)
-                XCTAssertNil(windows.quickModel.request)
+                XCTAssertNil(windows.inputModel.request)
             }
         }
     }

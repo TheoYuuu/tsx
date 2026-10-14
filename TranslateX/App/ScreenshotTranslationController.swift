@@ -1,6 +1,7 @@
 import AppKit
 
-/// One user-initiated screenshot intent. Captured pixels stay in the local workspace, never a log, file or provider request.
+/// One user-initiated screenshot intent. Capture/OCR keep pixels in memory;
+/// only the result layer's explicit copy/save actions may export them.
 @MainActor
 final class ScreenshotTranslationController {
     private let windows: WindowCoordinator
@@ -9,6 +10,16 @@ final class ScreenshotTranslationController {
     private let recognizer = OCRService()
     private var task: Task<Void, Never>?
     private var workflow = ScreenshotWorkflowState()
+    private lazy var overlay: ScreenshotOverlayController = {
+        let overlay = ScreenshotOverlayController(windows: windows)
+        overlay.onDismiss = { [weak self] in self?.cancelCapture() }
+        overlay.onRecapture = { [weak self] in
+            guard let self else { return }
+            self.start(source: self.sourceApplication)
+        }
+        return overlay
+    }()
+    private var sourceApplication: NSRunningApplication?
 
     init(windows: WindowCoordinator) {
         self.windows = windows
@@ -16,16 +27,15 @@ final class ScreenshotTranslationController {
     }
 
     func start(source: NSRunningApplication?) {
-        // Closing the old panel calls back into cancel(). Preserve the origin before
+        // Cancelling the previous capture calls back into cancel(). Preserve the origin before
         // either cancellation, so restarting a selector does not forget its hidden window.
         let inheritedRestoration = workflow.restorationForRestart
         cancel()
-        windows.closeQuick(restoreFocus: false)
-        windows.prepareQuickTranslation()
-        let serviceRevision = windows.quickModel.captureServiceIntent()
-        windows.quickModel.useScreenshotSourceName()
+        windows.cancelExternalCapture()
+        sourceApplication = source
+        let serviceRevision = overlay.model.captureServiceIntent()
         guard ScreenCaptureService.hasPermission else {
-            windows.showQuick(source: source, permission: .screenCapture)
+            windows.showPermission(.screenCapture, source: source)
             return
         }
         let restoration = windows.hideForScreenshot()
@@ -36,17 +46,15 @@ final class ScreenshotTranslationController {
                NSWorkspace.shared.frontmostApplication?.processIdentifier != source.processIdentifier {
                 source.activate(options: [])
             }
-            var resultBounds: CGRect?
+            var hasPresentedCapture = false
             do {
                 let layout = try CaptureLayoutGuard.begin()
                 defer { layout.stop() }
                 let region = try await self.selector.selectRegion()
                 guard !Task.isCancelled, self.workflow.requestID == id else { return }
                 try layout.validate(referenceTop: region.referenceTop)
-                resultBounds = CGRect(x: region.bounds.minX, y: region.referenceTop - region.bounds.maxY,
-                                      width: region.bounds.width, height: region.bounds.height)
                 // The selector has removed every overlay before this capture starts.
-                // Show the result panel only after pixels are captured, so it cannot
+                // Show the temporary image only after pixels are captured, so it cannot
                 // become part of the user's selected region.
                 let image = try await self.capture.capture(
                     region: region.bounds, referenceTop: region.referenceTop,
@@ -54,12 +62,20 @@ final class ScreenshotTranslationController {
                 )
                 guard !Task.isCancelled, self.workflow.requestID == id else { return }
                 try layout.validate()
-                self.windows.quickModel.beginRecognition(image: image, cancellation: { [weak self] in self?.cancel() })
-                self.windows.showQuick(source: source, bounds: resultBounds)
+                // The selected pixels are now immutable. Activating the result
+                // can itself send a screen-parameters notification; OCR no
+                // longer depends on live capture coordinates.
+                layout.stop()
+                self.overlay.model.source = "auto"
+                self.overlay.model.target = self.windows.inputModel.target
+                self.overlay.model.useScreenshotSourceName()
+                hasPresentedCapture = true
+                self.overlay.model.beginRecognition(image: image, cancellation: { [weak self] in self?.cancelCapture() })
+                self.overlay.present(source: source, selection: region.bounds)
                 let document = try await self.recognizer.recognizeDocument(image)
                 guard !Task.isCancelled, self.workflow.requestID == id else { return }
-                try layout.validate()
-                self.windows.quickModel.submitCapturedDocument(document, serviceRevision: serviceRevision)
+                self.overlay.model.submitCapturedDocument(document, serviceRevision: serviceRevision,
+                    respectAutomaticPreference: true)
                 self.finish(id)
             } catch is CancellationError {
                 guard let restoration = self.finish(id) else { return }
@@ -68,18 +84,29 @@ final class ScreenshotTranslationController {
                 guard !Task.isCancelled, self.workflow.requestID == id else { return }
                 self.finish(id)
                 if (error as? CaptureError) == .permissionRequired {
-                    self.windows.showQuick(source: source, permission: .screenCapture)
+                    self.windows.showPermission(.screenCapture, source: source)
                 } else {
-                    self.windows.quickModel.fail(localized: ScreenshotFailure.key(for: error))
-                    let layoutChanged = (error as? CaptureError) == .screenConfigurationChanged
-                        || (error as? RegionSelectionError) == .screenConfigurationChanged
-                    self.windows.showQuick(source: source, bounds: layoutChanged ? nil : resultBounds)
+                    if hasPresentedCapture {
+                        self.overlay.model.fail(localized: ScreenshotFailure.key(for: error))
+                    } else {
+                        self.windows.restoreAfterScreenshotCancellation(restoration)
+                        let alert = NSAlert()
+                        alert.messageText = L10n.string("Screenshot Translation")
+                        alert.informativeText = ScreenshotFailure.message(for: error)
+                        alert.addButton(withTitle: L10n.string("OK"))
+                        alert.runModal()
+                    }
                 }
             }
         }
     }
 
     func cancel() {
+        cancelCapture()
+        overlay.dismiss(restoreFocus: false)
+    }
+
+    private func cancelCapture() {
         workflow.cancel()
         task?.cancel()
         task = nil

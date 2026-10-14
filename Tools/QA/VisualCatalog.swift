@@ -185,7 +185,7 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
         bar.addItem(appItem)
         let item = NSMenuItem(title: "场景", action: nil, keyEquivalent: "")
         let menu = NSMenu(title: "场景")
-        for name in ["主窗口", "空白输入", "取词结果", "长文本", "设置", "翻译服务 · 配置列表", "翻译服务 · 空白列表", "Codex · 未登录", "Codex · 设备码", "Codex · 正在完成", "Codex · 账号模型", "Codex · 固定错误", "关于", "辅助功能说明", "屏幕录制说明", "正在识别", "语言准备", "复制内容变化", "翻译取消", "同语言", "未识别文字", "截图提示", "最小主窗口", "最小浮窗", "纯浅色", "通透玻璃", "深色外观", "浅色外观", "窗口内布局对照", "桌面构造背景", "设计构造背景", "彩色条纹背景", "浅色桌面背景", "深色桌面背景", "主窗与设置 · 设置激活", "主窗与设置 · 翻译激活", "屏幕底部下拉核查"] {
+        for name in ["主窗口", "空白输入", "取词结果", "长文本", "设置", "翻译服务 · 配置列表", "翻译服务 · 空白列表", "Codex · 未登录", "Codex · 设备码", "Codex · 正在完成", "Codex · 账号模型", "Codex · 固定错误", "关于", "辅助功能说明", "屏幕录制说明", "正在识别", "语言准备", "复制内容变化", "翻译取消", "同语言", "未识别文字", "截图提示", "最小主窗口", "最小快捷调用", "纯浅色", "通透玻璃", "深色外观", "浅色外观", "窗口内布局对照", "桌面构造背景", "设计构造背景", "彩色条纹背景", "浅色桌面背景", "深色桌面背景", "主窗与设置 · 设置激活", "主窗与设置 · 翻译激活", "屏幕底部下拉核查"] {
             let row = menu.addItem(withTitle: name, action: #selector(selectScene(_:)), keyEquivalent: "")
             row.target = self
         }
@@ -256,20 +256,23 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
         backdrop?.orderFrontRegardless()
         for window in NSApp.windows where window !== backdrop { window.orderOut(nil) }
         NotificationCenter.default.post(name: .translateXTranslationSettingsClosed, object: nil)
-        windows.closeQuick(restoreFocus: false)
+        windows.dismissTranslation(restoreFocus: false)
+        windows.closePermission()
         try? services.select(nil)
         windows.inputModel.clear()
-        windows.prepareQuickTranslation()
+        windows.prepareCapturedTranslation()
         switch name {
         case "主窗口", "最小主窗口":
             await completed(windows.inputModel, text: original, output: translated)
             windows.showMain()
             NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" }?.setFrame(NSRect(x: 220, y: 170, width: name == "最小主窗口" ? 660 : 980, height: name == "最小主窗口" ? 440 : 598), display: true)
         case "空白输入": windows.showMain()
-        case "取词结果", "长文本", "最小浮窗":
-            await completed(windows.quickModel, text: name == "长文本" ? String(repeating: original + "\n", count: 10) : original.components(separatedBy: "\n\n")[0], output: name == "长文本" ? String(repeating: translated + "\n", count: 10) : translated.components(separatedBy: "\n\n")[0])
-            windows.showQuick(source: nil)
-            if name == "最小浮窗" { NSApp.windows.first { $0.identifier?.rawValue == "translatex.quick" }?.setFrame(NSRect(x: 520, y: 250, width: 600, height: 340), display: true) }
+        case "取词结果", "长文本", "最小快捷调用":
+            await completed(windows.inputModel, text: name == "长文本" ? String(repeating: original + "\n", count: 10) : original.components(separatedBy: "\n\n")[0], output: name == "长文本" ? String(repeating: translated + "\n", count: 10) : translated.components(separatedBy: "\n\n")[0])
+            windows.showCapturedTranslation(source: nil)
+            if name == "最小快捷调用", let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "translatex.main" }) {
+                window.setFrame(NSRect(origin: NSPoint(x: 520, y: 250), size: window.minSize), display: true)
+            }
         case "设置": windows.showSettings(shortcuts: shortcuts)
         case "Codex · 未登录", "Codex · 设备码", "Codex · 正在完成", "Codex · 账号模型", "Codex · 固定错误":
             await showCodex(name)
@@ -284,22 +287,22 @@ final class VisualCatalog: NSObject, NSApplicationDelegate, NSWindowDelegate {
                 alert.runModal()
             }
         case "关于": windows.showAbout()
-        case "辅助功能说明", "屏幕录制说明": windows.showQuick(source: nil, permission: name == "辅助功能说明" ? .accessibility : .screenCapture)
-        case "正在识别": windows.quickModel.beginRecognition(); windows.showQuick(source: nil)
+        case "辅助功能说明", "屏幕录制说明": windows.showPermission(name == "辅助功能说明" ? .accessibility : .screenCapture, source: nil)
+        case "正在识别": windows.inputModel.beginRecognition(); windows.showCapturedTranslation(source: nil)
         case "语言准备":
-            windows.quickModel.text = original
-            windows.quickModel.submit()
-            windows.quickModel.markPreparing(windows.quickModel.request!)
-            windows.showQuick(source: nil)
+            windows.inputModel.text = original
+            windows.inputModel.submit()
+            windows.inputModel.markPreparing(windows.inputModel.request!)
+            windows.showCapturedTranslation(source: nil)
         case "复制内容变化":
-            windows.quickModel.fail(L10n.string("The selection or clipboard changed. Select your text and try again."))
-            windows.showQuick(source: nil)
-        case "翻译取消": windows.quickModel.beginRecognition(); windows.quickModel.cancel(); windows.showQuick(source: nil)
-        case "同语言": windows.quickModel.text = translated; windows.quickModel.source = "zh-Hans"; windows.quickModel.submit(); windows.showQuick(source: nil)
+            windows.inputModel.fail(L10n.string("The selection or clipboard changed. Select your text and try again."))
+            windows.showCapturedTranslation(source: nil)
+        case "翻译取消": windows.inputModel.beginRecognition(); windows.inputModel.cancel(); windows.showCapturedTranslation(source: nil)
+        case "同语言": windows.inputModel.text = translated; windows.inputModel.source = "zh-Hans"; windows.inputModel.submit(); windows.showCapturedTranslation(source: nil)
         case "未识别文字":
-            windows.quickModel.text = original; windows.quickModel.submit()
-            await windows.quickModel.run(windows.quickModel.request!, provider: EmptyProvider())
-            windows.showQuick(source: nil)
+            windows.inputModel.text = original; windows.inputModel.submit()
+            await windows.inputModel.run(windows.inputModel.request!, provider: EmptyProvider())
+            windows.showCapturedTranslation(source: nil)
         case "截图提示":
             guard let backdrop else { return }
             let panel = VisualCaptureWindow(contentRect: backdrop.frame, styleMask: [.borderless], backing: .buffered, defer: false)

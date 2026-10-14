@@ -52,6 +52,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self.windows.permissions.request(permission)
         }
         windows.onQuickOperationCancelled = { [weak self] in
+            self?.selectionID = nil
             self?.selectionTask?.cancel()
             self?.selection.cancel()
             self?.screenshots.cancel()
@@ -78,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         guard !isTerminating else { return false }
+        screenshots.cancel()
         windows.showTranslationWindow()
         return true
     }
@@ -135,39 +137,40 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openInput() {
         guard !isTerminating else { return }
+        screenshots.cancel()
         windows.showTranslationWindow()
     }
 
     @objc private func openSettings() {
         guard !isTerminating else { return }
+        screenshots.cancel()
         windows.showSettings(shortcuts: shortcutSettings)
     }
 
     @objc private func openAbout() {
         guard !isTerminating else { return }
+        screenshots.cancel()
         windows.showAbout()
     }
 
     @objc private func translateSelection() {
         guard !isTerminating else { return }
         screenshots.cancel()
-        windows.onQuickRetry = { [weak self] in self?.translateSelection() }
         let frontmost = NSWorkspace.shared.frontmostApplication
         let source = frontmost?.processIdentifier == ProcessInfo.processInfo.processIdentifier
             ? lastExternalApplication : frontmost
         selectionTask?.cancel()
         selection.cancel()
-        windows.closeQuick(restoreFocus: false)
-        windows.prepareQuickTranslation()
-        let serviceRevision = windows.quickModel.captureServiceIntent()
-        windows.quickModel.sourceName = source?.localizedName ?? ""
+        windows.cancelExternalCapture()
+        let serviceRevision = windows.inputModel.captureServiceIntent()
         guard SelectionService.isAccessibilityTrusted else {
-            windows.showQuick(source: source, permission: .accessibility)
+            windows.showPermission(.accessibility, source: source)
             return
         }
         guard let source, !source.isTerminated else {
-            windows.quickModel.fail(localized: "Select text in another app, then use the shortcut. You can also type to translate.")
-            windows.showQuick(source: source)
+            windows.prepareCapturedTranslation()
+            windows.inputModel.fail(localized: "Select text in another app, then use the shortcut. You can also type to translate.")
+            windows.showCapturedTranslation(source: source)
             return
         }
         let id = UUID()
@@ -183,19 +186,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             do {
                 let captured = try await self.selection.capture(from: source)
                 guard !Task.isCancelled, self.selectionID == id else { return }
-                self.windows.quickModel.sourceName = captured.sourceName
-                self.windows.quickModel.submitCapturedText(captured.text, serviceRevision: serviceRevision)
-                self.windows.showQuick(source: source, bounds: captured.bounds)
+                self.windows.prepareCapturedTranslation()
+                self.windows.inputModel.sourceName = captured.sourceName
+                self.windows.inputModel.submitCapturedText(captured.text, serviceRevision: serviceRevision)
+                self.windows.showCapturedTranslation(source: source, bounds: captured.bounds)
             } catch is CancellationError {
                 return
             } catch {
                 guard !Task.isCancelled, self.selectionID == id else { return }
                 switch SelectionFailure(error) {
                 case .accessibilityPermissionRequired:
-                    self.windows.showQuick(source: source, permission: .accessibility)
+                    self.windows.showPermission(.accessibility, source: source)
                 case .message(let key):
-                    self.windows.quickModel.fail(localized: key)
-                    self.windows.showQuick(source: source)
+                    self.windows.prepareCapturedTranslation()
+                    self.windows.inputModel.sourceName = source.localizedName ?? ""
+                    self.windows.inputModel.fail(localized: key)
+                    self.windows.showCapturedTranslation(source: source)
                 }
             }
         }
@@ -203,7 +209,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func translateScreenshot() {
         guard !isTerminating else { return }
-        windows.onQuickRetry = { [weak self] in self?.translateScreenshot() }
         let frontmost = NSWorkspace.shared.frontmostApplication
         let source = frontmost?.processIdentifier == ProcessInfo.processInfo.processIdentifier
             ? lastExternalApplication : frontmost

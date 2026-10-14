@@ -195,7 +195,7 @@ final class ScreenshotDocumentTests: XCTestCase {
         let original = image()
         model.beginRecognition(image: original)
         XCTAssertEqual(model.phase, .recognizing)
-        XCTAssertTrue(model.showsQuickWorkspace)
+        XCTAssertEqual(model.screenshot?.image.width, original.width)
         XCTAssertTrue(model.canClear)
         model.fail("Recognition failed")
         let main = TranslationModel()

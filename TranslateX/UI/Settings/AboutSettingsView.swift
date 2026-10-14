@@ -158,12 +158,13 @@ struct SettingsUpdateOverlay: View {
                     AppUpdateInstallationView(updates: updates, presentation: presentation, dialogSize: dialogSize)
                         .frame(width: dialogSize.width)
                 } else if let mode = updates.releaseNotesPresentation {
-                    ReleaseNotesView(updates: updates, mode: mode, maximumHeight: max(0, geometry.size.height - 40)) {
+                    ReleaseNotesView(updates: updates, mode: mode, maximumHeight: UpdateDialogLayout.maximumHeight(in: geometry.size)) {
                         updates.dismissReleaseNotes()
                     }.frame(width: min(520, max(0, geometry.size.width - 40)))
                 }
             }.frame(width: geometry.size.width, height: geometry.size.height)
         }
+        .ignoresSafeArea()
         .onExitCommand {
             if updates.showsSettingsUpdate { updates.dismissUpdate() }
             else { updates.dismissReleaseNotes() }

@@ -1,8 +1,14 @@
 [
   {
+    "version": "1.3.0",
+    "notes": "## 中文\n\n- **统一翻译主窗口** 输入与快捷取词共用主窗口，左上角显示来源；新内容替换当前内容后可恢复上一条，Esc 收起并返回来源应用。\n- **原位截图翻译** 框选后在所选区域附近显示完整图片与译文，支持自动或手动翻译、语言切换、原图对照、全文查看、复制文字或图片，以及保存原图和译图。需要继续编辑时可送入主窗口。\n- **更清楚的权限引导** 辅助功能与屏幕录制提示采用系统标题栏和左上角窗口按钮，简要说明用途、数据去向与设置入口。\n- **易读的用量记录** 日期显示完整年月日，时间单独成行；费用保留两位小数，不足一美分的非零费用显示为 <$0.01，仍可查看精确值。\n- **更新弹窗修复** 限制更新内容弹窗的最大高度，增加上下留距，并修复设置窗口蒙层边缘漏白。\n\n### 升级前须知\n\n更新会重启 TSX，请先复制需要保留的文字或保存截图。复杂照片纹理、重叠区域或过长译文可能无法直接覆盖排版；这些区域保留原图，并提供完整译文查看。\n\n## English\n\n- **One main translation window** Typed input and shortcut selections share the main window, with the source at the upper left. Restore the previous content after it is replaced, or press Esc to hide the window and return to the source app.\n- **Screenshot translation in place** View the complete image and translations near your selected region. Translate automatically or manually, switch languages, compare the original, read the full text, copy text or images, and save original or translated images. Open the result in the main window to continue editing.\n- **Clearer permission guidance** Accessibility and Screen Recording prompts use a system title bar and standard window buttons, with concise explanations of their purpose, data handling, and the settings action.\n- **Readable usage records** Full calendar dates and times appear on separate lines. Costs use two decimal places; nonzero amounts below one cent show <$0.01, with precise values still available.\n- **Update dialog fixes** Release-note dialogs have a maximum height and more vertical spacing. Fixed uncovered edges in the Settings backdrop.\n\n### Before updating\n\nTSX restarts during an update. Copy text or save screenshots you want to keep first. Intricate photo textures, overlapping regions, or long translations may not fit directly over the image; those regions retain the original pixels and offer the full translation.\n",
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.0"
+  },
+  {
     "version": "1.2.1",
     "notes": "## 中文\n\n- **关于页一键更新** 点击「更新到 v…」后直接下载并接续安装、重启，进度留在设置窗口，不再切换到主窗口重复确认。「检查更新」仍只检查，不改变自动更新偏好。\n- **更舒展的更新弹窗** 「发现新版本」弹窗随主窗口大小调整，在限定的最小与最大尺寸之间缩放；默认主窗口可展示较大尺寸，更新内容更易阅读。\n- **界面细节修复** 本机服务的文本接收提示使用易懂的名称，修正提示图标与文字对齐，并为「发现新版本」按钮补上悬停手型光标。\n\n## English\n\n- **One-click updates from About** Clicking Update to v… starts downloading and continues through installation and restart, with progress kept in Settings and no repeated confirmation in the main window. Check for Updates still only checks, without changing automatic-update preferences.\n- **More room for release notes** The New Version Available dialog adapts to the main window between defined minimum and maximum sizes. The default main window shows the larger dialog for easier reading.\n- **Interface fixes** Local-service text-recipient hints use a readable name, their icons align with the text, and the New Version Available button shows a pointing-hand cursor on hover.\n",
-    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.2.1"
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.2.1",
+    "publishedAt": "2026-10-11T05:47:40Z"
   },
   {
     "version": "1.2.0",

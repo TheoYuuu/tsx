@@ -10,13 +10,12 @@ final class QuickPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
     override func cancelOperation(_ sender: Any?) {
-        guard !isTrackingMenu, (firstResponder as? NSTextView)?.hasMarkedText() != true else { return }
+        guard !isTrackingMenu, attachedSheet == nil,
+              (firstResponder as? NSTextView)?.hasMarkedText() != true else { return }
         onEscape?()
     }
 
-    // The panel intentionally has no standard close button. Route File > Close
-    // through coordinator cleanup instead of NSWindow's
-    // default implementation, which requires the .closable style mask.
+    // Both the native close button and File > Close need coordinator cleanup.
     override func performClose(_ sender: Any?) { (onClose ?? onEscape)?() }
 
     override func validateUserInterfaceItem(_ item: any NSValidatedUserInterfaceItem) -> Bool {
@@ -26,23 +25,32 @@ final class QuickPanel: NSPanel {
 }
 
 @MainActor
+final class TranslationWindow: NSWindow {
+    var onEscape: (() -> Void)?
+    var isTrackingMenu = false
+    override func cancelOperation(_ sender: Any?) {
+        guard !isTrackingMenu, attachedSheet == nil,
+              (firstResponder as? NSTextView)?.hasMarkedText() != true else { return }
+        onEscape?()
+    }
+}
+
+@MainActor
 final class WindowCoordinator: NSObject, NSWindowDelegate {
     let preferences: AppPreferences
     let permissions = PermissionStatus()
     let services: TranslationServiceStore
     let inputModel: TranslationModel
-    let quickModel: TranslationModel
     let languages = LanguageCatalog()
     var updates: AppUpdateController? {
-        didSet { trackMainModal() }
+        didSet { trackMainModal(); trackSettingsModal() }
     }
     var onSelection: (() -> Void)?
     var onScreenshot: (() -> Void)?
     var onSettings: (() -> Void)?
     var onPermission: ((SystemPermission) -> Void)?
     var onQuickOperationCancelled: (() -> Void)?
-    var onQuickRetry: (() -> Void)?
-    private var mainWindow: NSWindow?
+    private var mainWindow: TranslationWindow?
     private var settingsWindow: NSWindow?
     let serviceNavigation = TranslationServiceNavigationCoordinator()
     let settingsNavigation = SettingsNavigation()
@@ -50,22 +58,20 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     private var observesAccountQueries = false
     private var settingsShortcuts: ShortcutSettings?
     private weak var inputEditor: TranslationInputTextView?
-    private weak var quickEditor: TranslationInputTextView?
     private weak var inputTranslationEditor: TranslationInputTextView?
-    private weak var quickTranslationEditor: TranslationInputTextView?
     private var needsInputFocus = false
     private var panel: QuickPanel?
     private var panelPermission: SystemPermission?
-    private var automaticPanelSize: NSSize?
+    private var permissionSourceApplication: NSRunningApplication?
     private var automaticMainSize: NSSize?
-    private var panelShowsWorkspace = false
     private var presentedLayout: TranslationLayout
     private var outsideMonitor: Any?
     private var localMonitor: Any?
     private var trackedMenus = Set<ObjectIdentifier>()
     private var sourceApplication: NSRunningApplication?
-    private enum TranslationWindow { case main, quick }
-    private var lastTranslationWindow = TranslationWindow.main
+    private var previousSourceApplication: NSRunningApplication?
+    private var translationKeyMonitor: Any?
+    private var observesMenuTracking = false
 
     override convenience init() { self.init(preferences: AppPreferences()) }
 
@@ -75,11 +81,8 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         presentedLayout = preferences.translationLayout
         self.services = services
         inputModel = TranslationModel(automaticallyTranslates: true, services: services)
-        quickModel = TranslationModel(automaticallyTranslates: true, services: services)
         super.init()
         inputModel.target = preferences.defaultTarget
-        quickModel.target = preferences.defaultTarget
-        trackQuickPresentation()
         trackLayout()
         trackInterfaceLanguage()
         trackSettingsConfirmation()
@@ -118,6 +121,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     func applyInterfaceLanguage() {
         L10n.apply(preferences.interfaceLanguage)
         settingsWindow?.title = L10n.string("Settings")
+        if let panelPermission { panel?.title = panelPermission.name }
     }
 
     private func trackLayout() {
@@ -143,17 +147,11 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         // Native zoom changes geometry without an end-live-resize callback.
         // Our host never resizes the window from SwiftUI's content dimensions.
         rememberMainSize()
-        rememberQuickSize()
         presentedLayout = preferences.translationLayout
         if let mainWindow {
             mainWindow.minSize = presentedLayout.minimumSize(for: .main)
             resize(mainWindow, to: preferredSize(for: .main))
             automaticMainSize = mainWindow.frame.size
-        }
-        if let panel, panel.isVisible, panelPermission == nil, quickModel.showsQuickWorkspace {
-            panel.minSize = quickMinimumSize
-            resize(panel, to: preferredSize(for: .quick))
-            automaticPanelSize = panel.frame.size
         }
     }
 
@@ -166,71 +164,24 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         guard let window = notification.object as? NSWindow else { return }
         if window === mainWindow {
             preferences.rememberWindowSize(window.frame.size, for: .main, layout: presentedLayout)
-        } else if window === panel, panelShowsWorkspace {
-            preferences.rememberWindowSize(window.frame.size, for: .quick, layout: presentedLayout)
         }
+    }
+
+    func windowWillUseStandardFrame(_ window: NSWindow, defaultFrame: NSRect) -> NSRect {
+        guard window === panel else { return defaultFrame }
+        let visible = (window.screen ?? NSScreen.main)?.visibleFrame ?? defaultFrame
+        let maximum = PermissionPromptView.maximumWindowSize
+        let size = NSSize(width: min(defaultFrame.width, maximum.width),
+                          height: min(defaultFrame.height, maximum.height))
+        // Native zoom may use the display's standard frame even when maxSize
+        // constrains manual resizing. Keep zoom compact and let AppKit retain
+        // its normal second-click restoration of the user's previous frame.
+        return PanelPlacement.resizingFrame(current: window.frame, size: size, visibleFrame: visible)
     }
 
     private func rememberMainSize() {
         guard let mainWindow, mainWindow.frame.size != automaticMainSize else { return }
         preferences.rememberWindowSize(mainWindow.frame.size, for: .main, layout: presentedLayout)
-    }
-
-    private func rememberQuickSize() {
-        guard let panel, panel.isVisible, panelShowsWorkspace, panel.frame.size != automaticPanelSize else { return }
-        preferences.rememberWindowSize(panel.frame.size, for: .quick, layout: presentedLayout)
-    }
-
-    private func trackQuickPresentation() {
-        withObservationTracking {
-            _ = quickModel.phase
-            _ = quickModel.displayedResult
-            _ = quickModel.showsQuickWorkspace
-        } onChange: { [weak self] in
-            Task { @MainActor [weak self] in
-                self?.resizeQuickForPresentation()
-                self?.trackQuickPresentation()
-            }
-        }
-    }
-
-    private var quickPresentationSize: NSSize {
-        if panelPermission != nil { return QuickTranslationView.permissionWindowSize }
-        if quickModel.showsQuickWorkspace { return preferredSize(for: .quick) }
-        return NSSize(width: 392, height: 315)
-    }
-
-    private var quickMinimumSize: NSSize {
-        panelPermission == nil && quickModel.showsQuickWorkspace
-            ? presentedLayout.minimumSize(for: .quick) : NSSize(width: 340, height: 300)
-    }
-
-    private func resizeQuickForPresentation() {
-        guard let panel, panel.isVisible else { return }
-        rememberQuickSize()
-        panelShowsWorkspace = panelPermission == nil && quickModel.showsQuickWorkspace
-        panel.minSize = quickMinimumSize
-        let visible = (panel.screen ?? NSScreen.main)?.visibleFrame ?? panel.frame
-        guard let previous = automaticPanelSize, panel.frame.size == previous else {
-            // A narrow recognition panel may have been resized before the text
-            // arrived. Preserve that choice unless it cannot fit two columns.
-            let minimum = NSSize(width: max(panel.frame.width, quickMinimumSize.width),
-                                 height: max(panel.frame.height, quickMinimumSize.height))
-            if minimum != panel.frame.size {
-                panel.setFrame(PanelPlacement.resizingFrame(current: panel.frame, size: minimum, visibleFrame: visible), display: true)
-                if panelShowsWorkspace {
-                    // Carry the user's narrow OCR-window choice into its valid
-                    // reading size, so a later status update cannot expand it.
-                    preferences.rememberWindowSize(minimum, for: .quick, layout: presentedLayout)
-                }
-                automaticPanelSize = panel.frame.size
-            }
-            return
-        }
-        let size = quickPresentationSize
-        guard size != previous else { return }
-        panel.setFrame(PanelPlacement.resizingFrame(current: panel.frame, size: size, visibleFrame: visible), display: true)
-        automaticPanelSize = panel.frame.size
     }
 
     func applyAppearance() {
@@ -245,51 +196,44 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         if inputModel.text.isEmpty { inputModel.target = preferences.defaultTarget }
     }
 
-    func prepareQuickTranslation() {
-        rememberQuickSize()
-        quickEditor?.finishCompositionForReplacement()
-        quickTranslationEditor?.finishCompositionForReplacement()
-        quickModel.clear(keepingUndo: false)
-        quickModel.source = "auto"
-        quickModel.target = preferences.defaultTarget
+    /// Replace content only after a capture has succeeded. Failed permission
+    /// checks and cancelled region selection leave the existing workspace intact.
+    func prepareCapturedTranslation() {
+        inputEditor?.finishCompositionForReplacement()
+        inputTranslationEditor?.finishCompositionForReplacement()
+        if inputModel.beginExternalReplacement() { previousSourceApplication = sourceApplication }
+        inputModel.source = "auto"
     }
 
-    var canOpenQuickInMain: Bool {
-        !quickModel.isComposing && (quickModel.phase != .recognizing
-            || !quickModel.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    func restorePreviousTranslation() {
+        guard inputModel.canRestorePreviousWorkspace, !inputModel.isComposing else { return }
+        onQuickOperationCancelled?()
+        inputEditor?.finishCompositionForReplacement()
+        inputTranslationEditor?.finishCompositionForReplacement()
+        if inputModel.restorePreviousWorkspace() {
+            sourceApplication = previousSourceApplication
+            previousSourceApplication = nil
+        }
     }
 
-    func openQuickInMain() {
-        // Recheck at action time: a previously enabled UI action must not abandon
-        // OCR before it has produced the passage that the user wants to move.
-        guard canOpenQuickInMain else { return }
-        // Snapshot before showMain closes the panel and cancels its request.
-        showMain(handoff: quickModel.makeHandoff())
-    }
+    func showTranslationWindow() { showMain() }
 
-    /// Dock, menu and input shortcut resume the most recently used workspace.
-    /// Reuse the retained host so image mode, zoom, edits and position survive;
-    /// do not replace the main draft or start another provider request.
-    func showTranslationWindow() {
-        if lastTranslationWindow == .quick, panelPermission == nil, let panel,
-           quickModel.screenshot != nil || !(quickModel.text + quickModel.translatedText).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            applyTranslationLayout()
-            if panel.minSize != quickMinimumSize {
-                panel.minSize = quickMinimumSize
-                resize(panel, to: preferredSize(for: .quick))
-                automaticPanelSize = panel.frame.size
-            }
-            panel.makeKeyAndOrderFront(nil)
-            installOutsideMonitor()
-            NSApp.activate(ignoringOtherApps: true)
-        } else { showMain() }
+    func acceptScreenshot(_ handoff: TranslationHandoff, source: NSRunningApplication?) {
+        prepareCapturedTranslation()
+        inputModel.acceptHandoff(handoff)
+        inputModel.useScreenshotSourceName()
+        sourceApplication = source
+        presentMain(focusEditor: false)
     }
 
     func showMain(handoff: TranslationHandoff? = nil) {
-        lastTranslationWindow = .main
+        presentMain(handoff: handoff, focusEditor: true)
+    }
+
+    private func presentMain(handoff: TranslationHandoff? = nil, focusEditor: Bool, captureAnchor: CGPoint? = nil) {
         applyTranslationLayout()
-        needsInputFocus = updates?.isPresentingMainModal != true
-        closeQuick(restoreFocus: false)
+        needsInputFocus = focusEditor && updates?.isPresentingMainModal != true
+        closePermission()
         if let handoff {
             inputEditor?.finishCompositionForReplacement()
             inputTranslationEditor?.finishCompositionForReplacement()
@@ -297,7 +241,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         }
         if mainWindow == nil {
             let initialSize = preferredSize(for: .main)
-            let window = NSWindow(contentRect: NSRect(origin: .zero, size: initialSize),
+            let window = TranslationWindow(contentRect: NSRect(origin: .zero, size: initialSize),
                                   styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
             TranslateXWindowChrome.configure(window)
             window.setFrame(NSRect(origin: .zero, size: initialSize), display: false)
@@ -305,9 +249,11 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
             window.title = "TSX"
             window.identifier = NSUserInterfaceItemIdentifier("translatex.main")
             window.isReleasedWhenClosed = false
+            window.collectionBehavior = [.moveToActiveSpace, .fullScreenPrimary]
             // Preserve the released autosave key so an engineering rename keeps window placement.
             window.setFrameAutosaveName("LumaxMainWindow")
             window.delegate = self
+            window.onEscape = { [weak self] in self?.dismissTranslation() }
             if !window.setFrameUsingName("LumaxMainWindow") { window.center() }
             // Keep the legacy position. A saved size belongs to its own layout;
             // a first vertical window must not inherit a short horizontal frame.
@@ -328,13 +274,20 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
                     self?.focusInputWhenReady()
                 },
                 translationEditorReady: { [weak self] in self?.inputTranslationEditor = $0 as? TranslationInputTextView },
-                updates: updates
+                updates: updates, restorePrevious: { [weak self] in self?.restorePreviousTranslation() }
             ))
         }
         syncMainModal()
+        if let anchor = captureAnchor, let window = mainWindow, !window.styleMask.contains(.fullScreen),
+           let screen = NSScreen.screens.first(where: { $0.frame.contains(anchor) }) ?? NSScreen.main {
+            window.setFrame(PanelPlacement.frame(size: window.frame.size, anchor: anchor,
+                                                 visibleFrame: screen.visibleFrame), display: false)
+            automaticMainSize = window.frame.size
+        }
         if mainWindow?.isMiniaturized == true { mainWindow?.deminiaturize(nil) }
         mainWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        installTranslationKeyMonitor()
         focusInputWhenReady()
     }
 
@@ -350,18 +303,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     }
 
     func windowDidBecomeKey(_ notification: Notification) {
-        if notification.object as? NSWindow === mainWindow {
-            // AppKit can give the main window focus automatically when the
-            // quick panel disappears. That is not a visit to the main draft.
-            let event = NSApp.currentEvent
-            let userEnteredMain = event?.window === mainWindow &&
-                (event?.type == .leftMouseDown || event?.type == .rightMouseDown || event?.type == .keyDown)
-            if lastTranslationWindow == .main || panel?.isVisible == true || userEnteredMain {
-                lastTranslationWindow = .main
-            }
-            focusInputWhenReady()
-        }
-        if notification.object as? NSWindow === panel { lastTranslationWindow = .quick }
+        if notification.object as? NSWindow === mainWindow { focusInputWhenReady() }
         if notification.object as? NSWindow === settingsWindow { permissions.refresh() }
     }
 
@@ -371,7 +313,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     }
 
     func showSettings(shortcuts: ShortcutSettings) {
-        closeQuick(restoreFocus: false)
+        closePermission()
         // The settings action supersedes any editor attachment/focus callback
         // still queued by the translation window.
         needsInputFocus = false
@@ -399,6 +341,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
             window.center()
             settingsWindow = window
         }
+        syncSettingsModal()
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }
@@ -447,6 +390,28 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
                 }
                 self.trackSettingsConfirmation()
             }
+        }
+    }
+
+    private func trackSettingsModal() {
+        guard let updates else { return }
+        withObservationTracking { _ = updates.isPresentingSettingsModal } onChange: { [weak self, weak updates] in
+            Task { @MainActor [weak self, weak updates] in
+                guard let self, let updates, updates === self.updates else { return }
+                self.syncSettingsModal()
+                self.trackSettingsModal()
+            }
+        }
+    }
+
+    private func syncSettingsModal() {
+        guard let surface = settingsWindow?.contentView as? WindowSurface<SettingsView> else { return }
+        if let updates, updates.isPresentingSettingsModal {
+            if surface.modalHostingView == nil { settingsWindow?.makeFirstResponder(nil) }
+            // Match the main window: dim above the glass and its edge lighting.
+            surface.presentModal { SettingsUpdateOverlay(updates: updates) }
+        } else {
+            surface.dismissModal()
         }
     }
 
@@ -499,100 +464,121 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         syncMainModal()
     }
 
-    func showQuick(source: NSRunningApplication?, bounds: CGRect? = nil, permission: SystemPermission? = nil) {
-        lastTranslationWindow = .quick
-        rememberQuickSize()
-        applyTranslationLayout()
+    /// Selection, screenshot and ordinary input share this window and its host.
+    func showCapturedTranslation(source: NSRunningApplication?, bounds: CGRect? = nil) {
+        let wasVisibleHere = mainWindow?.isVisible == true && mainWindow?.isOnActiveSpace == true
         sourceApplication = source
+        var anchor: CGPoint?
+        if !wasVisibleHere {
+            anchor = NSEvent.mouseLocation
+            if let bounds, let primary = NSScreen.screens.first, !bounds.isEmpty {
+                anchor = CGPoint(x: bounds.midX, y: primary.frame.maxY - bounds.maxY)
+            }
+        }
+        presentMain(focusEditor: false, captureAnchor: anchor)
+    }
+
+    func showPermission(_ permission: SystemPermission, source: NSRunningApplication?) {
         panelPermission = permission
-        panelShowsWorkspace = permission == nil && quickModel.showsQuickWorkspace
+        permissionSourceApplication = source
         if panel == nil {
             let window = QuickPanel(contentRect: .zero,
-                                    styleMask: [.titled, .fullSizeContentView, .nonactivatingPanel, .resizable],
+                                    styleMask: [.titled, .closable, .miniaturizable, .resizable],
                                     backing: .buffered, defer: false)
-            window.title = "TSX"
-            TranslateXWindowChrome.configure(window)
-            window.titleVisibility = .hidden
-            window.identifier = NSUserInterfaceItemIdentifier("translatex.quick")
-            window.titlebarAppearsTransparent = true
-            window.standardWindowButton(.closeButton)?.isHidden = true
-            window.standardWindowButton(.miniaturizeButton)?.isHidden = true
-            window.standardWindowButton(.zoomButton)?.isHidden = true
+            window.identifier = NSUserInterfaceItemIdentifier("translatex.permission")
+            window.delegate = self
             window.isFloatingPanel = true
             window.hidesOnDeactivate = false
             window.isReleasedWhenClosed = false
             window.level = .floating
             window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-            window.isMovableByWindowBackground = true
-            window.onEscape = { [weak self] in
-                guard let self else { return }
-                if self.quickModel.isBusy { self.cancelQuickOperation() }
-                else { self.closeQuick() }
-            }
-            window.onClose = { [weak self] in self?.closeQuick() }
-            window.delegate = self
+            window.onEscape = { [weak self] in self?.closePermission(restoreFocus: true) }
+            window.onClose = { [weak self] in self?.closePermission(restoreFocus: true) }
             panel = window
         }
-        let content = WindowSurface(preferences: preferences, content: QuickTranslationView(
-            model: quickModel,
-            close: { [weak self] in self?.closeQuick() },
-            openInput: { [weak self] in self?.openQuickInMain() },
-            canOpenInput: { [weak self] in self?.canOpenQuickInMain ?? false },
-            permission: permission,
-            requestPermission: { [weak self] in
-                if let permission { self?.onPermission?(permission) }
-            },
-            cancel: { [weak self] in self?.cancelQuickOperation() },
-            retry: { [weak self] in
-                guard let self else { return }
-                if self.quickModel.canTranslate { self.quickModel.submit() }
-                else { self.onQuickRetry?() }
-            },
-            translateSelection: { [weak self] in self?.onSelection?() },
-            translateScreenshot: { [weak self] in self?.onScreenshot?() },
-            openSettings: { [weak self] in self?.onSettings?() },
-            manageServices: { [weak self] in self?.showTranslationServices() },
-            catalog: languages,
-            editorReady: { [weak self] in self?.quickEditor = $0 as? TranslationInputTextView },
-            translationEditorReady: { [weak self] in self?.quickTranslationEditor = $0 as? TranslationInputTextView }
-        ))
-        // The surface contains a stable host; AppKit retains ownership of resize limits.
-        panel?.contentView = content
-        panel?.minSize = quickMinimumSize
-        var anchor = NSEvent.mouseLocation
-        if let bounds, let primary = NSScreen.screens.first, !bounds.isEmpty {
-            anchor = CGPoint(x: bounds.midX, y: primary.frame.maxY - bounds.maxY)
-        }
-        let screen = NSScreen.screens.first(where: { $0.frame.contains(anchor) }) ?? NSScreen.main
-        if let screen {
-            let size = quickPresentationSize
-            panel?.setFrame(PanelPlacement.frame(size: size,
+        // Keep SwiftUI inside the native content rect; the system owns the
+        // titlebar, traffic lights and outer window corners.
+        let content = PermissionPromptView(openInput: { [weak self] in self?.showMain() },
+                                           permission: permission,
+                                           requestPermission: { [weak self] in self?.onPermission?(permission) })
+        let host = NSHostingView(rootView: TranslateXThemeHost(preferences: preferences) { content })
+        host.sizingOptions = []
+        // A root NSHostingView can still publish window size limits after its
+        // first layout. An ordinary content view keeps those limits owned by
+        // AppKit while the SwiftUI child follows the native content rectangle.
+        let container = NSView(frame: .zero)
+        host.autoresizingMask = [.width, .height]
+        host.frame = container.bounds
+        container.addSubview(host)
+        panel?.contentView = container
+        panel?.title = permission.name
+        panel?.minSize = PermissionPromptView.minimumWindowSize
+        panel?.maxSize = PermissionPromptView.maximumWindowSize
+        let anchor = NSEvent.mouseLocation
+        if let screen = NSScreen.screens.first(where: { $0.frame.contains(anchor) }) ?? NSScreen.main {
+            panel?.setFrame(PanelPlacement.frame(size: PermissionPromptView.permissionWindowSize,
                                                 anchor: anchor, visibleFrame: screen.visibleFrame), display: true)
-            automaticPanelSize = panel?.frame.size
         }
-        // Becoming key enables Escape/copy without activating TranslateX or changing the source app.
+        if panel?.isMiniaturized == true { panel?.deminiaturize(nil) }
         panel?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
         installOutsideMonitor()
     }
 
-    func closeQuick(restoreFocus: Bool = true) {
-        rememberQuickSize()
-        quickEditor?.finishCompositionForReplacement()
-        quickTranslationEditor?.finishCompositionForReplacement()
-        cancelQuickOperation()
-        let wasKey = panel?.isKeyWindow == true
+    func closePermission(restoreFocus: Bool = false) {
+        let shouldRestoreFocus = restoreFocus && panel?.isKeyWindow == true && NSApp.isActive
+        let source = permissionSourceApplication
         panel?.orderOut(nil)
+        panelPermission = nil
+        permissionSourceApplication = nil
         removeMonitors()
-        if restoreFocus, wasKey, let sourceApplication,
-           NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier {
-            sourceApplication.activate(options: [])
+        if shouldRestoreFocus, let source, !source.isTerminated,
+           source.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+            source.activate(options: [])
         }
-        sourceApplication = nil
     }
 
-    private func cancelQuickOperation() {
-        quickModel.cancel()
+    /// Abandon selection/OCR without interrupting a translation already in the
+    /// shared workspace. Detach an old OCR cancellation before its successor
+    /// creates a workflow, or replacement could cancel that new workflow.
+    func cancelExternalCapture() {
+        closePermission()
+        if inputModel.phase == .recognizing { inputModel.cancel() }
         onQuickOperationCancelled?()
+    }
+
+    func cancelCapturedOperation() {
+        inputModel.cancel()
+        onQuickOperationCancelled?()
+    }
+
+    func dismissTranslation(restoreFocus: Bool = true) {
+        guard updates?.isPresentingMainModal != true, mainWindow?.attachedSheet == nil else { return }
+        rememberMainSize()
+        needsInputFocus = false
+        let shouldRestoreFocus = restoreFocus && mainWindow?.isKeyWindow == true && NSApp.isActive
+        cancelCapturedOperation()
+        mainWindow?.orderOut(nil)
+        if shouldRestoreFocus, let sourceApplication, !sourceApplication.isTerminated,
+           sourceApplication.processIdentifier != ProcessInfo.processInfo.processIdentifier {
+            sourceApplication.activate(options: [])
+        }
+    }
+
+    private func installTranslationKeyMonitor() {
+        guard translationKeyMonitor == nil else { return }
+        translationKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            let consumed = MainActor.assumeIsolated {
+                guard let self, event.keyCode == 53, event.window === self.mainWindow,
+                      self.mainWindow?.isTrackingMenu != true, self.mainWindow?.attachedSheet == nil,
+                      (self.mainWindow?.firstResponder as? NSTextView)?.hasMarkedText() != true,
+                      self.updates?.isPresentingMainModal != true else { return false }
+                self.dismissTranslation()
+                return true
+            }
+            return consumed ? nil : event
+        }
+        observeMenuTracking()
     }
 
     /// Hide our content before the user chooses pixels. Restore only the window
@@ -623,7 +609,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
             showAbout()
         case .settings:
             guard let settingsWindow else { return }
-            closeQuick(restoreFocus: false)
+            closePermission()
             settingsWindow.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
         }
@@ -634,8 +620,15 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         accounts.stopAutomaticRefresh()
         rememberMainSize()
         needsInputFocus = false
-        inputModel.cancel()
-        closeQuick(restoreFocus: false)
+        cancelCapturedOperation()
+        closePermission()
+        if let translationKeyMonitor { NSEvent.removeMonitor(translationKeyMonitor) }
+        translationKeyMonitor = nil
+        NotificationCenter.default.removeObserver(self)
+        observesMenuTracking = false
+        trackedMenus.removeAll()
+        mainWindow?.isTrackingMenu = false
+        panel?.isTrackingMenu = false
         mainWindow?.orderOut(nil)
         settingsWindow?.orderOut(nil)
         NotificationCenter.default.post(name: .translateXTranslationSettingsClosed, object: nil)
@@ -646,29 +639,26 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         removeMonitors()
         // Native language and service menus have their own windows. Their mouse
         // events and Escape belong to menu tracking, not the panel's dismissal.
-        NotificationCenter.default.addObserver(self, selector: #selector(menuDidBeginTracking(_:)),
-                                               name: NSMenu.didBeginTrackingNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(menuDidEndTracking(_:)),
-                                               name: NSMenu.didEndTrackingNotification, object: nil)
+        observeMenuTracking()
         outsideMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
             MainActor.assumeIsolated {
-                guard let self, !self.isShowingSystemPrompt else { return }
-                self.closeQuick(restoreFocus: false)
+                guard let self, self.panel?.isVisible == true, self.panel?.isMiniaturized != true,
+                      !self.isShowingSystemPrompt else { return }
+                self.closePermission()
             }
         }
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown, .keyDown]) { [weak self] event in
             let consumed = MainActor.assumeIsolated {
-                guard let self else { return false }
+                guard let self, self.panel?.isVisible == true, self.panel?.isMiniaturized != true else { return false }
                 if event.type == .keyDown, event.keyCode == 53, event.window === self.panel,
-                   self.panel?.isTrackingMenu != true,
+                   self.panel?.isTrackingMenu != true, self.panel?.attachedSheet == nil,
                    (self.panel?.firstResponder as? NSTextView)?.hasMarkedText() != true {
-                    self.closeQuick()
+                    self.closePermission(restoreFocus: true)
                     return true
                 }
                 if event.type != .keyDown, event.window !== self.panel,
                    event.window?.sheetParent !== self.panel, !self.isShowingSystemPrompt {
-                    if event.window === self.mainWindow { self.lastTranslationWindow = .main }
-                    self.closeQuick(restoreFocus: false)
+                    self.closePermission()
                 }
                 return false
             }
@@ -677,26 +667,33 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     }
 
     private var isShowingSystemPrompt: Bool {
-        panel?.isTrackingMenu == true || panel?.attachedSheet != nil || quickModel.phase == .preparingLanguages
+        panel?.isTrackingMenu == true || panel?.attachedSheet != nil || inputModel.phase == .preparingLanguages
+    }
+
+    private func observeMenuTracking() {
+        guard !observesMenuTracking else { return }
+        observesMenuTracking = true
+        NotificationCenter.default.addObserver(self, selector: #selector(menuDidBeginTracking(_:)),
+                                               name: NSMenu.didBeginTrackingNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(menuDidEndTracking(_:)),
+                                               name: NSMenu.didEndTrackingNotification, object: nil)
     }
 
     @objc private func menuDidBeginTracking(_ notification: Notification) {
         guard let menu = notification.object as? NSMenu else { return }
         trackedMenus.insert(ObjectIdentifier(menu))
         panel?.isTrackingMenu = true
+        mainWindow?.isTrackingMenu = true
     }
 
     @objc private func menuDidEndTracking(_ notification: Notification) {
         guard let menu = notification.object as? NSMenu else { return }
         trackedMenus.remove(ObjectIdentifier(menu))
         panel?.isTrackingMenu = !trackedMenus.isEmpty
+        mainWindow?.isTrackingMenu = !trackedMenus.isEmpty
     }
 
     private func removeMonitors() {
-        NotificationCenter.default.removeObserver(self, name: NSMenu.didBeginTrackingNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: NSMenu.didEndTrackingNotification, object: nil)
-        trackedMenus.removeAll()
-        panel?.isTrackingMenu = false
         if let outsideMonitor { NSEvent.removeMonitor(outsideMonitor) }
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         outsideMonitor = nil
@@ -712,7 +709,8 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         if notification.object as? NSWindow === mainWindow {
             rememberMainSize()
-            inputModel.cancel()
+            cancelCapturedOperation()
+            needsInputFocus = false
         }
         if notification.object as? NSWindow === settingsWindow {
             settingsShortcuts?.endRecording()
