@@ -833,6 +833,8 @@
 "Star on GitHub" = "Star on GitHub";
 "Dismiss support message" = "Dismiss support message";
 "Checking for updates" = "Checking for updates";
+"Could not check for updates" = "Could not check for updates";
+"Unable to connect to the update server. Please try again later." = "Unable to connect to the update server. Please try again later.";
 "Update to v%@" = "Update to v%@";
 "Could not check for updates. Please try again." = "Could not check for updates. Please try again.";
 "New version v%@ is available" = "New version v%@ is available";

@@ -1,8 +1,14 @@
 [
   {
+    "version": "1.3.1",
+    "notes": "## 中文\n\n- 检查更新使用独立的紧凑弹窗，仅显示状态、进度和取消操作。\n- 检查失败时，重试和关闭按钮保持相同尺寸；已是最新版时提供简洁提示。\n- 检查完成后切换到原有更新说明，两个弹窗不叠加，更新说明的样式与布局保持不变。\n\n## English\n\n- Update checks use a separate compact dialog with status, progress, and a Cancel button.\n- Failed checks show equally sized Retry and Close buttons; up-to-date checks show a concise confirmation.\n- Completed checks switch to the existing release notes without overlapping dialogs. The release-notes styling and layout remain unchanged.\n",
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.1"
+  },
+  {
     "version": "1.3.0",
     "notes": "## 中文\n\n- **统一翻译主窗口** 输入与快捷取词共用主窗口，左上角显示来源；新内容替换当前内容后可恢复上一条，Esc 收起并返回来源应用。\n- **原位截图翻译** 框选后在所选区域附近显示完整图片与译文，支持自动或手动翻译、语言切换、原图对照、全文查看、复制文字或图片，以及保存原图和译图。需要继续编辑时可送入主窗口。\n- **更清楚的权限引导** 辅助功能与屏幕录制提示采用系统标题栏和左上角窗口按钮，简要说明用途、数据去向与设置入口。\n- **易读的用量记录** 日期显示完整年月日，时间单独成行；费用保留两位小数，不足一美分的非零费用显示为 <$0.01，仍可查看精确值。\n- **更新弹窗修复** 限制更新内容弹窗的最大高度，增加上下留距，并修复设置窗口蒙层边缘漏白。\n\n### 升级前须知\n\n更新会重启 TSX，请先复制需要保留的文字或保存截图。复杂照片纹理、重叠区域或过长译文可能无法直接覆盖排版；这些区域保留原图，并提供完整译文查看。\n\n## English\n\n- **One main translation window** Typed input and shortcut selections share the main window, with the source at the upper left. Restore the previous content after it is replaced, or press Esc to hide the window and return to the source app.\n- **Screenshot translation in place** View the complete image and translations near your selected region. Translate automatically or manually, switch languages, compare the original, read the full text, copy text or images, and save original or translated images. Open the result in the main window to continue editing.\n- **Clearer permission guidance** Accessibility and Screen Recording prompts use a system title bar and standard window buttons, with concise explanations of their purpose, data handling, and the settings action.\n- **Readable usage records** Full calendar dates and times appear on separate lines. Costs use two decimal places; nonzero amounts below one cent show <$0.01, with precise values still available.\n- **Update dialog fixes** Release-note dialogs have a maximum height and more vertical spacing. Fixed uncovered edges in the Settings backdrop.\n\n### Before updating\n\nTSX restarts during an update. Copy text or save screenshots you want to keep first. Intricate photo textures, overlapping regions, or long translations may not fit directly over the image; those regions retain the original pixels and offer the full translation.\n",
-    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.0"
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.0",
+    "publishedAt": "2026-10-14T18:39:35Z"
   },
   {
     "version": "1.2.1",

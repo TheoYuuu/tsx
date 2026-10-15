@@ -20,6 +20,11 @@ struct AppUpdatePresentation: Equatable {
     var informationURL: URL?
     var informationOnly = false
     var publishedAt: Date?
+    var isCheckFailure = false
+
+    var usesCheckDialog: Bool {
+        phase == .checking || phase == .current || (phase == .failed && isCheckFailure)
+    }
 }
 
 enum AppReleaseNotesMode: Hashable {
@@ -317,8 +322,9 @@ final class AppUpdateController {
     }
     func installing() { cancellation = nil; updateReply = nil; setPhase(.installing, progress: nil) }
     func updateErrored() {
+        let isCheckFailure = updatePresentation?.phase == .checking
         checkFailed(); cancellation = nil; updateReply = nil
-        present(.init(version: availableVersion, phase: .failed))
+        present(.init(version: availableVersion, phase: .failed, isCheckFailure: isCheckFailure))
     }
     func updateNotFound() {
         foundNoUpdate(); cancellation = nil; updateReply = nil
@@ -397,8 +403,10 @@ final class AppUpdateController {
 
     #if TRANSLATEX_VISUAL_QA
     static func visualReview(previewInstalledNotes: Bool = false, shortReleaseNotes: Bool = false,
-                             previewAvailableUpdate: Bool = false, compactReleaseNotes: Bool = false) -> AppUpdateController {
-        let backend = VisualReviewAppUpdater(fixtureVersion: compactReleaseNotes ? "1.1.2" : "1.0.1")
+                             previewAvailableUpdate: Bool = false, compactReleaseNotes: Bool = false,
+                             checkOutcome: String? = nil) -> AppUpdateController {
+        let backend = VisualReviewAppUpdater(fixtureVersion: compactReleaseNotes ? "1.1.2" : "1.0.1",
+                                             checkOutcome: checkOutcome)
         let entries: [AppRelease]? = compactReleaseNotes ? [
             .init(version: "1.1.2", publishedAt: Date().addingTimeInterval(-10_800), notes: """
             ## 中文
@@ -460,11 +468,32 @@ private final class VisualReviewAppUpdater: AppUpdaterBackend {
     private var simulation: Task<Void, Never>?
     // This candidate only exercises the UI; it is not a published release.
     private let fixtureVersion: String
-    init(fixtureVersion: String = "1.0.1") { self.fixtureVersion = fixtureVersion }
+    private let checkOutcome: String?
+    init(fixtureVersion: String = "1.0.1", checkOutcome: String? = nil) {
+        self.fixtureVersion = fixtureVersion
+        self.checkOutcome = checkOutcome
+    }
 
     func start() throws {}
     func checkInformation() { owner?.foundUpdate(fixtureVersion); owner?.finishedCheck() }
     func checkUpdates() {
+        guard let checkOutcome else { offerUpdate(); return }
+        owner?.showUpdateCheck { [weak self] in
+            self?.simulation?.cancel()
+            self?.owner?.finishedCheck()
+        }
+        simulation = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(5)) } catch { return }
+            guard let self, !Task.isCancelled else { return }
+            switch checkOutcome {
+            case "failed": owner?.updateErrored()
+            case "current": owner?.updateNotFound()
+            default: offerUpdate()
+            }
+            owner?.finishedCheck()
+        }
+    }
+    private func offerUpdate() {
         owner?.offerUpdate(version: fixtureVersion, informationOnly: false, informationURL: nil,
                            userInitiated: true) { [weak self] choice in
             guard choice == .install, let self else { return }

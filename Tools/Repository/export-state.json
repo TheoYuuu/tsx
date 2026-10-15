@@ -422,7 +422,7 @@
     },
     "Tools/QA/README.md": {
       "mode": "100644",
-      "sha256": "c05d81faeb3c3ec016e184c735e6da630806cb957aec16f5be650609903617e1"
+      "sha256": "a7ab6767665422d740b8f557fc0c95432aa4a7fb6adc7946f84e9b10175cfad7"
     },
     "Tools/QA/RemoteTranslationNetworkProbe.swift": {
       "mode": "100644",
@@ -442,7 +442,7 @@
     },
     "Tools/QA/TranslationServiceVisualReview.swift": {
       "mode": "100644",
-      "sha256": "b9e4d9530442388bf58d3371f22722c1e982f8c4e83bbeae7ab526052857cf42"
+      "sha256": "e780479b324cd98581f90082f043453d257ae210d35c0700accbbb75ef29b57e"
     },
     "Tools/QA/ValidateProject.swift": {
       "mode": "100644",
@@ -478,7 +478,7 @@
     },
     "TranslateX.xcodeproj/project.pbxproj": {
       "mode": "100644",
-      "sha256": "1873b3f700e7cd3c2cc6fab4a84611cf33d527ccb1f8b18573bddde637845038"
+      "sha256": "9d27f51a06941e3fb69e422f4be2aacf491758ebb68af067e3ada514883887a3"
     },
     "TranslateX.xcodeproj/project.xcworkspace/contents.xcworkspacedata": {
       "mode": "100644",
@@ -786,7 +786,7 @@
     },
     "TranslateX/Resources/PublishedReleaseNotes.json": {
       "mode": "100644",
-      "sha256": "02ed9c03fe1033f7096f783bbe039f0852b3446dcc5e43f06bb1bf7afa146331"
+      "sha256": "0f999d47f1754664c1d4037652292975ec81619d4397493e2323a88c19715e76"
     },
     "TranslateX/Resources/en.lproj/InfoPlist.strings": {
       "mode": "100644",
@@ -794,7 +794,7 @@
     },
     "TranslateX/Resources/en.lproj/Localizable.strings": {
       "mode": "100644",
-      "sha256": "9d97b862ffbfeea909be75ab518beb7bdc85a0241d106cde5b3308f8da2053fd"
+      "sha256": "971ded59e87bbd2b2e49fca2e27618005431a0fa6e198b5ead58b008ba86beb8"
     },
     "TranslateX/Resources/zh-Hans.lproj/InfoPlist.strings": {
       "mode": "100644",
@@ -802,7 +802,7 @@
     },
     "TranslateX/Resources/zh-Hans.lproj/Localizable.strings": {
       "mode": "100644",
-      "sha256": "f401c1519bc5c882433d1c44add710d3556649158331c754aeef9078c99cc514"
+      "sha256": "0311269698e9447d0866dd23620fc1eb47da83fe201ac73916d6d8ef12308cb7"
     },
     "TranslateX/Settings/AppPreferences.swift": {
       "mode": "100644",
@@ -890,7 +890,7 @@
     },
     "TranslateX/System/Updates/AppUpdateController.swift": {
       "mode": "100644",
-      "sha256": "3478ef3126181eb0fdf2771b81c84551443175c88361639d8613e0bcdf3b7495"
+      "sha256": "23e449e09a24f1de239813570370b973d9d14942d3f0a26a79dd27d1b7dd616d"
     },
     "TranslateX/System/Updates/ReleaseNotesPresentation.swift": {
       "mode": "100644",
@@ -1074,7 +1074,11 @@
     },
     "TranslateX/UI/Settings/AboutSettingsView.swift": {
       "mode": "100644",
-      "sha256": "2df2440cf30e95c23f0afc5b9f81b37564acfa4cc05a25ad9f6613965c4570a7"
+      "sha256": "17c1fdba677bcd696846ad1a7d20e826573ded34d5d47c035f66f102601f9757"
+    },
+    "TranslateX/UI/Settings/AppUpdateCheckDialog.swift": {
+      "mode": "100644",
+      "sha256": "f40b1531df081c11f5d88b899da75f59e8b625ca9e65461aeb6c4081340eade8"
     },
     "TranslateX/UI/Settings/CodexAccountSettingsView.swift": {
       "mode": "100644",
@@ -1086,7 +1090,7 @@
     },
     "TranslateX/UI/Settings/ReleaseNotesView.swift": {
       "mode": "100644",
-      "sha256": "f1e8c9d25d313a24ae3d5b8f2336e3ad31405febf0d4793fbd6c495a54a202cb"
+      "sha256": "76afbeefd9a41e54b35970fdcd044efdc03577c17d7e02783a038cbb557f1a79"
     },
     "TranslateX/UI/Settings/SettingsView.swift": {
       "mode": "100644",
@@ -1218,7 +1222,7 @@
     },
     "TranslateXTests/AppUpdateControllerTests.swift": {
       "mode": "100644",
-      "sha256": "cbf1c1676f2d61560d590d71ef4f1d10c7791b1109be17dab5d4363a98077ce8"
+      "sha256": "60c7db2b029d20e3feecca9fccf1bfba809047e48aef930e4e895a791adecbc6"
     },
     "TranslateXTests/AppleTranslationHostTests.swift": {
       "mode": "100644",
@@ -1510,7 +1514,7 @@
     },
     "project.yml": {
       "mode": "100644",
-      "sha256": "a372b95e88b91c76f04c0b85c1efe8c4a7a7e1acc63233db5950b9d66b9f28ac"
+      "sha256": "bd32bcd8414dd92fc2c1e640215fb6eb15142a419f0cc6871f49f5fd90b229ac"
     }
   },
   "version": 1

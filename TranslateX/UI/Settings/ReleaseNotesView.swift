@@ -93,11 +93,12 @@ struct MainReleaseNotesOverlay: View {
         GeometryReader { geometry in
             if updates.isPresentingMainModal {
                 ZStack {
-                    Color.black.opacity(theme.isDark ? 0.46 : 0.23).ignoresSafeArea()
+                    Color.black.opacity(updates.showsMainUpdate && updates.updatePresentation?.usesCheckDialog == true
+                                        ? (theme.isDark ? 0.20 : 0.07) : (theme.isDark ? 0.46 : 0.23)).ignoresSafeArea()
                         .contentShape(Rectangle()).onTapGesture {}
                     if updates.showsMainUpdate, let presentation = updates.updatePresentation {
                         let dialogSize = UpdateDialogLayout.size(in: geometry.size)
-                        AppUpdateInstallationView(updates: updates, presentation: presentation,
+                        AppUpdateDialogView(updates: updates, presentation: presentation,
                                                   dialogSize: dialogSize)
                             .frame(width: dialogSize.width)
                     } else if let mode = updates.mainReleaseNotesPresentation {

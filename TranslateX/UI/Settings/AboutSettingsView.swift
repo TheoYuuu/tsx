@@ -151,11 +151,12 @@ struct SettingsUpdateOverlay: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                Color.black.opacity(theme.isDark ? 0.46 : 0.23).ignoresSafeArea()
+                Color.black.opacity(updates.showsSettingsUpdate && updates.updatePresentation?.usesCheckDialog == true
+                                    ? (theme.isDark ? 0.20 : 0.07) : (theme.isDark ? 0.46 : 0.23)).ignoresSafeArea()
                     .contentShape(Rectangle()).onTapGesture {}
                 if updates.showsSettingsUpdate, let presentation = updates.updatePresentation {
                     let dialogSize = UpdateDialogLayout.size(in: geometry.size)
-                    AppUpdateInstallationView(updates: updates, presentation: presentation, dialogSize: dialogSize)
+                    AppUpdateDialogView(updates: updates, presentation: presentation, dialogSize: dialogSize)
                         .frame(width: dialogSize.width)
                 } else if let mode = updates.releaseNotesPresentation {
                     ReleaseNotesView(updates: updates, mode: mode, maximumHeight: UpdateDialogLayout.maximumHeight(in: geometry.size)) {

@@ -1082,7 +1082,9 @@ final class TranslationServiceVisualReview: NSObject {
             let updates = AppUpdateController.visualReview(previewInstalledNotes: scene.hasPrefix("release-notes"),
                                                            shortReleaseNotes: scene.contains("short"),
                                                            previewAvailableUpdate: scene.hasPrefix("main-update"),
-                                                           compactReleaseNotes: scene.contains("compact"))
+                                                           compactReleaseNotes: scene.contains("compact"),
+                                                           checkOutcome: scene.contains("check")
+                                                            ? (scene.contains("failed") ? "failed" : scene.contains("current") ? "current" : "available") : nil)
             windows.updates = updates
             updates.onPresentUpdate = { [weak windows] in windows?.showUpdate() }
             reviewWindows = windows
@@ -1091,9 +1093,10 @@ final class TranslationServiceVisualReview: NSObject {
                 windows.showSettings(shortcuts: shortcuts)
                 windows.showAbout()
                 if scene.hasPrefix("release-notes") { updates.showRecentReleaseNotes() }
+                if scene.contains("check") { updates.checkForUpdates(in: .settings) }
             } else if scene.hasPrefix("main-update") {
                 windows.showMain()
-                if scene.contains("modal") { updates.performUpdateAction() }
+                if scene.contains("modal") || scene.contains("check") { updates.performUpdateAction() }
             } else {
                 if scene.contains("recent") { updates.showRecentReleaseNotes(in: .mainWindow) }
                 windows.showMainReleaseNotes()

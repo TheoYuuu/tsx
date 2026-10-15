@@ -91,6 +91,8 @@ Scripts/build-screen-fixture.sh
 
 ### 更新弹窗与窗口焦点
 
+检查更新另有 `main-update-check`、`main-update-check-failed` 和 `main-update-check-current` 场景，构造检查持续 5 秒后分别显示更新说明、检查失败和最新版本。场景名追加 `-settings` 可检查设置窗口；取消与重试均使用隔离更新器，不请求线上清单。
+
 视觉目录支持 `main-update-entry`、`main-update-modal` 和 `main-update-modal-minimum` 场景，使用正式主窗口与隔离更新器展示入口、弹窗和最小窗口布局，不联网下载或安装。通过 `CaptureTranslationServiceReview.py` 的 `--review-scene`、`--review-interface-language` 和 `--review-theme` 参数选择场景、语言与主题，截图保留在忽略目录。
 
 紧凑更新界面另提供 `main-update-modal-compact`、`release-notes-compact`、`release-notes-recent-compact` 和 `release-notes-settings-compact`，覆盖发现更新、更新完成、主窗口历史和设置内历史；主窗口场景可追加 `-minimum`。这些场景使用双语构造说明与相对发布时间，包含应被隐藏的安装说明，沿用生产视图、全局滚动样式及隔离更新器；点击立即更新只模拟进度，不下载、安装或退出真实产品。

@@ -833,6 +833,8 @@
 "Star on GitHub" = "去点 Star";
 "Dismiss support message" = "关闭支持提示";
 "Checking for updates" = "正在检查更新";
+"Could not check for updates" = "无法检查更新";
+"Unable to connect to the update server. Please try again later." = "暂时无法连接更新服务器，请稍后重试。";
 "Update to v%@" = "更新到 v%@";
 "Could not check for updates. Please try again." = "暂时无法检查更新，请重试。";
 "New version v%@ is available" = "发现新版本 v%@";

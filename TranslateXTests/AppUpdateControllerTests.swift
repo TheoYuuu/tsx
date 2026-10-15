@@ -161,6 +161,77 @@ private final class UpdateBackendFixture: AppUpdaterBackend {
 }
 
 extension AppUpdateControllerTests {
+    func testManualCheckReplacesCompactDialogWithExistingOffer() {
+        let (updates, _) = aboutUpdateFixture()
+        updates.performUpdateAction()
+        var cancellations = 0
+        updates.showUpdateCheck { cancellations += 1 }
+        updates.presentUpdateInMainWindow()
+        XCTAssertEqual(updates.updatePresentation?.phase, .checking)
+        XCTAssertEqual(updates.updatePresentation?.usesCheckDialog, true)
+        XCTAssertTrue(updates.showsMainUpdate)
+        var choice: SPUUserUpdateChoice?
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            userInitiated: true) { choice = $0 }
+        XCTAssertEqual(updates.updatePresentation?.phase, .available)
+        XCTAssertEqual(updates.updatePresentation?.usesCheckDialog, false)
+        XCTAssertTrue(updates.showsMainUpdate)
+        XCTAssertNil(choice)
+        updates.dismissUpdate()
+        XCTAssertEqual(choice, .dismiss)
+        XCTAssertEqual(cancellations, 0, "Closing an offer must not cancel the completed check.")
+    }
+
+    func testKnownVersionCheckFailureUsesCompactDialogAndCanRetry() {
+        let (updates, backend) = aboutUpdateFixture()
+        updates.performUpdateAction()
+        updates.showUpdateCheck(cancellation: {})
+        updates.updateErrored()
+        XCTAssertEqual(updates.updatePresentation?.version, "2.0.0")
+        XCTAssertEqual(updates.updatePresentation?.usesCheckDialog, true)
+        updates.retryUpdate()
+        XCTAssertNil(updates.updatePresentation)
+        XCTAssertEqual(backend.calls.filter { $0 == "update" }.count, 2)
+        updates.showUpdateCheck(cancellation: {})
+        updates.updateNotFound()
+        XCTAssertEqual(updates.updatePresentation?.phase, .current)
+        XCTAssertEqual(updates.updatePresentation?.usesCheckDialog, true)
+        updates.dismissUpdate()
+        XCTAssertNil(updates.updatePresentation)
+    }
+
+    func testDownloadAndInstallFailuresKeepExistingPresentation() {
+        for phase in [AppUpdatePresentation.Phase.downloading, .extracting, .installing] {
+            let (updates, _) = aboutUpdateFixture()
+            updates.performUpdateAction()
+            updates.showUpdateCheck(cancellation: {})
+            updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                                userInitiated: true, reply: { _ in })
+            switch phase {
+            case .downloading: updates.downloadStarted {}
+            case .extracting: updates.extractionStarted()
+            default: updates.installing()
+            }
+            updates.updateErrored()
+            XCTAssertEqual(updates.updatePresentation?.phase, .failed)
+            XCTAssertEqual(updates.updatePresentation?.usesCheckDialog, false)
+        }
+    }
+
+    func testCompactCheckCancelRunsCancellationOnceAndClosesModal() {
+        let (updates, _) = aboutUpdateFixture()
+        updates.performUpdateAction()
+        var cancellations = 0
+        updates.showUpdateCheck { cancellations += 1; updates.finishedCheck() }
+        updates.presentUpdateInMainWindow()
+        updates.dismissUpdate()
+        updates.dismissUpdate()
+        XCTAssertEqual(cancellations, 1)
+        XCTAssertNil(updates.updatePresentation)
+        XCTAssertFalse(updates.isPresentingMainModal)
+        XCTAssertFalse(updates.isChecking)
+    }
+
     private func aboutUpdateFixture() -> (AppUpdateController, UpdateBackendFixture) {
         let backend = UpdateBackendFixture()
         let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false, isReleaseBuild: true,

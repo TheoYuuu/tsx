@@ -50,6 +50,7 @@
 		3E4982B989A6E8A0A13EF838 /* TranslationServiceRoutingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3271C9634B86716205FC6A9 /* TranslationServiceRoutingTests.swift */; };
 		3FD7CECAA7A0385CA2D10292 /* MaterialPreferencesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68217701F236895FB350AEE5 /* MaterialPreferencesTests.swift */; };
 		4165339E1FA181B46A3E76E8 /* SelectionFailureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AE35FAC75A550AE89FB6886 /* SelectionFailureTests.swift */; };
+		44F0348F265DFECF3CD7387D /* AppUpdateCheckDialog.swift in Sources */ = {isa = PBXBuildFile; fileRef = C59898C4F340E8E4DC7FDEF3 /* AppUpdateCheckDialog.swift */; };
 		460B1B1CE0B16F2A9EB6E878 /* InputTranslationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 798DA75730CA37408A913210 /* InputTranslationView.swift */; };
 		4898A4BE5ACC1D7FD1458E34 /* TencentTranslationLanguages.swift in Sources */ = {isa = PBXBuildFile; fileRef = 222EBC3E9538BB819C301097 /* TencentTranslationLanguages.swift */; };
 		490775D3A6C822E1874C92E8 /* GlobalShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EBF83138F9FF3170740CF3C /* GlobalShortcut.swift */; };
@@ -344,6 +345,7 @@
 		C196E40C9F55494B2D753F36 /* LocalizationMessageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationMessageTests.swift; sourceTree = "<group>"; };
 		C36A8E8397E83E148CE1BFD8 /* TranslationServicePresetTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServicePresetTests.swift; sourceTree = "<group>"; };
 		C3861379407D3FF1BE051FCB /* TranslationStatusLight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationStatusLight.swift; sourceTree = "<group>"; };
+		C59898C4F340E8E4DC7FDEF3 /* AppUpdateCheckDialog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateCheckDialog.swift; sourceTree = "<group>"; };
 		C78B909A4315204683FF2C2C /* DedicatedTranslationProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DedicatedTranslationProviderTests.swift; sourceTree = "<group>"; };
 		C9EA3CF1C426D206F9D39F8A /* TranslationSplitLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationSplitLayout.swift; sourceTree = "<group>"; };
 		CA5442189BB965CA701657FB /* WindowCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowCoordinator.swift; sourceTree = "<group>"; };
@@ -735,6 +737,7 @@
 			isa = PBXGroup;
 			children = (
 				20D809E0C9999B4BD98EBF0A /* AboutSettingsView.swift */,
+				C59898C4F340E8E4DC7FDEF3 /* AppUpdateCheckDialog.swift */,
 				2B47B3115B81FEF7A4D84D91 /* CodexAccountSettingsView.swift */,
 				E68AB3043905E700D0430C2A /* CompactUpdateDialog.swift */,
 				351E9D25A1068BEB0C04D69B /* ReleaseNotesView.swift */,
@@ -919,6 +922,7 @@
 				F82D20C7B55E897434DD64E7 /* AppDelegate.swift in Sources */,
 				538D39B0CBC5C48F3385340F /* AppPreferences.swift in Sources */,
 				D60DE703FCD888FC66A6FDFC /* AppReleaseNotes.swift in Sources */,
+				44F0348F265DFECF3CD7387D /* AppUpdateCheckDialog.swift in Sources */,
 				8F7650C457AE32CF98E8C999 /* AppUpdateController.swift in Sources */,
 				9A8A82EAE87A00D08DF77916 /* AppleTranslationHost.swift in Sources */,
 				341AC1944DDEC7AE307DC749 /* BoundedTranslationHTTPTransport.swift in Sources */,
@@ -1304,7 +1308,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Config/TranslateX.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 97K37J92QD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1315,7 +1319,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.3.0;
+				MARKETING_VERSION = 1.3.1;
 				OTHER_CODE_SIGN_FLAGS = "$(inherited) --options runtime";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TRANSLATEX_APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = TranslateX;
@@ -1334,7 +1338,7 @@
 				CODE_SIGN_ENTITLEMENTS = Config/TranslateX.entitlements;
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = 97K37J92QD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1345,7 +1349,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.3.0;
+				MARKETING_VERSION = 1.3.1;
 				OTHER_CODE_SIGN_FLAGS = "$(inherited) --options runtime";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TRANSLATEX_APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = TranslateX;
