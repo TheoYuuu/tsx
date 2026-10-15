@@ -1,6 +1,7 @@
 import AppKit
 import Observation
 import SwiftUI
+import UniformTypeIdentifiers
 
 @MainActor
 final class QuickPanel: NSPanel {
@@ -274,7 +275,8 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
                     self?.focusInputWhenReady()
                 },
                 translationEditorReady: { [weak self] in self?.inputTranslationEditor = $0 as? TranslationInputTextView },
-                updates: updates, restorePrevious: { [weak self] in self?.restorePreviousTranslation() }
+                updates: updates, restorePrevious: { [weak self] in self?.restorePreviousTranslation() },
+                saveScreenshot: { [weak self] in self?.saveScreenshot($0) }
             ))
         }
         syncMainModal()
@@ -346,7 +348,37 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    private func showTranslationServices() {
+    private func saveScreenshot(_ output: ScreenshotOutput) {
+        guard let mainWindow, mainWindow.attachedSheet == nil, let document = inputModel.screenshot else { return }
+        let image: CGImage?
+        switch output {
+        case .originalImage: image = document.image
+        case .translatedImage: image = ScreenshotImageRenderer.render(document)?.image
+        case .originalText, .translatedText: return
+        }
+        guard let image, let data = ScreenshotImageExport.pngData(image) else {
+            showScreenshotSaveError(in: mainWindow)
+            return
+        }
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.png]
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = output == .originalImage ? "TSX-original.png" : "TSX-translated.png"
+        panel.beginSheetModal(for: mainWindow) { [weak self, weak mainWindow] response in
+            guard response == .OK, let url = panel.url else { return }
+            do { try data.write(to: url, options: .atomic) }
+            catch { if let mainWindow { self?.showScreenshotSaveError(in: mainWindow) } }
+        }
+    }
+
+    private func showScreenshotSaveError(in window: NSWindow) {
+        let alert = NSAlert()
+        alert.messageText = L10n.string("Unable to save. Try again.")
+        alert.addButton(withTitle: L10n.string("OK"))
+        alert.beginSheetModal(for: window)
+    }
+
+    func showTranslationServices() {
         onSettings?()
         serviceNavigation.showServices()
     }

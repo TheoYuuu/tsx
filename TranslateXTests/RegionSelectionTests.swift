@@ -113,6 +113,33 @@ final class RegionSelectionEventTests: XCTestCase {
         XCTAssertEqual(cancellations, 2)
     }
 
+    func testReturnConfirmsOnlyAnExplicitPendingSelectionAndToolbarReceivesClicks() throws {
+        _ = NSApplication.shared
+        let view = RegionSelectionOverlayView(frame: CGRect(x: 0, y: 0, width: 600, height: 400),
+                                              screenFrame: CGRect(x: -600, y: 100, width: 600, height: 400))
+        var confirmations = 0
+        view.onConfirm = { confirmations += 1 }
+        let enter = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: 0, context: nil, characters: "\r", charactersIgnoringModifiers: "\r", isARepeat: false, keyCode: 36))
+        view.keyDown(with: enter)
+        XCTAssertEqual(confirmations, 0)
+        view.selection = CGRect(x: -500, y: 200, width: 300, height: 200)
+        view.showsConfirmation = true
+        view.layoutSubtreeIfNeeded()
+        view.keyDown(with: enter)
+        XCTAssertEqual(confirmations, 1)
+        XCTAssertTrue(view.hitTest(CGPoint(x: 20, y: 20)) === view, "The rest of the desktop still starts a new drag")
+        let toolbar = try XCTUnwrap(view.subviews.last)
+        XCTAssertTrue(view.bounds.contains(toolbar.frame))
+        XCTAssertFalse(toolbar.isHidden)
+        let hit = view.hitTest(CGPoint(x: toolbar.frame.midX, y: toolbar.frame.midY))
+        XCTAssertNotNil(hit)
+        XCTAssertFalse(hit === view, "The confirmation toolbar must not be swallowed by the selection surface")
+        view.showsConfirmation = false
+        view.keyDown(with: enter)
+        XCTAssertEqual(confirmations, 1)
+    }
+
     private func event(_ type: NSEvent.EventType, at point: CGPoint, window: NSWindow) throws -> NSEvent {
         try XCTUnwrap(NSEvent.mouseEvent(
             with: type, location: point, modifierFlags: [], timestamp: 0,

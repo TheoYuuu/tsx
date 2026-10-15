@@ -21,6 +21,17 @@ struct ScreenshotDocument: Equatable, Sendable {
     let image: CGImage
     var regions: [ScreenshotRegion]
     var translations: [UUID: String] = [:]
+    /// Last generated text, retained through handoff and undo so restoring one
+    /// correction never discards edits in other regions or calls a provider.
+    var generatedTranslations: [UUID: String] = [:]
+
+    func isTranslationEdited(_ id: UUID) -> Bool {
+        guard let generated = generatedTranslations[id] else { return false }
+        return translations[id] != generated
+    }
+    var hasEditedTranslations: Bool {
+        translations.contains { generatedTranslations[$0.key] != $0.value }
+    }
 
     init(image: CGImage, regions: [ScreenshotRegion] = []) {
         id = UUID()
@@ -94,6 +105,7 @@ struct ScreenshotDocument: Equatable, Sendable {
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.id == rhs.id && lhs.regions == rhs.regions && lhs.translations == rhs.translations
+            && lhs.generatedTranslations == rhs.generatedTranslations
     }
 
     /// The image itself never reflows. All regions use this same fitted scale.

@@ -158,6 +158,7 @@
 		D668EF367EB30FD12A1E6E99 /* TranslationServiceChecksController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A2FD9B5CD4A89865BC49B6B /* TranslationServiceChecksController.swift */; };
 		D6690CC873728DA4ECC35619 /* ShortcutRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD5F1CE3AACD5DD502C5F678 /* ShortcutRecorder.swift */; };
 		D8696C61786A53A4C670E83E /* TranslationServiceIconTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4EBBBC9818ECD3BD6C3F7F9 /* TranslationServiceIconTests.swift */; };
+		DA45C195FDD4A8E83B33A6D3 /* ScreenshotControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5448B9F512B5390FE5631C48 /* ScreenshotControls.swift */; };
 		DBDE2C30CAE309D0218516AF /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46B551D9BDBAC89914CAE180 /* AboutView.swift */; };
 		DE981858F6F0AAB1856193A5 /* NativeControlDisableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E068ECC82C052835AF2F28C5 /* NativeControlDisableTests.swift */; };
 		E0576C9F415A3EC132BA886D /* TranslationServiceEditorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0182656FDAC8E6250DCEB55 /* TranslationServiceEditorTests.swift */; };
@@ -271,6 +272,7 @@
 		50929072B8F7AD434B5A7B48 /* ScreenshotFailureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotFailureTests.swift; sourceTree = "<group>"; };
 		525782C4DC93A970C70707FF /* SelectionClipboard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionClipboard.swift; sourceTree = "<group>"; };
 		52B6470C5A25533C4C26E5A9 /* TranslationServicesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServicesSettingsView.swift; sourceTree = "<group>"; };
+		5448B9F512B5390FE5631C48 /* ScreenshotControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotControls.swift; sourceTree = "<group>"; };
 		5499AB41698A314C69187747 /* SparkleAppUpdater.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparkleAppUpdater.swift; sourceTree = "<group>"; };
 		563E2795324BF66791D69330 /* WindowPreferencesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowPreferencesTests.swift; sourceTree = "<group>"; };
 		5673A12FA819CBC332A7141A /* ScreenshotImageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotImageRenderer.swift; sourceTree = "<group>"; };
@@ -580,6 +582,7 @@
 			children = (
 				798DA75730CA37408A913210 /* InputTranslationView.swift */,
 				D7C9F99A0B7EEA761F4CF8F5 /* QuickTranslationView.swift */,
+				5448B9F512B5390FE5631C48 /* ScreenshotControls.swift */,
 				7D5F152572346E8FC882EABE /* ScreenshotOverlayView.swift */,
 				729CB935CA7567C8200F92FA /* ScreenshotTranslationWorkspace.swift */,
 				F00BE6946AEA55A2C466CAEF /* TranslationCommandBar.swift */,
@@ -961,6 +964,7 @@
 				0BE5CBFA8F4697FE62598A9F /* RemoteTranslationProvider.swift in Sources */,
 				B8E77D4949C6165871F25EFC /* RemoteTranslationResponseParser.swift in Sources */,
 				669C0DDADFCB303F83F21797 /* ScreenCaptureService.swift in Sources */,
+				DA45C195FDD4A8E83B33A6D3 /* ScreenshotControls.swift in Sources */,
 				649308808A7B7D1058DC1E9E /* ScreenshotDocument.swift in Sources */,
 				334F9BFE17993774D1B30392 /* ScreenshotImageRenderer.swift in Sources */,
 				FA7988816CFEF65A6E7AEE15 /* ScreenshotOverlayController.swift in Sources */,
@@ -1308,7 +1312,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Config/TranslateX.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = 97K37J92QD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1319,7 +1323,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.3.1;
+				MARKETING_VERSION = 1.3.2;
 				OTHER_CODE_SIGN_FLAGS = "$(inherited) --options runtime";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TRANSLATEX_APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = TranslateX;
@@ -1338,7 +1342,7 @@
 				CODE_SIGN_ENTITLEMENTS = Config/TranslateX.entitlements;
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = 97K37J92QD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1349,7 +1353,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.3.1;
+				MARKETING_VERSION = 1.3.2;
 				OTHER_CODE_SIGN_FLAGS = "$(inherited) --options runtime";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TRANSLATEX_APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = TranslateX;

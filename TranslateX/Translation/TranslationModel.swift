@@ -113,6 +113,7 @@ final class TranslationModel {
     @ObservationIgnored private var requestWasAutomatic = false
     @ObservationIgnored private var requestPolicyRevision = 0
     @ObservationIgnored private var requestSnapshot: WorkspaceSnapshot?
+    @ObservationIgnored private var requestRegionID: UUID?
     @ObservationIgnored private var verifiedSnapshot: WorkspaceSnapshot?
     private var undoSnapshot: WorkspaceSnapshot?
     private var redoSnapshot: WorkspaceSnapshot?
@@ -354,19 +355,30 @@ final class TranslationModel {
         inputSide = .source
         detectedSource = Self.detectLanguage(text, target: target)
         result = nil; previousResult = nil; verifiedSnapshot = nil
-        translationWasEdited = side == .target
+        translationWasEdited = document.hasEditedTranslations
         partialSide = nil; phase = .empty; statusMessageKey = ""
         undoSnapshot = previous; redoSnapshot = nil
         if isComposing { phase = .composing }
-        else if side == .source { scheduleTranslation() }
+        else if side == .source { scheduleTranslation(regionID: id) }
     }
 
     func submit() { submit(automatic: false) }
 
-    private func submit(automatic: Bool) {
+    func submitScreenshotRegion(_ id: UUID) {
+        guard screenshot?.regions.contains(where: { $0.id == id }) == true else { return }
+        submit(automatic: false, regionID: id)
+    }
+
+    func restoreScreenshotRegionTranslation(_ id: UUID) {
+        guard !isComposing, let generated = screenshot?.generatedTranslations[id] else { return }
+        editScreenshotRegion(id, text: generated, side: .target)
+    }
+
+    private func submit(automatic: Bool, regionID: UUID? = nil) {
         synchronizeService()
         guard !isComposing, !automatic || usesAutomaticTranslation else { return }
         invalidateRequest()
+        requestRegionID = regionID
         statusMessageKey = ""
         guard canTranslate else { phase = .empty; return }
         let input = translationInput
@@ -377,7 +389,7 @@ final class TranslationModel {
         // previous provider's detected language to certify a local copy.
         if inputSide == .source, source == "auto" { detectedSource = Self.detectLanguage(inputText, target: target) }
         if canSynchronizeUnchangedInput {
-            synchronizeUnchangedInput()
+            synchronizeUnchangedInput(regionID: regionID)
             return
         }
         // A nil Apple source opens the system language-selection sheet. Keep an
@@ -432,8 +444,20 @@ final class TranslationModel {
         }
     }
 
-    private func synchronizeUnchangedInput() {
+    private func synchronizeUnchangedInput(regionID: UUID? = nil) {
         let previous = snapshot()
+        if let regionID, let region = screenshot?.regions.first(where: { $0.id == regionID }) {
+            screenshot?.translations[regionID] = region.text
+            screenshot?.generatedTranslations[regionID] = region.text
+            if let screenshot {
+                setText(screenshot.translatedText, on: .target)
+                translationWasEdited = screenshot.hasEditedTranslations
+            }
+            undoSnapshot = previous; redoSnapshot = nil
+            result = nil; previousResult = nil; verifiedSnapshot = nil
+            partialSide = nil; phase = .empty; statusMessageKey = "Region updated"
+            return
+        }
         let value = inputText
         if text(on: destinationSide) != value {
             undoSnapshot = previous
@@ -442,7 +466,11 @@ final class TranslationModel {
         setText(value, on: destinationSide)
         if inputSide == .source {
             translationWasEdited = false
-            if let document = screenshot { screenshot?.translations = Dictionary(uniqueKeysWithValues: document.regions.map { ($0.id, $0.text) }) }
+            if let document = screenshot {
+                let values = Dictionary(uniqueKeysWithValues: document.regions.map { ($0.id, $0.text) })
+                screenshot?.translations = values
+                screenshot?.generatedTranslations = values
+            }
         }
         // This is an exact local copy, not a provider result or a detected language.
         result = nil
@@ -483,6 +511,13 @@ final class TranslationModel {
             phase = .completed
             statusMessageKey = requestWasAutomatic ? "Updated automatically" : "Updated"
             verifiedSnapshot = snapshot()
+            if requestRegionID != nil {
+                // A partial retranslation must not certify other pending or
+                // manually corrected paragraphs as a new provider result.
+                result = nil; verifiedSnapshot = nil; phase = .empty
+                statusMessageKey = "Region updated"
+                translationWasEdited = screenshot?.hasEditedTranslations ?? false
+            }
         } catch {
             guard isCurrent(captured) else { return }
             if let remoteError = error as? RemoteTranslationError, !Task.isCancelled {
@@ -504,7 +539,8 @@ final class TranslationModel {
 
     private func translateScreenshot(_ document: ScreenshotDocument, request captured: TranslationRequest,
                                      provider: any TranslationProvider) async throws -> TranslationResult {
-        for region in document.regions {
+        let regionID = requestRegionID
+        for region in document.regions where regionID == nil || region.id == regionID {
             try Task.checkCancellation()
             guard isCurrent(captured), screenshot?.id == document.id else { throw CancellationError() }
             let value: String
@@ -523,6 +559,7 @@ final class TranslationModel {
             try Task.checkCancellation()
             guard isCurrent(captured), screenshot?.id == document.id else { throw CancellationError() }
             screenshot?.translations[region.id] = value
+            screenshot?.generatedTranslations[region.id] = value
             if let screenshot { setText(screenshot.translatedText, on: .target) }
             partialSide = .target
         }
@@ -692,12 +729,14 @@ final class TranslationModel {
         configuration = nil
         partialText = ""
         requestSnapshot = nil
+        requestRegionID = nil
     }
     private func languageChanged() {
         if phase == .recognizing { return }
         invalidateRequest(); forgetUndo()
         if screenshot != nil {
             screenshot?.translations.removeAll()
+            screenshot?.generatedTranslations.removeAll()
             setText("", on: .target)
             partialSide = nil
             translationWasEdited = false
@@ -707,9 +746,9 @@ final class TranslationModel {
         if inputSide == .source { detectedSource = Self.detectLanguage(text, target: target) }
         scheduleTranslation()
     }
-    private func scheduleTranslation() {
+    private func scheduleTranslation(regionID: UUID? = nil) {
         guard usesAutomaticTranslation, canTranslate, isServiceCurrent else { return }
-        if canSynchronizeUnchangedInput { submit(automatic: true); return }
+        if canSynchronizeUnchangedInput { submit(automatic: true, regionID: regionID); return }
         guard !needsSourceLanguage, !needsReverseLanguage else { return }
         phase = .waiting
         let scheduledRevision = contentRevision
@@ -720,7 +759,7 @@ final class TranslationModel {
                 try await sleep(delay)
                 guard !Task.isCancelled, let self, self.contentRevision == scheduledRevision else { return }
                 self.updateTask = nil
-                self.submit(automatic: true)
+                self.submit(automatic: true, regionID: regionID)
             } catch { }
         }
     }

@@ -28,7 +28,7 @@ struct TranslationServicePicker: View {
     }
 }
 
-private struct NativeTranslationServicePicker: NSViewRepresentable {
+struct NativeTranslationServicePicker: NSViewRepresentable {
     let model: TranslationModel
     let maximumWidth: CGFloat
     let openSettings: () -> Void

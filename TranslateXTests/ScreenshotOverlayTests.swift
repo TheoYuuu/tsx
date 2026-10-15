@@ -14,7 +14,7 @@ final class ScreenshotOverlayTests: XCTestCase {
             XCTAssertEqual(result.imageFrame, selection)
             XCTAssertTrue(screen.contains(result.frame))
             XCTAssertTrue(result.frame.contains(result.imageFrame))
-            XCTAssertEqual(result.toolbarAbove, selection.minY < 118)
+            XCTAssertEqual(result.toolbarAbove, selection.minY < ScreenshotOverlayPlacement.toolbarHeight + 8)
         }
     }
 
@@ -165,6 +165,44 @@ final class ScreenshotOverlayTests: XCTestCase {
         NotificationCenter.default.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
         XCTAssertFalse(overlay.isVisible)
         XCTAssertNil(model.screenshot)
+    }
+
+    func testEscapeEndingAMenuDoesNotAlsoDismissTheScreenshot() async throws {
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        let overlay = ScreenshotOverlayController(windows: windows, model: try await completedModel())
+        defer { overlay.dismiss(restoreFocus: false) }
+        overlay.present(source: nil, selection: CGRect(x: 200, y: 200, width: 350, height: 200))
+        let panel = try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.screenshotResult" && $0.isVisible })
+        let menu = NSMenu()
+        NotificationCenter.default.post(name: NSMenu.didBeginTrackingNotification, object: menu)
+        panel.cancelOperation(nil)
+        XCTAssertTrue(overlay.isVisible)
+        NotificationCenter.default.post(name: NSMenu.didEndTrackingNotification, object: menu)
+        panel.cancelOperation(nil)
+        XCTAssertTrue(overlay.isVisible, "The event that dismisses a menu still belongs to that menu")
+        try await Task.sleep(for: .milliseconds(20))
+        panel.cancelOperation(nil)
+        XCTAssertFalse(overlay.isVisible, "A subsequent Escape closes the screenshot normally")
+    }
+
+    func testNativeIconMenuKeepsImagesAndRejectsAnActionDisabledWhileTracking() throws {
+        let control = ScreenshotActionMenuControl()
+        var copies = 0
+        control.configure([ScreenshotMenuItem(title: "Copy original", symbol: "list.clipboard") { copies += 1 }])
+        let menu = try XCTUnwrap(control.menu)
+        let item = try XCTUnwrap(menu.items.last)
+        XCTAssertTrue(menu.items[0].isHidden, "The display item is separate from the first real action")
+        XCTAssertNotNil(item.image, "Native rows retain the action's icon")
+        control.menuWillOpen(menu)
+        control.configure([ScreenshotMenuItem(title: "Copy original", symbol: "list.clipboard", enabled: false) { copies += 1 }])
+        menu.performActionForItem(at: 1)
+        XCTAssertEqual(copies, 0, "A menu opened before the model changed must use the current enabled state")
+        control.menuDidClose(menu)
+        XCTAssertEqual(control.menu?.items.last?.isEnabled, false)
+        control.configure([ScreenshotMenuItem(title: "Copy original", symbol: "list.clipboard") { copies += 1 }])
+        control.menu?.performActionForItem(at: 1)
+        XCTAssertEqual(copies, 1)
     }
 
     private func completedModel() async throws -> TranslationModel {

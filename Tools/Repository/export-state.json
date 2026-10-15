@@ -478,7 +478,7 @@
     },
     "TranslateX.xcodeproj/project.pbxproj": {
       "mode": "100644",
-      "sha256": "9d27f51a06941e3fb69e422f4be2aacf491758ebb68af067e3ada514883887a3"
+      "sha256": "c7a85750c06b2b76e5910d85bcf7d46895f492db51e007cc4501fb9d149da632"
     },
     "TranslateX.xcodeproj/project.xcworkspace/contents.xcworkspacedata": {
       "mode": "100644",
@@ -502,7 +502,7 @@
     },
     "TranslateX/App/ScreenshotTranslationController.swift": {
       "mode": "100644",
-      "sha256": "9980f94fdf2af92683decf77add0cf8a8ab7cb10ec3ced2f991cb18c4087b7fb"
+      "sha256": "df95fd4366171b8f6b8b746a7b6aaf867917038ada0e21d0ff80599592e71cb3"
     },
     "TranslateX/App/TranslateXApp.swift": {
       "mode": "100644",
@@ -786,7 +786,7 @@
     },
     "TranslateX/Resources/PublishedReleaseNotes.json": {
       "mode": "100644",
-      "sha256": "0f999d47f1754664c1d4037652292975ec81619d4397493e2323a88c19715e76"
+      "sha256": "00c6e51cfc3130c12ea2fb13bd113b63a95050f1abbd1e9ca003ed3d73a064c7"
     },
     "TranslateX/Resources/en.lproj/InfoPlist.strings": {
       "mode": "100644",
@@ -794,7 +794,7 @@
     },
     "TranslateX/Resources/en.lproj/Localizable.strings": {
       "mode": "100644",
-      "sha256": "971ded59e87bbd2b2e49fca2e27618005431a0fa6e198b5ead58b008ba86beb8"
+      "sha256": "d87594a63897223b7a42b8a85967a4cae92a77ce84ecb1b32a5b3ff86cfcb45a"
     },
     "TranslateX/Resources/zh-Hans.lproj/InfoPlist.strings": {
       "mode": "100644",
@@ -802,7 +802,7 @@
     },
     "TranslateX/Resources/zh-Hans.lproj/Localizable.strings": {
       "mode": "100644",
-      "sha256": "0311269698e9447d0866dd23620fc1eb47da83fe201ac73916d6d8ef12308cb7"
+      "sha256": "1eb9ce9cafc99a51f234c204e9733ad56dce4512c915313bf91c23dcfa0be5cd"
     },
     "TranslateX/Settings/AppPreferences.swift": {
       "mode": "100644",
@@ -838,7 +838,7 @@
     },
     "TranslateX/System/OCR/ScreenshotDocument.swift": {
       "mode": "100644",
-      "sha256": "7ede01c65f4e0b65646b4380071ea113bc6c045c5b1992ef36bcc07a48d6080f"
+      "sha256": "f4f18b0270d95063fffd712d02cd7d2c0144ec2f29a7938771ba0a3255bac5c0"
     },
     "TranslateX/System/OCR/ScreenshotImageRenderer.swift": {
       "mode": "100644",
@@ -1034,7 +1034,7 @@
     },
     "TranslateX/Translation/TranslationModel.swift": {
       "mode": "100644",
-      "sha256": "1efb0db7fe2503af2e6510d6a652289aea5f05b52bff02480e89544f5a5e980e"
+      "sha256": "77f612ab0250639d2ff5c8694d9ba2409d93763032e06f83a72328ff16d2f23d"
     },
     "TranslateX/Translation/TranslationProvider.swift": {
       "mode": "100644",
@@ -1046,7 +1046,7 @@
     },
     "TranslateX/UI/Design/LanguageMenu.swift": {
       "mode": "100644",
-      "sha256": "6f31b8a213aeb987e90e6537c252f3c8c1bd3f008460017e7112694ac067d838"
+      "sha256": "bf54e50535be28a9145dd3af70fe2a22ab1b8ae43e10c57ab6f61fcc64896dff"
     },
     "TranslateX/UI/Design/TranslateXBrandLockup.swift": {
       "mode": "100644",
@@ -1150,19 +1150,23 @@
     },
     "TranslateX/UI/Translation/InputTranslationView.swift": {
       "mode": "100644",
-      "sha256": "74459577d7bd09088b15f39545d3911e838bdf20a43872881503a4c341c12c0e"
+      "sha256": "e740f29505effd06a31f585b62930a5e9880035520d9783d402b35e3aa771fc6"
     },
     "TranslateX/UI/Translation/QuickTranslationView.swift": {
       "mode": "100644",
       "sha256": "02a4b25cedeeeba6d98733c7af413dffe39a59ed553cc3d203570bb8425a1385"
     },
+    "TranslateX/UI/Translation/ScreenshotControls.swift": {
+      "mode": "100644",
+      "sha256": "ff3be71b611573e50373e0ab6e27376dfe26e9eb1358e2d106efc35d58e669e3"
+    },
     "TranslateX/UI/Translation/ScreenshotOverlayView.swift": {
       "mode": "100644",
-      "sha256": "13a80962d2aa5014051e8b9ec5cd83774f20790e78655407aa1fc17647e8604f"
+      "sha256": "dee9a9834d9f26119f11edc3460a9b73e6f91dedd40447b0e004a540933860d8"
     },
     "TranslateX/UI/Translation/ScreenshotTranslationWorkspace.swift": {
       "mode": "100644",
-      "sha256": "d4eb647c6f04442e41ec989876c5312811fac753813bfdc12dfc4f0ad8fb688b"
+      "sha256": "988727848b1799ded7f5f93238aca21ed2b76bd80c07ffd9ce8b6a34e83b565f"
     },
     "TranslateX/UI/Translation/TranslationCommandBar.swift": {
       "mode": "100644",
@@ -1174,7 +1178,7 @@
     },
     "TranslateX/UI/Translation/TranslationServicePicker.swift": {
       "mode": "100644",
-      "sha256": "717a1d3bb2fcb043ff5b90add6d7c699843bec2977d25f72b0e4f00f52c12dd6"
+      "sha256": "c9440a6e72ffe75553bf886a5a08c30f56eda80ef12885cd85fb2b778d30d711"
     },
     "TranslateX/UI/Translation/TranslationStatusLight.swift": {
       "mode": "100644",
@@ -1194,7 +1198,7 @@
     },
     "TranslateX/Windows/RegionSelectionController.swift": {
       "mode": "100644",
-      "sha256": "aae15eb6111c70128b74dfaba7a9077ba97535c4f8a78f862db14a4e9601f895"
+      "sha256": "786da06e9dd58f665f7a886f69f262bab9170bd845e8243ea53ff8387fd9222f"
     },
     "TranslateX/Windows/RegionSelectionGeometry.swift": {
       "mode": "100644",
@@ -1202,11 +1206,11 @@
     },
     "TranslateX/Windows/ScreenshotOverlayController.swift": {
       "mode": "100644",
-      "sha256": "68d52a0f1ebf4c5de0dae558363ec2db308804f2c38ef2e58fd7d89bbfd234e6"
+      "sha256": "c148410bd1b250210ef3fc72da2dd0a11731bd731876225c81c201e4c0292784"
     },
     "TranslateX/Windows/WindowCoordinator.swift": {
       "mode": "100644",
-      "sha256": "d5b8ccfbcb7813dc510c13406c4a0e10945e0c17cce26931b47c651fce77ebd8"
+      "sha256": "094a8ee79e3fa4b40396171d114e0686a93ec75ee51dbfd9d703ef83703cae45"
     },
     "TranslateX/Windows/WindowSurface.swift": {
       "mode": "100644",
@@ -1350,7 +1354,7 @@
     },
     "TranslateXTests/RegionSelectionTests.swift": {
       "mode": "100644",
-      "sha256": "f0b0a0bbb09ba1995fd406dda122806aeef70990a11f1c3a461c4a330706ac7e"
+      "sha256": "c5349b9b02c5e19d011634e61e227a87379950954dec34b2244494f6f0793d1b"
     },
     "TranslateXTests/ReleaseNotesPresentationTests.swift": {
       "mode": "100644",
@@ -1366,7 +1370,7 @@
     },
     "TranslateXTests/ScreenshotDocumentTests.swift": {
       "mode": "100644",
-      "sha256": "83cd06b4e360f53358cb84ef7672b88aa54de5680ebe02202b19eaff0efd5996"
+      "sha256": "9538076295a9b80ab55b68f6c7ffa6870589e60fe75fa7ebb84f836548afd91f"
     },
     "TranslateXTests/ScreenshotFailureTests.swift": {
       "mode": "100644",
@@ -1378,7 +1382,7 @@
     },
     "TranslateXTests/ScreenshotOverlayTests.swift": {
       "mode": "100644",
-      "sha256": "de959ffd93216b2455902ae9abd9ee48c870d566f21d5ea1787474fb01682103"
+      "sha256": "4b5070569b2d57139e96415a08c568a4311ece95c3fab2f6bffd852e1f8b585c"
     },
     "TranslateXTests/ScreenshotWorkflowTests.swift": {
       "mode": "100644",
@@ -1514,7 +1518,7 @@
     },
     "project.yml": {
       "mode": "100644",
-      "sha256": "bd32bcd8414dd92fc2c1e640215fb6eb15142a419f0cc6871f49f5fd90b229ac"
+      "sha256": "1dbc7667d0f7f642fe22d8911c04f8b06a3451476909078cfba753b4c1884271"
     }
   },
   "version": 1

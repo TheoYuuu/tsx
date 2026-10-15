@@ -94,6 +94,8 @@ final class RegionSelectionController: NSObject {
     private var initialLayout: CaptureLayoutSnapshot?
     private var referenceTop: CGFloat = 0
     private var hasPushedCursor = false
+    private var requiresConfirmation = false
+    private var pendingSelection: CGRect?
 
     var isSelecting: Bool { continuation != nil }
 
@@ -102,7 +104,7 @@ final class RegionSelectionController: NSObject {
         super.init()
     }
 
-    func selectRegion() async throws -> SelectedRegion {
+    func selectRegion(requiresConfirmation: Bool = false) async throws -> SelectedRegion {
         try Task.checkCancellation()
         guard !isSelecting else { throw RegionSelectionError.busy }
         let screens = NSScreen.screens
@@ -114,6 +116,8 @@ final class RegionSelectionController: NSObject {
             try Task.checkCancellation()
             return try await withCheckedThrowingContinuation { continuation in
                 self.continuation = continuation
+                self.requiresConfirmation = requiresConfirmation
+                pendingSelection = nil
                 sessionID = id
                 initialLayout = layout
                 referenceTop = primary.frame.maxY
@@ -155,6 +159,7 @@ final class RegionSelectionController: NSObject {
             let view = RegionSelectionOverlayView(frame: NSRect(origin: .zero, size: screen.frame.size), screenFrame: screen.frame,
                                                   preferences: preferences)
             view.onBegin = { [weak self] point in
+                self?.pendingSelection = nil
                 self?.geometry?.begin(at: point)
                 self?.refreshOverlays()
             }
@@ -164,6 +169,7 @@ final class RegionSelectionController: NSObject {
             }
             view.onEnd = { [weak self] point in self?.completeDrag(at: point) }
             view.onCancel = { [weak self] in self?.cancel() }
+            view.onConfirm = { [weak self] in self?.confirmSelection() }
             panel.contentView = view
             panel.initialFirstResponder = view
             panel.makeFirstResponder(view)
@@ -179,9 +185,18 @@ final class RegionSelectionController: NSObject {
     }
 
     private func refreshOverlays() {
-        for panel in panels {
-            (panel.contentView as? RegionSelectionOverlayView)?.selection = geometry?.selection
+        let confirmationPanel = pendingSelection.flatMap { selection in
+            panels.max { left, right in
+                let a = left.frame.intersection(selection), b = right.frame.intersection(selection)
+                return (a.isNull ? 0 : a.width * a.height) < (b.isNull ? 0 : b.width * b.height)
+            }
         }
+        for panel in panels {
+            guard let view = panel.contentView as? RegionSelectionOverlayView else { continue }
+            view.selection = geometry?.selection
+            view.showsConfirmation = panel === confirmationPanel
+        }
+        confirmationPanel?.makeKeyAndOrderFront(nil)
     }
 
     private func completeDrag(at point: CGPoint) {
@@ -189,6 +204,18 @@ final class RegionSelectionController: NSObject {
             refreshOverlays()
             return
         }
+        if requiresConfirmation {
+            pendingSelection = bounds
+            refreshOverlays()
+        } else { completeSelection(bounds) }
+    }
+
+    private func confirmSelection() {
+        guard let pendingSelection else { return }
+        completeSelection(pendingSelection)
+    }
+
+    private func completeSelection(_ bounds: CGRect) {
         let identifiers = panels.compactMap { panel -> CGWindowID? in
             panel.windowNumber > 0 ? CGWindowID(panel.windowNumber) : nil
         }
@@ -206,6 +233,7 @@ final class RegionSelectionController: NSObject {
         continuation = nil
         sessionID = nil
         geometry = nil
+        pendingSelection = nil
         initialLayout = nil
         NotificationCenter.default.removeObserver(self, name: NSApplication.didChangeScreenParametersNotification, object: nil)
         for panel in panels {
@@ -245,15 +273,31 @@ final class RegionSelectionOverlayView: NSView {
     var onDrag: ((CGPoint) -> Void)?
     var onEnd: ((CGPoint) -> Void)?
     var onCancel: (() -> Void)?
-    var selection: CGRect? { didSet { needsDisplay = true } }
+    var onConfirm: (() -> Void)?
+    var selection: CGRect? { didSet { needsDisplay = true; needsLayout = true } }
+    var showsConfirmation = false {
+        didSet {
+            confirmation?.isHidden = !showsConfirmation
+            hint.isHidden = showsConfirmation
+            needsLayout = true
+            needsDisplay = true
+            window?.invalidateCursorRects(for: self)
+        }
+    }
     private let screenFrame: CGRect
     private let hint: WindowSurface<CaptureHintView>
+    private var confirmation: WindowSurface<CaptureConfirmationView>?
 
     init(frame: NSRect, screenFrame: CGRect, preferences: AppPreferences = AppPreferences()) {
         self.screenFrame = screenFrame
         hint = WindowSurface(preferences: preferences, content: CaptureHintView())
         super.init(frame: frame)
         addSubview(hint)
+        let confirmation = WindowSurface(preferences: preferences, content: CaptureConfirmationView(
+            cancel: { [weak self] in self?.onCancel?() }, confirm: { [weak self] in self?.onConfirm?() }))
+        confirmation.isHidden = true
+        addSubview(confirmation)
+        self.confirmation = confirmation
         positionHint()
         setAccessibilityRole(.group)
         setAccessibilityLabel(L10n.string("Drag to select an area · Esc to cancel"))
@@ -264,17 +308,37 @@ final class RegionSelectionOverlayView: NSView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
     // Hints are informative, never a hole in the drag-selection surface.
-    override func hitTest(_ point: NSPoint) -> NSView? { bounds.contains(point) ? self : nil }
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard bounds.contains(point) else { return nil }
+        if showsConfirmation, let confirmation, confirmation.frame.contains(point) {
+            return super.hitTest(point)
+        }
+        return self
+    }
 
-    override func layout() { super.layout(); positionHint() }
+    override func layout() {
+        super.layout(); positionHint()
+        if showsConfirmation, let selection {
+            let local = selection.offsetBy(dx: -screenFrame.minX, dy: -screenFrame.minY).intersection(bounds)
+            let y = local.minY >= 60 ? local.minY - 52 : min(bounds.maxY - 52, local.maxY + 8)
+            confirmation?.frame = CGRect(x: min(max(8, local.maxX - 80), bounds.maxX - 88), y: max(8, y), width: 80, height: 44)
+        }
+    }
 
     private func positionHint() {
         let width = min(480, max(200, bounds.width - 32))
         hint.frame = NSRect(x: (bounds.width - width) / 2, y: bounds.height - 119, width: width, height: 44)
     }
 
-    override func resetCursorRects() { addCursorRect(bounds, cursor: .crosshair) }
-    override func cursorUpdate(with event: NSEvent) { NSCursor.crosshair.set() }
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: .crosshair)
+        if showsConfirmation, let confirmation { addCursorRect(confirmation.frame, cursor: .arrow) }
+    }
+    override func cursorUpdate(with event: NSEvent) {
+        let point = convert(event.locationInWindow, from: nil)
+        if showsConfirmation, confirmation?.frame.contains(point) == true { NSCursor.arrow.set() }
+        else { NSCursor.crosshair.set() }
+    }
 
     override func mouseDown(with event: NSEvent) {
         guard let point = globalPoint(for: event) else { return }
@@ -296,6 +360,7 @@ final class RegionSelectionOverlayView: NSView {
     override func cancelOperation(_ sender: Any?) { onCancel?() }
     override func keyDown(with event: NSEvent) {
         if event.keyCode == 53 { onCancel?() }
+        else if showsConfirmation && (event.keyCode == 36 || event.keyCode == 76) { onConfirm?() }
     }
 
     private func globalPoint(for event: NSEvent) -> CGPoint? {
@@ -335,7 +400,7 @@ final class RegionSelectionOverlayView: NSView {
             }
             corners.lineWidth = 3
             corners.stroke()
-            if let selection, localSelection.intersects(bounds) {
+            if !showsConfirmation, let selection, localSelection.intersects(bounds) {
                 let size = "\(Int(selection.width.rounded())) × \(Int(selection.height.rounded()))"
                 drawLabel(size, near: CGPoint(x: localSelection.midX, y: localSelection.minY - 40), centered: true, monospaced: true)
             }
@@ -353,6 +418,25 @@ final class RegionSelectionOverlayView: NSView {
         NSColor.black.withAlphaComponent(0.78).setFill()
         NSBezierPath(roundedRect: box, xRadius: 7, yRadius: 7).fill()
         (text as NSString).draw(at: CGPoint(x: box.minX + 10, y: box.minY + 6), withAttributes: attributes)
+    }
+}
+
+private struct CaptureConfirmationView: View {
+    let cancel: () -> Void
+    let confirm: () -> Void
+    @Environment(\.translateXTheme) private var theme
+    var body: some View {
+        HStack(spacing: 4) {
+            Button(action: cancel) { Image(systemName: "xmark").font(.system(size: 15)).frame(width: 30, height: 30) }
+                .buttonStyle(ScreenshotIconButtonStyle(tint: .red))
+                .translateXTooltip(L10n.string("Cancel"))
+                .accessibilityLabel(Text(L10n.string("Cancel")))
+            Button(action: confirm) { Image(systemName: "checkmark").font(.system(size: 16, weight: .medium)).frame(width: 30, height: 30) }
+                .buttonStyle(ScreenshotIconButtonStyle(tint: theme.accent))
+                .translateXTooltip(L10n.string("Confirm selection and translate"))
+                .accessibilityLabel(Text(L10n.string("Confirm selection and translate")))
+                .accessibilityIdentifier("screenshot.confirmSelection")
+        }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

@@ -15,7 +15,7 @@ final class ScreenshotTranslationController {
         overlay.onDismiss = { [weak self] in self?.cancelCapture() }
         overlay.onRecapture = { [weak self] in
             guard let self else { return }
-            self.start(source: self.sourceApplication)
+            self.start(source: self.sourceApplication, requiresConfirmation: true)
         }
         return overlay
     }()
@@ -26,7 +26,7 @@ final class ScreenshotTranslationController {
         selector = RegionSelectionController(preferences: windows.preferences)
     }
 
-    func start(source: NSRunningApplication?) {
+    func start(source: NSRunningApplication?, requiresConfirmation: Bool = false) {
         // Cancelling the previous capture calls back into cancel(). Preserve the origin before
         // either cancellation, so restarting a selector does not forget its hidden window.
         let inheritedRestoration = workflow.restorationForRestart
@@ -50,7 +50,7 @@ final class ScreenshotTranslationController {
             do {
                 let layout = try CaptureLayoutGuard.begin()
                 defer { layout.stop() }
-                let region = try await self.selector.selectRegion()
+                let region = try await self.selector.selectRegion(requiresConfirmation: requiresConfirmation)
                 guard !Task.isCancelled, self.workflow.requestID == id else { return }
                 try layout.validate(referenceTop: region.referenceTop)
                 // The selector has removed every overlay before this capture starts.
@@ -75,7 +75,7 @@ final class ScreenshotTranslationController {
                 let document = try await self.recognizer.recognizeDocument(image)
                 guard !Task.isCancelled, self.workflow.requestID == id else { return }
                 self.overlay.model.submitCapturedDocument(document, serviceRevision: serviceRevision,
-                    respectAutomaticPreference: true)
+                    respectAutomaticPreference: !requiresConfirmation)
                 self.finish(id)
             } catch is CancellationError {
                 guard let restoration = self.finish(id) else { return }

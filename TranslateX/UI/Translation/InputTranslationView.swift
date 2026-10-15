@@ -11,6 +11,7 @@ struct InputTranslationView: View {
     var translationEditorReady: (NSTextView) -> Void = { _ in }
     var updates: AppUpdateController? = nil
     var restorePrevious: () -> Void = {}
+    var saveScreenshot: (ScreenshotOutput) -> Void = { _ in }
     @Environment(\.translateXTheme) private var theme
     @Environment(\.translationLayout) private var layout
 
@@ -57,7 +58,7 @@ struct InputTranslationView: View {
                 .padding(.horizontal, 12).padding(.bottom, 10)
             Group {
                 if model.screenshot != nil {
-                    ScreenshotTranslationWorkspace(model: model, catalog: catalog, recapture: translateScreenshot)
+                    ScreenshotTranslationWorkspace(model: model, catalog: catalog, save: saveScreenshot)
                 } else {
                     TranslationWorkspace(model: model, catalog: catalog, editorReady: editorReady,
                                          translationEditorReady: translationEditorReady)

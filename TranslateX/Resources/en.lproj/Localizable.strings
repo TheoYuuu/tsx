@@ -1135,3 +1135,35 @@
 "Unable to save the image. Choose another location." = "Unable to save the image. Choose another location.";
 "Generating translated image…" = "Generating translated image…";
 "Failed to prepare translated image. Retry." = "Failed to prepare translated image. Retry.";
+
+"Retranslate" = "Retranslate";
+
+"Image" = "Image";
+
+"Recognized text" = "Recognized text";
+
+"Edited translation" = "Edited translation";
+
+"Retranslate this region" = "Retranslate this region";
+
+"Restore this translation" = "Restore this translation";
+
+"Region updated" = "Region updated";
+
+"Correct recognized text, then retranslate a region" = "Correct recognized text, then retranslate a region";
+
+"Select an image region to find its translation" = "Select an image region to find its translation";
+
+"Edit text to update the translated image" = "Edit text to update the translated image";
+
+"Confirm selection and translate" = "Confirm selection and translate";
+
+"Unable to save. Try again." = "Unable to save. Try again.";
+
+"Auto · %@" = "Auto · %@";
+
+"Edit in main window" = "Edit in main window";
+
+"View full translation" = "View full translation";
+
+"Full translation" = "Full translation";

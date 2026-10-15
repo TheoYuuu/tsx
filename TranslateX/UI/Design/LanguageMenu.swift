@@ -12,6 +12,8 @@ struct LanguageMenu: NSViewRepresentable {
     var enabled = true
     var displayTitle: String? = nil
     var minimumWidth: CGFloat = 0
+    var maximumWidth: CGFloat = .greatestFiniteMagnitude
+    var grouped = false
     @Environment(\.translateXTheme) private var theme
 
     func makeNSView(context: Context) -> LanguageMenuControl { LanguageMenuControl() }
@@ -26,6 +28,9 @@ struct LanguageMenu: NSViewRepresentable {
         control.selection = selection
         control.displayTitle = displayTitle
         control.minimumWidth = minimumWidth
+        control.maximumWidth = maximumWidth
+        control.grouped = grouped
+        control.hoverColor = NSColor(theme.ink.opacity(0.06))
         control.onSelect = { selection = $0 }
         control.isEnabled = enabled && context.environment.isEnabled
         control.hoverCursor = theme.hoverCursor
@@ -54,19 +59,56 @@ final class LanguageMenuControl: NSPopUpButton, NSMenuDelegate {
     }
 
     var minimumWidth: CGFloat = 0
+    var maximumWidth: CGFloat = .greatestFiniteMagnitude
+    var grouped = false
+    var hoverColor = NSColor.labelColor.withAlphaComponent(0.06)
+    private var hovered = false
+    private var menuOpen = false
+    private var hoverTracking: NSTrackingArea?
     var fillColor = NSColor.controlBackgroundColor
     var edgeColor = NSColor.separatorColor
+
+    /// Shared language borders surround the controls; their hover fills stay
+    /// two points inside that border, including while the native menu tracks.
+    var hoverFillRect: CGRect { bounds.insetBy(dx: 2, dy: 2) }
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let hoverTracking { removeTrackingArea(hoverTracking) }
+        let area = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self)
+        addTrackingArea(area); hoverTracking = area
+    }
+    override func mouseEntered(with event: NSEvent) { hovered = true; needsDisplay = true }
+    override func mouseExited(with event: NSEvent) { hovered = false; needsDisplay = true }
+    func menuWillOpen(_ menu: NSMenu) { menuOpen = true; needsDisplay = true }
+    func menuDidClose(_ menu: NSMenu) { menuOpen = false; needsDisplay = true }
 
     override func draw(_ dirtyRect: NSRect) {
         let rect = bounds.insetBy(dx: 0.5, dy: 0.5)
         let shape = NSBezierPath(roundedRect: rect, xRadius: 7, yRadius: 7)
-        fillColor.withAlphaComponent(fillColor.alphaComponent * (isEnabled ? 1 : 0.5)).setFill(); shape.fill()
-        edgeColor.setStroke(); shape.lineWidth = 1; shape.stroke()
+        if grouped {
+            if isEnabled && (hovered || menuOpen) {
+                hoverColor.setFill()
+                NSBezierPath(roundedRect: hoverFillRect, xRadius: 4, yRadius: 4).fill()
+            }
+        } else {
+            fillColor.withAlphaComponent(fillColor.alphaComponent * (isEnabled ? 1 : 0.5)).setFill(); shape.fill()
+            edgeColor.setStroke(); shape.lineWidth = 1; shape.stroke()
+        }
         let title = NSMutableAttributedString(attributedString: attributedTitle)
         // The native display item includes the disclosure attachment. Draw it
         // separately so wide controls keep the arrow at the trailing edge.
         if title.length > 0, title.attribute(.attachment, at: title.length - 1, effectiveRange: nil) != nil {
             title.deleteCharacters(in: NSRange(location: title.length - 1, length: 1))
+        }
+        let available = max(0, bounds.width - 34)
+        if title.length > 0 {
+            let attributes = title.attributes(at: 0, effectiveRange: nil)
+            var value = title.string.trimmingCharacters(in: .whitespaces)
+            if NSAttributedString(string: value, attributes: attributes).size().width > available {
+                while !value.isEmpty && NSAttributedString(string: value + "…", attributes: attributes).size().width > available { value.removeLast() }
+                value += "…"
+            }
+            title.setAttributedString(NSAttributedString(string: value, attributes: attributes))
         }
         let size = title.size()
         NSGraphicsContext.saveGraphicsState()
@@ -102,7 +144,7 @@ final class LanguageMenuControl: NSPopUpButton, NSMenuDelegate {
     required init?(coder: NSCoder) { nil }
     override var acceptsFirstResponder: Bool { isEnabled }
     override var intrinsicContentSize: NSSize {
-        NSSize(width: max(minimumWidth, ceil(attributedTitle.size().width) + 22), height: 30)
+        NSSize(width: min(maximumWidth, max(minimumWidth, ceil(attributedTitle.size().width) + 22)), height: grouped ? 28 : 30)
     }
 
     func refreshTitle() {

@@ -118,6 +118,69 @@ final class ScreenshotDocumentTests: XCTestCase {
         XCTAssertEqual(model.phase, .unchanged)
     }
 
+    func testRetranslatingOneRegionPreservesOtherCorrectionsAndOriginalCoordinates() async throws {
+        let model = TranslationModel()
+        let document = try document()
+        model.submitCapturedDocument(document, serviceRevision: 0)
+        await model.run(try XCTUnwrap(model.request), provider: RecordingRegionProvider())
+        let first = document.regions[0].id, second = document.regions[1].id
+        model.editScreenshotRegion(second, text: "保留另一段的手动校正", side: .target)
+        model.editScreenshotRegion(first, text: "Corrected recognition in the first paragraph.", side: .source)
+        model.submitScreenshotRegion(first)
+        let provider = RecordingRegionProvider()
+        await model.run(try XCTUnwrap(model.request), provider: provider)
+        XCTAssertEqual(provider.requests.map(\.id), [first])
+        XCTAssertEqual(provider.requests.map(\.text), ["Corrected recognition in the first paragraph."])
+        XCTAssertEqual(model.screenshot?.translations[second], "保留另一段的手动校正")
+        XCTAssertEqual(model.screenshot?.regions.map(\.bounds), document.regions.map(\.bounds))
+        XCTAssertTrue(model.screenshot?.image === document.image)
+        XCTAssertNil(model.result, "One updated region cannot certify all other content")
+        XCTAssertTrue(model.undoWorkspaceChange())
+        XCTAssertEqual(model.screenshot?.translations[second], "保留另一段的手动校正")
+    }
+
+    func testRestoreOneTranslationUsesGeneratedBaselineAcrossHandoffAndSupportsUndo() async throws {
+        let model = TranslationModel()
+        let document = try document()
+        model.submitCapturedDocument(document, serviceRevision: 0)
+        await model.run(try XCTUnwrap(model.request), provider: RecordingRegionProvider())
+        let first = document.regions[0].id, second = document.regions[1].id
+        let generated = try XCTUnwrap(model.screenshot?.translations[first])
+        model.editScreenshotRegion(first, text: "第一段手动校正", side: .target)
+        model.editScreenshotRegion(second, text: "第二段手动校正", side: .target)
+        let main = TranslationModel()
+        main.acceptHandoff(model.makeHandoff())
+        XCTAssertTrue(main.screenshot?.isTranslationEdited(first) == true)
+        main.restoreScreenshotRegionTranslation(first)
+        XCTAssertEqual(main.screenshot?.translations[first], generated)
+        XCTAssertEqual(main.screenshot?.translations[second], "第二段手动校正")
+        XCTAssertFalse(main.screenshot?.isTranslationEdited(first) == true)
+        XCTAssertNil(main.request)
+        XCTAssertTrue(main.undoWorkspaceChange())
+        XCTAssertEqual(main.screenshot?.translations[first], "第一段手动校正")
+        main.target = "fr"
+        XCTAssertTrue(main.screenshot?.generatedTranslations.isEmpty == true)
+        main.restoreScreenshotRegionTranslation(first)
+        XCTAssertTrue(main.screenshot?.translations.isEmpty == true, "An old-language baseline cannot be restored")
+    }
+
+    func testLateRegionRetranslationCannotReplaceANewerCorrection() async throws {
+        let model = TranslationModel()
+        let document = try document()
+        model.submitCapturedDocument(document, serviceRevision: 0, startAutomatically: false)
+        let id = document.regions[0].id
+        model.submitScreenshotRegion(id)
+        let gate = RegionGate(), request = try XCTUnwrap(model.request)
+        let task = Task { await model.run(request, provider: gate) }
+        await waitFor(gate)
+        model.editScreenshotRegion(id, text: "请求期间手动修改", side: .target)
+        gate.complete()
+        await task.value
+        XCTAssertEqual(model.screenshot?.translations[id], "请求期间手动修改")
+        XCTAssertNil(model.screenshot?.generatedTranslations[id])
+        XCTAssertNil(model.result)
+    }
+
     func testFailedLaterRegionRetainsEarlierTranslationWithoutFalseSuccess() async throws {
         let model = TranslationModel()
         let document = try document()

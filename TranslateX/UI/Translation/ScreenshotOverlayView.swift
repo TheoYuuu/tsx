@@ -21,7 +21,7 @@ struct ScreenshotOverlayView: View {
     var renderFailed = false
     var onRetryRender: () -> Void = {}
     @Binding var showsFullText: Bool
-    @Binding var showsStatus: Bool
+    var onManageServices: () -> Void = {}
     let onClose: () -> Void
     let onRecapture: () -> Void
     let onEditInMain: () -> Void
@@ -30,8 +30,8 @@ struct ScreenshotOverlayView: View {
 
     @Environment(\.translateXTheme) private var theme
     @State private var showsOriginal = false
+    @State private var controlsWidth: CGFloat = 660
 
-    private var narrow: Bool { toolbarWidth < 480 }
     private var requesting: Bool { model.phase == .recognizing || model.phase == .translating || model.phase == .preparingLanguages }
     private var canSubmit: Bool { model.canTranslate && !model.needsSourceLanguage && !model.needsReverseLanguage }
     private var needsRecapture: Bool { !requesting && model.screenshot?.regions.isEmpty == true }
@@ -58,13 +58,12 @@ struct ScreenshotOverlayView: View {
                 .frame(width: toolbarWidth, alignment: .leading)
             if !toolbarAbove { toolbar }
         }
-        .frame(width: toolbarWidth, height: imageSize.height + 110)
+        .frame(width: toolbarWidth, height: imageSize.height + ScreenshotOverlayPlacement.toolbarHeight)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("screenshotOverlay")
         .onChange(of: model.screenshot?.id) {
             showsOriginal = false
             showsFullText = false
-            showsStatus = false
         }
     }
 
@@ -103,37 +102,46 @@ struct ScreenshotOverlayView: View {
                 Color.clear.frame(width: imageSize.width, height: imageSize.height)
             }
         }
+        .overlay(alignment: .bottom) { contextualFeedback.padding(8) }
         .offset(x: imageOffsetX)
         .accessibilityIdentifier("screenshotOverlay.image")
     }
 
     private var toolbar: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 6) {
-                language(.source)
-                icon("arrow.left.arrow.right", "Swap languages", id: "swapLanguages") { model.swapScreenshotLanguages() }
-                    .disabled(!model.canSwapLanguages || model.phase == .recognizing)
-                language(.target)
-                if !narrow { primary; close }
-            }.frame(height: 30)
-            HStack(spacing: narrow ? 4 : 8) {
-                if narrow { primary }
+        ScrollView(.horizontal) {
+            HStack(spacing: 4) {
+                ScreenshotServicePicker(model: model, openSettings: onManageServices)
+                    .disabled(model.isComposing || model.phase == .recognizing)
+                    .accessibilityIdentifier("screenshotOverlay.service")
+                HStack(spacing: 0) {
+                    language(.source)
+                    icon("arrow.right", "Swap languages", id: "swapLanguages") { model.swapScreenshotLanguages() }
+                        .disabled(!model.canSwapLanguages || model.phase == .recognizing)
+                    language(.target)
+                }
+                .padding(1)
+                .frame(height: 30)
+                .overlay { RoundedRectangle(cornerRadius: 7).strokeBorder(theme.divider, lineWidth: 1).allowsHitTesting(false) }
+                Rectangle().fill(theme.divider).frame(width: 1, height: 18).padding(.horizontal, 3).accessibilityHidden(true)
+                primary
                 compare
-                copyMenu
-                saveMenu
-                icon("text.alignleft", "Screenshot full text", id: "fullText") { showsFullText = true }
+                icon("doc.text", "View full translation", id: "fullText") { showsFullText = true }
                     .disabled(model.screenshot?.regions.isEmpty != false)
-                Spacer(minLength: 0)
+                icon("doc.on.doc", "Copy translation", id: "copy") { onCopy(.translatedText) }
+                    .disabled(!hasTranslation)
+                saveMenu
                 moreMenu
-                if narrow { close }
-            }.frame(height: 26)
-            feedbackRow.frame(height: 16)
+                close
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 44)
+            .fixedSize(horizontal: true, vertical: false)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { controlsWidth = $0 }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 9)
-        .frame(width: toolbarWidth, height: 102)
-        .background(theme.card, in: RoundedRectangle(cornerRadius: 13))
-        .overlay { RoundedRectangle(cornerRadius: 13).strokeBorder(theme.edge, lineWidth: 1).allowsHitTesting(false) }
+        .scrollIndicators(.hidden)
+        .frame(width: min(controlsWidth, toolbarWidth), height: 44)
+        .background(theme.card, in: RoundedRectangle(cornerRadius: 11))
+        .overlay { RoundedRectangle(cornerRadius: 11).strokeBorder(theme.edge, lineWidth: 1).allowsHitTesting(false) }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(L10n.string("Translation toolbar")))
         .accessibilityIdentifier("screenshotOverlay.toolbar")
@@ -141,173 +149,112 @@ struct ScreenshotOverlayView: View {
     }
 
     private func language(_ side: TranslationSide) -> some View {
-        let selection = side == .source ? $model.source : $model.target
-        let value = side == .source ? model.source : model.target
-        let title = L10n.string(side == .source ? "Source language" : "Target language")
-        let languages = catalog.languages(for: model.serviceConfiguration, asTarget: side == .target)
-        return Menu {
-            Picker(title, selection: selection) {
-                if side == .source { Text(L10n.string("Detect language")).tag("auto") }
-                if value != "auto", !languages.contains(where: { $0.id == value }) {
-                    Text(LanguageCatalog.displayName(for: value)).tag(value)
-                }
-                ForEach(languages) { language in Text(language.name).tag(language.id) }
-            }
-        } label: {
-            Text(value == "auto" ? L10n.string("Detect language") : LanguageCatalog.displayName(for: value))
-                .font(.system(size: 11))
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .menuStyle(.borderlessButton)
-        .padding(.horizontal, 9)
-        .frame(maxWidth: .infinity, minHeight: 28)
-        .background(theme.control, in: RoundedRectangle(cornerRadius: 7))
-        .disabled(model.isComposing || model.phase == .recognizing)
-        .accessibilityLabel(Text(title))
-        .accessibilityIdentifier("screenshotOverlay.\(side == .source ? "sourceLanguage" : "targetLanguage")")
+        LanguageMenu(label: L10n.string(side == .source ? "Source language" : "Target language"),
+            selection: side == .source ? $model.source : $model.target,
+            languages: catalog.languages(for: model.serviceConfiguration, asTarget: side == .target),
+            includeAuto: side == .source, prominent: false,
+            enabled: !model.isComposing && model.phase != .recognizing,
+            displayTitle: side == .source && model.source == "auto" ? model.resolvedSource.map {
+                String(format: L10n.string("Auto · %@"), LanguageCatalog.displayName(for: $0))
+            } : nil, maximumWidth: 116, grouped: true)
+            .fixedSize()
+            .translateXTooltip(L10n.string(side == .source ? "Source language" : "Target language"))
+            .accessibilityIdentifier("screenshotOverlay.\(side == .source ? "sourceLanguage" : "targetLanguage")")
     }
 
     private var primary: some View {
-        Button {
+        let title = requesting ? "Stop" : needsRecapture ? "Capture again" : "Retranslate"
+        return Button {
             if requesting { model.cancel() }
             else if needsRecapture { onRecapture() }
             else { model.submit() }
         } label: {
-            Text(L10n.string(requesting ? "Stop" : needsRecapture ? "Capture again" : model.hasTranslationFailure ? "Retry" : "Translate"))
-                .font(.system(size: 11, weight: .semibold))
-                .lineLimit(1)
-                .padding(.horizontal, 10)
-                .frame(minWidth: narrow ? 60 : 72, minHeight: 26)
-                .foregroundStyle(requesting ? theme.ink : .white)
-                .background(requesting ? theme.control : theme.accent, in: RoundedRectangle(cornerRadius: 7))
+            Group {
+                if requesting { Image(systemName: "stop.fill").font(.system(size: 12)) }
+                else if needsRecapture { Image(systemName: "viewfinder").font(.system(size: 16)) }
+                else { ScreenshotSymbol(symbol: .retranslate) }
+            }.frame(width: 30, height: 30)
         }
-        .buttonStyle(.plain)
-        .translateXControlCursor()
+        .buttonStyle(ScreenshotIconButtonStyle(tint: requesting ? nil : theme.accent))
         .keyboardShortcut(.return, modifiers: .command)
         .disabled(!requesting && !needsRecapture && !canSubmit)
+        .accessibilityLabel(Text(L10n.string(title)))
+        .translateXTooltip(L10n.string(title))
         .accessibilityIdentifier("screenshotOverlay.submit")
     }
 
     private var close: some View {
-        icon("xmark", "Close · Esc", id: "close", action: onClose)
+        icon("xmark", "Close · Esc", id: "close", tint: .red, action: onClose)
     }
 
     private var compare: some View {
-        Button { showsOriginal.toggle() } label: {
-            HStack(spacing: 5) {
-                Image(systemName: showsOriginal ? "photo" : "square.on.square")
-                if !narrow { Text(L10n.string(showsOriginal ? "Show translation" : "Show original")) }
-            }
-            .font(.system(size: 11))
-            .frame(minWidth: 26, minHeight: 26)
-        }
-        .buttonStyle(.plain)
-        .translateXControlCursor()
-        .disabled(!hasTranslation)
-        .accessibilityLabel(Text(L10n.string(showsOriginal ? "Show translation" : "Show original")))
-        .translateXTooltip(L10n.string(showsOriginal ? "Show translation" : "Show original"))
-        .accessibilityIdentifier("screenshotOverlay.compare")
-    }
-
-    private var copyMenu: some View {
-        Menu {
-            Button(L10n.string("Copy original")) { onCopy(.originalText) }.disabled(model.screenshot?.sourceText.isEmpty != false)
-            Button(L10n.string("Copy translation")) { onCopy(.translatedText) }.disabled(!hasTranslation)
-            Divider()
-            Button(L10n.string("Copy original image")) { onCopy(.originalImage) }
-            Button(L10n.string("Copy translated image")) { onCopy(.translatedImage) }.disabled(!hasTranslation || rendered == nil)
-        } label: { menuLabel("doc.on.doc", "Copy") }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-        .accessibilityLabel(Text(L10n.string("Copy")))
-        .translateXTooltip(L10n.string("Copy"))
-        .accessibilityIdentifier("screenshotOverlay.copy")
+        icon("photo", showsOriginal ? "Show translation" : "Show original", id: "compare", selected: showsOriginal) {
+            showsOriginal.toggle()
+        }.disabled(!hasTranslation)
     }
 
     private var saveMenu: some View {
-        Menu {
-            Button(L10n.string("Save original image")) { onSave(.originalImage) }
-            Button(L10n.string("Save translated image")) { onSave(.translatedImage) }.disabled(!hasTranslation || rendered == nil)
-        } label: { menuLabel("square.and.arrow.down", "Save") }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-        .accessibilityLabel(Text(L10n.string("Save")))
+        ScreenshotActionMenu(title: "Save", savesImage: true, items: [
+            ScreenshotMenuItem(title: "Save translated image", enabled: hasTranslation) { onSave(.translatedImage) },
+            ScreenshotMenuItem(title: "Save original image") { onSave(.originalImage) }
+        ])
         .translateXTooltip(L10n.string("Save"))
         .accessibilityIdentifier("screenshotOverlay.save")
     }
 
     private var moreMenu: some View {
-        Menu {
-            Button(L10n.string("Open in main window"), action: onEditInMain)
-                .disabled(model.phase == .recognizing)
-            Button(L10n.string("Capture again"), action: onRecapture)
-        } label: { Image(systemName: "ellipsis").frame(width: 20, height: 26) }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-        .accessibilityLabel(Text(L10n.string("More actions")))
+        ScreenshotActionMenu(title: "More actions", items: [
+            ScreenshotMenuItem(title: "Copy translated image", symbol: "photo.on.rectangle", enabled: hasTranslation) { onCopy(.translatedImage) },
+            ScreenshotMenuItem(title: "Copy original", symbol: "list.clipboard", enabled: model.screenshot?.sourceText.isEmpty == false) { onCopy(.originalText) },
+            ScreenshotMenuItem(title: "Copy original image", symbol: "photo") { onCopy(.originalImage) },
+            .separator,
+            ScreenshotMenuItem(title: "Edit in main window", symbol: "macwindow", enabled: model.phase != .recognizing, action: onEditInMain),
+            ScreenshotMenuItem(title: "Capture again", symbol: "viewfinder", action: onRecapture)
+        ])
         .translateXTooltip(L10n.string("More actions"))
         .accessibilityIdentifier("screenshotOverlay.more")
     }
 
-    private func menuLabel(_ symbol: String, _ key: String) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: symbol)
-            if !narrow { Text(L10n.string(key)) }
-        }.font(.system(size: 11)).frame(minHeight: 26)
-    }
-
-    private func icon(_ symbol: String, _ key: String, id: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: symbol).font(.system(size: 12)).frame(width: 26, height: 26) }
-            .buttonStyle(TranslateXIconButtonStyle())
+    private func icon(_ symbol: String, _ key: String, id: String, tint: Color? = nil, selected: Bool = false,
+                      action: @escaping () -> Void) -> some View {
+        Button(action: action) { Image(systemName: symbol).font(.system(size: 15)).frame(width: 30, height: 28) }
+            .buttonStyle(ScreenshotIconButtonStyle(tint: tint, selected: selected))
             .accessibilityLabel(Text(L10n.string(key)))
             .translateXTooltip(L10n.string(key))
             .accessibilityIdentifier("screenshotOverlay.\(id)")
     }
 
-    private var feedbackRow: some View {
-        HStack(spacing: 6) {
-            if overflowCount > 0 {
-                Button { showsFullText = true } label: {
-                    Label(overflowMessage, systemImage: "text.badge.plus")
-                        .font(.system(size: 10, weight: .medium)).lineLimit(1)
+    @ViewBuilder private var contextualFeedback: some View {
+        if requesting || showsRenderFeedback || model.hasTranslationFailure || model.phase == .noText || operationMessage != nil || overflowCount > 0 {
+            VStack(alignment: .leading, spacing: 4) {
+                if requesting || showsRenderFeedback || model.hasTranslationFailure || model.phase == .noText || operationMessage != nil {
+                    HStack(spacing: 6) {
+                        if requesting || (showsRenderFeedback && isRendering) { ProgressView().controlSize(.mini) }
+                        Text(feedbackDetail).font(.system(size: 11)).lineLimit(3).fixedSize(horizontal: false, vertical: true)
+                        if showsRenderFeedback && renderFailed && !isRendering {
+                            Button(L10n.string("Retry"), action: onRetryRender).buttonStyle(.plain).foregroundStyle(theme.accent)
+                        }
+                    }.accessibilityIdentifier("screenshotOverlay.feedback")
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(theme.isDark ? Color.orange : Color(red: 0.58, green: 0.31, blue: 0.02))
-                .translateXControlCursor()
-                .accessibilityIdentifier("screenshotOverlay.overflowNotice")
-                Spacer(minLength: 0)
-            }
-            if overflowCount == 0 || !narrow || operationMessage != nil || model.hasTranslationFailure || model.phase == .noText || requesting || showsRenderFeedback {
-                Button {
-                    if showsRenderFeedback && renderFailed && !isRendering { onRetryRender() }
-                    else { showsStatus = true }
-                } label: {
-                    HStack(spacing: 4) {
-                        if requesting || (showsRenderFeedback && isRendering) { ProgressView().controlSize(.mini).scaleEffect(0.7).frame(width: 10, height: 10) }
-                        else if showsRenderFeedback && renderFailed { Image(systemName: "exclamationmark.triangle") }
-                        else { TranslationStatusLight(phase: model.phase) }
-                        Text(feedback).lineLimit(1)
-                    }.font(.system(size: 10))
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(model.hasTranslationFailure || model.phase == .noText || (showsRenderFeedback && renderFailed) ? Color.orange : theme.muted)
-                .translateXTooltip(feedbackDetail)
-                .accessibilityLabel(Text(feedbackDetail))
-                .accessibilityIdentifier("screenshotOverlay.status")
-                .popover(isPresented: $showsStatus) {
-                    Text(feedbackDetail)
-                        .font(.system(size: 12)).textSelection(.enabled).padding(14).frame(width: min(320, toolbarWidth - 20))
+                if overflowCount > 0 {
+                    Button { showsFullText = true } label: {
+                        Label(overflowMessage, systemImage: "doc.text").font(.system(size: 11)).lineLimit(2)
+                    }.buttonStyle(.plain).translateXControlCursor().foregroundStyle(theme.accent)
+                        .accessibilityIdentifier("screenshotOverlay.overflowNotice")
                 }
             }
-            if overflowCount == 0 { Spacer(minLength: 0) }
+            .foregroundStyle(theme.ink)
+            .padding(.horizontal, 10).padding(.vertical, 7)
+            .background(theme.card, in: RoundedRectangle(cornerRadius: 8))
+            .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(theme.edge, lineWidth: 1).allowsHitTesting(false) }
+            .frame(maxWidth: max(1, min(imageSize.width - 16, 400)))
         }
     }
 
     private var fullText: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(L10n.string("Screenshot full text")).font(.system(size: 13, weight: .semibold))
+                Text(L10n.string("Full translation")).font(.system(size: 13, weight: .semibold))
                 Spacer()
                 icon("xmark", "Close", id: "closeFullText") { showsFullText = false }
             }
@@ -320,7 +267,6 @@ struct ScreenshotOverlayView: View {
                     if let document = model.screenshot {
                         ForEach(document.regions) { region in
                             VStack(alignment: .leading, spacing: 6) {
-                                Text(region.text).font(.system(size: 12)).foregroundStyle(theme.muted)
                                 Text(document.translations[region.id] ?? L10n.string("Translation pending"))
                                     .font(.system(size: 14)).foregroundStyle(theme.ink)
                             }
@@ -331,8 +277,11 @@ struct ScreenshotOverlayView: View {
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 6)
             }.frame(height: 300)
-            Button(L10n.string("Open in main window"), action: onEditInMain)
-                .buttonStyle(TranslateXButtonStyle(kind: .quiet))
+            HStack {
+                Text(LanguageCatalog.displayName(for: model.target)).font(.system(size: 11)).foregroundStyle(theme.muted)
+                Spacer()
+                CopyButton(text: model.screenshot?.translatedText ?? "", label: "Copy translation", size: 30).disabled(!hasTranslation)
+            }
         }
         .padding(14)
         .frame(width: min(440, max(280, toolbarWidth - 24)))

@@ -1,8 +1,14 @@
 [
   {
+    "version": "1.3.2",
+    "notes": "## 中文\n\n- **更紧凑的截图工具条** 服务独立分组，原文与译文语言共用边框；单行图标按钮提供功能提示，语言悬停背景与边框之间保留留白。\n- **更顺手的截图操作** 重新翻译、原图对照、全文查看、复制和保存集中在工具条；更多菜单提供其他复制方式和主窗口编辑。重新框选后可确认翻译或取消。\n- **按区域编辑与恢复** 在主窗口点击图片文字区域即可定位对应译文；支持单段重译及恢复该段生成译文，保留其他区域的手动修改。\n- **保留熟悉的主窗口** 沿用原有头部、图标与自动互译特效，统一截图编辑区间距，支持左右和上下布局。关闭菜单或取消保存时保留截图结果。\n\n## English\n\n- **Compact screenshot toolbar** The service has its own group, while source and target languages share a border. Single-row icon buttons include tooltips, with inset hover backgrounds for language choices.\n- **Quicker screenshot actions** Retranslate, compare the original, read the full translation, copy, and save from the toolbar. More offers additional copy options and editing in the main window. Confirm or cancel after selecting a new region.\n- **Edit and restore individual regions** Click text regions in the image to locate their translations. Retranslate one region or restore its generated translation while keeping edits to other regions.\n- **The familiar main window** Keep the existing header, icons, and automatic-translation effects, with consistent editor spacing and side-by-side or stacked layouts. Dismissing a menu or cancelling Save keeps the screenshot open.\n",
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.2"
+  },
+  {
     "version": "1.3.1",
     "notes": "## 中文\n\n- 检查更新使用独立的紧凑弹窗，仅显示状态、进度和取消操作。\n- 检查失败时，重试和关闭按钮保持相同尺寸；已是最新版时提供简洁提示。\n- 检查完成后切换到原有更新说明，两个弹窗不叠加，更新说明的样式与布局保持不变。\n\n## English\n\n- Update checks use a separate compact dialog with status, progress, and a Cancel button.\n- Failed checks show equally sized Retry and Close buttons; up-to-date checks show a concise confirmation.\n- Completed checks switch to the existing release notes without overlapping dialogs. The release-notes styling and layout remain unchanged.\n",
-    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.1"
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.1",
+    "publishedAt": "2026-10-15T11:59:21Z"
   },
   {
     "version": "1.3.0",

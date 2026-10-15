@@ -41,7 +41,6 @@ final class ScreenshotOverlayController: NSObject {
         generation = UUID()
         presentation.message = nil
         presentation.showsFullText = false
-        presentation.showsStatus = false
         let screen = NSScreen.screens.max { a, b in
             a.frame.intersection(selection).area < b.frame.intersection(selection).area
         } ?? NSScreen.main
@@ -66,6 +65,7 @@ final class ScreenshotOverlayController: NSObject {
         // WindowSurface intentionally paints a whole editor and is unsuitable here.
         let root = ScreenshotOverlayRoot(model: model, catalog: windows.languages,
             preferences: windows.preferences, presentation: presentation, placement: placement,
+            onManageServices: { [weak windows] in windows?.showTranslationServices() },
             onClose: { [weak self] in self?.dismiss() },
             onRecapture: { [weak self] in self?.onRecapture?() },
             onEditInMain: { [weak self] in self?.editInMain() },
@@ -102,7 +102,6 @@ final class ScreenshotOverlayController: NSObject {
         renderedDocumentID = nil
         presentation.message = nil
         presentation.showsFullText = false
-        presentation.showsStatus = false
         removeObservers()
         onDismiss?()
         if shouldRestore, let sourceApplication, !sourceApplication.isTerminated,
@@ -233,7 +232,7 @@ final class ScreenshotOverlayController: NSObject {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let consumed = MainActor.assumeIsolated {
                 guard let self, self.isVisible, event.keyCode == 53,
-                      event.window === self.panel || self.presentation.showsFullText || self.presentation.showsStatus,
+                      event.window === self.panel || self.presentation.showsFullText,
                       self.trackedMenus.isEmpty,
                       self.panel?.attachedSheet == nil,
                       (event.window?.firstResponder as? NSTextView)?.hasMarkedText() != true,
@@ -249,8 +248,7 @@ final class ScreenshotOverlayController: NSObject {
         // Consume the event and update the shared presentation synchronously.
         // Deferring this decision lets AppKit dismiss a popover first and can
         // accidentally dismiss the picture with the very same Escape press.
-        if presentation.showsStatus { presentation.showsStatus = false }
-        else if presentation.showsFullText { presentation.showsFullText = false }
+        if presentation.showsFullText { presentation.showsFullText = false }
         else { dismiss() }
     }
 
@@ -259,8 +257,15 @@ final class ScreenshotOverlayController: NSObject {
         panel?.isTrackingMenu = !trackedMenus.isEmpty
     }
     @objc private func menuEnded(_ note: Notification) {
-        if let menu = note.object as? NSMenu { trackedMenus.remove(ObjectIdentifier(menu)) }
-        panel?.isTrackingMenu = !trackedMenus.isEmpty
+        guard let menu = note.object as? NSMenu else { return }
+        let identifier = ObjectIdentifier(menu), expected = generation
+        // AppKit can end tracking before the Escape event finishes propagating
+        // to the panel. Keep this event inside the menu's dismissal boundary.
+        Task { @MainActor [weak self] in
+            guard let self, self.generation == expected else { return }
+            self.trackedMenus.remove(identifier)
+            self.panel?.isTrackingMenu = !self.trackedMenus.isEmpty
+        }
     }
     @objc private func displaysChanged() {
         // AppKit also sends this when activation/menu-bar state changes. Only
@@ -309,7 +314,6 @@ private final class ScreenshotOverlayPresentation {
     var isRendering = false
     var renderFailed = false
     var showsFullText = false
-    var showsStatus = false
 }
 
 private struct ScreenshotOverlayRoot: View {
@@ -318,6 +322,7 @@ private struct ScreenshotOverlayRoot: View {
     let preferences: AppPreferences
     @Bindable var presentation: ScreenshotOverlayPresentation
     let placement: ScreenshotOverlayPlacement
+    let onManageServices: () -> Void
     let onClose: () -> Void
     let onRecapture: () -> Void
     let onEditInMain: () -> Void
@@ -331,7 +336,7 @@ private struct ScreenshotOverlayRoot: View {
                 toolbarAbove: placement.toolbarAbove, imageOffsetX: placement.imageFrame.minX - placement.frame.minX,
                 operationMessage: presentation.message,
                 isRendering: presentation.isRendering, renderFailed: presentation.renderFailed, onRetryRender: onRetryRender,
-                showsFullText: $presentation.showsFullText, showsStatus: $presentation.showsStatus,
+                showsFullText: $presentation.showsFullText, onManageServices: onManageServices,
                 onClose: onClose, onRecapture: onRecapture, onEditInMain: onEditInMain, onCopy: onCopy, onSave: onSave)
                 .background { AppleTranslationHost(model: model) }
         }
@@ -344,7 +349,7 @@ struct ScreenshotOverlayPlacement {
     let frame: CGRect
     let imageFrame: CGRect
     let toolbarAbove: Bool
-    static let toolbarHeight: CGFloat = 110
+    static let toolbarHeight: CGFloat = 52
 
     init(selection: CGRect, visibleFrame: CGRect) {
         let safe = visibleFrame.insetBy(dx: 8, dy: 8)
@@ -356,7 +361,7 @@ struct ScreenshotOverlayPlacement {
         let above = y - Self.toolbarHeight < safe.minY && y + size.height + Self.toolbarHeight <= safe.maxY
         let imageY = above ? y : max(y, safe.minY + Self.toolbarHeight)
         imageFrame = CGRect(origin: CGPoint(x: x, y: imageY), size: size)
-        let width = min(max(560, size.width), safe.width)
+        let width = min(max(720, size.width), safe.width)
         let windowX = min(max(imageFrame.midX - width / 2, safe.minX), safe.maxX - width)
         toolbarAbove = above
         frame = CGRect(x: windowX, y: above ? imageY : imageY - Self.toolbarHeight,

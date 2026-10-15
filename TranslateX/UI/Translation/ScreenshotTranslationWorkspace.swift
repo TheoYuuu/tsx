@@ -1,23 +1,22 @@
 import AppKit
 import SwiftUI
 
-/// Both capture modes share the same local image and editable region records.
-/// Background repair and typesetting stay local; the provider receives text only.
+/// Screenshot editing lives in the existing main window. Stable OCR region IDs
+/// link image hit targets, native text editors, generated text and corrections.
 struct ScreenshotTranslationWorkspace: View {
     @Bindable var model: TranslationModel
     let catalog: LanguageCatalog?
     var compact = false
-    var recapture: () -> Void = {}
+    var save: (ScreenshotOutput) -> Void = { _ in }
     @Environment(\.translateXTheme) private var theme
     @Environment(\.translationLayout) private var layout
     #if TRANSLATEX_VISUAL_QA
     @Environment(\.translationReviewCaptureMode) private var reviewCaptureMode
     #endif
-    @State private var imageMode = false
-    @State private var showsOriginal = false
-    @State private var editsSource = false
-    @State private var zoom: CGFloat = 1
+    @State private var sourceText = false
+    @State private var targetImage = false
     @State private var selectedRegion: UUID?
+    @State private var zoom: CGFloat = 1
     @State private var renderedImage: ScreenshotRenderedImage?
     @State private var isRendering = false
     @State private var renderFailed = false
@@ -30,287 +29,227 @@ struct ScreenshotTranslationWorkspace: View {
 
     var body: some View {
         if let document = model.screenshot {
-            VStack(spacing: 8) {
-                modeBar
-                if imageMode {
-                    HStack(spacing: 8) {
-                        language(.source)
-                        Image(systemName: "arrow.right").font(.system(size: 10)).foregroundStyle(theme.faint).accessibilityHidden(true)
-                        language(.target)
-                        Spacer(minLength: 0)
-                        renderFeedback
-                        if let renderedImage, !renderedImage.overflowRegionIDs.isEmpty {
-                            Button {
-                                selectedRegion = document.regions.first { renderedImage.overflowRegionIDs.contains($0.id) }?.id
-                            } label: {
-                                Label(String(format: L10n.string("%d passages need the full-text view"), renderedImage.overflowRegionIDs.count),
-                                      systemImage: "text.badge.plus")
-                                    .font(.system(size: 10)).lineLimit(1)
-                            }
-                            .buttonStyle(.plain).translateXControlCursor()
-                            .foregroundStyle(theme.isDark ? Color.orange : Color(red: 0.58, green: 0.31, blue: 0.02))
-                            .accessibilityIdentifier("screenshot.overflowNotice")
-                        }
-                        CopyButton(text: model.translatedText, label: "Copy translation", size: 26).disabled(model.isComposing)
-                    }.frame(height: 28).padding(.horizontal, 10)
-                }
-                Group {
-                    if imageMode {
-                        imageCanvas(document, overlays: true)
-                    } else {
-                        TranslationSplitLayout(orientation: layout) {
-                            sourcePane(document)
-                            Rectangle().fill(theme.divider).accessibilityHidden(true)
-                            translatedPane(document).background(theme.secondaryCard)
-                        }
-                    }
-                }
-                .background(theme.workspace)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(theme.divider, lineWidth: 1).allowsHitTesting(false) }
-                .serviceDesignMetric(compact ? "quick.screenshotContent" : "main.screenshotContent")
+            TranslationSplitLayout(orientation: layout) {
+                pane(document, side: .source)
+                Rectangle().fill(theme.divider).accessibilityHidden(true)
+                pane(document, side: .target).background(theme.secondaryCard)
             }
+            .background(theme.workspace)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay { RoundedRectangle(cornerRadius: 14).strokeBorder(theme.divider, lineWidth: 1).allowsHitTesting(false) }
+            .serviceDesignMetric(compact ? "quick.screenshotContent" : "main.screenshotContent")
             #if TRANSLATEX_VISUAL_QA
-            .onAppear {
-                imageMode = reviewCaptureMode == "image" || reviewCaptureMode == "original"
-                showsOriginal = reviewCaptureMode == "original"
-            }
+            .onAppear { targetImage = reviewCaptureMode == "image"; sourceText = false }
             #endif
-            .onChange(of: imageMode) {
-                selectedRegion = nil
-            }
-            .task(id: RenderRequest(document: imageMode ? document : nil, retry: renderRetry)) {
-                guard imageMode, !document.translations.isEmpty else {
+            .task(id: RenderRequest(document: targetImage ? document : nil, retry: renderRetry)) {
+                guard targetImage, !document.translations.isEmpty else {
                     renderedImage = nil; isRendering = false; renderFailed = false
                     return
                 }
-                isRendering = true
-                renderFailed = false
+                isRendering = true; renderFailed = false
+                do { try await Task.sleep(for: .milliseconds(120)) } catch { return }
                 let rendered = await ScreenshotImageRenderer.renderPreview(document)
                 guard !Task.isCancelled else { return }
-                renderedImage = rendered
-                isRendering = false
-                renderFailed = rendered == nil
+                renderedImage = rendered; isRendering = false; renderFailed = rendered == nil
             }
-            .onChange(of: showsOriginal) { selectedRegion = nil }
-            .onChange(of: zoom) { selectedRegion = nil }
-            .onChange(of: document.id) { zoom = 1; selectedRegion = nil; showsOriginal = false; editsSource = false; renderedImage = nil }
-        }
-    }
-
-    @ViewBuilder private var renderFeedback: some View {
-        if !showsOriginal, model.screenshot?.translations.isEmpty == false {
-            if isRendering {
-                HStack(spacing: 4) {
-                    ProgressView().controlSize(.mini).scaleEffect(0.7).frame(width: 10, height: 10)
-                    Text(L10n.string("Generating translated image…")).lineLimit(1)
-                }
-                .font(.system(size: 10)).foregroundStyle(theme.muted)
-                .accessibilityIdentifier("screenshot.rendering")
-            } else if renderFailed {
-                Button { renderRetry += 1 } label: {
-                    Label(L10n.string("Failed to prepare translated image. Retry."), systemImage: "arrow.clockwise")
-                        .font(.system(size: 10)).lineLimit(1)
-                }
-                .buttonStyle(.plain).translateXControlCursor().foregroundStyle(Color.orange)
-                .translateXTooltip(L10n.string("Failed to prepare translated image. Retry."))
-                .accessibilityIdentifier("screenshot.retryRender")
+            .onChange(of: document.id) {
+                selectedRegion = nil; zoom = 1; sourceText = false; targetImage = false; renderedImage = nil
             }
         }
     }
 
-    private var modeBar: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 10) { modes; Spacer(minLength: 2); imageControls; recaptureButton }
-            VStack(spacing: 5) {
-                HStack { modes; Spacer(); recaptureButton }
-                if imageMode { HStack { Spacer(); imageControls } }
-            }
-        }.padding(.horizontal, 4)
+    private func pane(_ document: ScreenshotDocument, side: TranslationSide) -> some View {
+        let imageVisible = side == .source ? !sourceText : targetImage
+        return VStack(spacing: 8) {
+            HStack(spacing: 6) {
+                language(side)
+                Spacer(minLength: 2)
+                tabs(side)
+                CopyButton(text: side == .source ? document.sourceText : document.translatedText,
+                           label: side == .source ? "Copy original" : "Copy translation", size: 26)
+                    .disabled(model.isComposing)
+            }.frame(height: 30)
+            if imageVisible { imageCanvas(document, side: side) }
+            else { regionEditors(document, side: side) }
+            footer(document, side: side, imageVisible: imageVisible)
+        }.padding(10)
     }
-    private var modes: some View {
-        HStack(spacing: 2) {
-            modeButton("Text mode", selected: !imageMode) { imageMode = false }
-            modeButton("Image mode", selected: imageMode) { imageMode = true }
-        }.padding(3).background(theme.control, in: RoundedRectangle(cornerRadius: 10))
+
+    private func tabs(_ side: TranslationSide) -> some View {
+        HStack(spacing: 1) {
+            if side == .source {
+                tab("Image", selected: !sourceText, id: "sourceImage") { sourceText = false }
+                tab("Original", selected: sourceText, id: "sourceText") { sourceText = true }
+            } else {
+                tab("Translation", selected: !targetImage, id: "targetText") { targetImage = false }
+                tab("Translated image", selected: targetImage, id: "targetImage") { targetImage = true }
+            }
+        }.padding(2).background(theme.control, in: RoundedRectangle(cornerRadius: 7))
             .disabled(model.isComposing)
     }
-    private func modeButton(_ key: String, selected: Bool, action: @escaping () -> Void) -> some View {
+
+    private func tab(_ title: String, selected: Bool, id: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(L10n.string(key)).font(.system(size: 11, weight: selected ? .medium : .regular))
+            Text(L10n.string(title)).font(.system(size: 11, weight: selected ? .medium : .regular)).lineLimit(1)
+                .padding(.horizontal, 7).frame(height: 24)
                 .foregroundStyle(selected ? theme.ink : theme.muted)
-                .padding(.horizontal, 11).frame(height: 24)
-                .background(selected ? theme.card : .clear, in: RoundedRectangle(cornerRadius: 7))
+                .background(selected ? theme.card : .clear, in: RoundedRectangle(cornerRadius: 5))
         }.buttonStyle(.plain).translateXControlCursor().accessibilityAddTraits(selected ? .isSelected : [])
-            .accessibilityIdentifier("screenshot.\(key == "Text mode" ? "textMode" : "imageMode")")
+            .accessibilityIdentifier("screenshot.\(id)")
     }
-    @ViewBuilder private var imageControls: some View {
-        if imageMode {
-            HStack(spacing: 4) {
-                Button { showsOriginal.toggle() } label: {
-                    Text(L10n.string(showsOriginal ? "Show translation" : "Show original"))
-                        .font(.system(size: 11)).padding(.horizontal, 7).frame(height: 26)
-                }.buttonStyle(.plain).translateXControlCursor().accessibilityIdentifier("screenshot.compare")
-                icon("minus", "Zoom out") { zoom = max(0.5, zoom - 0.25) }.disabled(zoom <= 0.5)
-                Text("\(Int(zoom * 100))%").font(.system(size: 10).monospacedDigit()).foregroundStyle(theme.muted)
-                    .frame(width: 34).accessibilityLabel(Text(L10n.string("Zoom")))
-                icon("plus", "Zoom in") { zoom = min(3, zoom + 0.25) }.disabled(zoom >= 3)
-                icon("arrow.up.left.and.arrow.down.right", "Fit image") { zoom = 1 }
-            }.disabled(model.isComposing)
-        }
-    }
-    private var recaptureButton: some View {
-        Button(action: recapture) {
-            Text("Capture again").font(.system(size: 11)).foregroundStyle(theme.muted)
-                .padding(.horizontal, 5).frame(height: 28)
-        }.buttonStyle(.plain).translateXControlCursor().disabled(model.isComposing)
-    }
-    private func icon(_ symbol: String, _ key: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: symbol).font(.system(size: 12)).frame(width: 26, height: 26) }
-            .buttonStyle(TranslateXIconButtonStyle()).accessibilityLabel(Text(L10n.string(key))).translateXTooltip(L10n.string(key))
-    }
+
     private func language(_ side: TranslationSide) -> some View {
         Group {
             if let catalog {
                 LanguageMenu(label: L10n.string(side == .source ? "Source language" : "Target language"),
                     selection: side == .source ? $model.source : $model.target,
                     languages: catalog.languages(for: model.serviceConfiguration, asTarget: side == .target),
-                    includeAuto: side == .source, prominent: false, enabled: !model.isComposing)
+                    includeAuto: side == .source, prominent: false, enabled: !model.isComposing, maximumWidth: 150)
             } else {
-                Text(LanguageCatalog.displayName(for: side == .source ? model.source : model.target)).font(.system(size: 12, weight: .medium))
+                Text(LanguageCatalog.displayName(for: side == .source ? model.source : model.target)).font(.system(size: 12))
             }
         }.fixedSize()
     }
-    private func sourcePane(_ document: ScreenshotDocument) -> some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 6) {
-                language(.source)
-                Spacer(minLength: 2)
-                icon(editsSource ? "photo" : "pencil", editsSource ? "Show screenshot" : "Edit recognized text") { editsSource.toggle() }
-                    .disabled(model.isComposing || document.regions.isEmpty)
-                icon("arrow.up.left.and.arrow.down.right", "Expand image") { imageMode = true; showsOriginal = true; zoom = 1 }
-                CopyButton(text: document.sourceText, label: "Copy original", size: 26).disabled(model.isComposing)
-            }.frame(height: 28)
-            if editsSource { regionEditors(document, side: .source) }
-            else { imageCanvas(document, overlays: false) }
-        }.padding(compact ? 12 : 16)
+
+    private func footer(_ document: ScreenshotDocument, side: TranslationSide, imageVisible: Bool) -> some View {
+        HStack(spacing: 5) {
+            if side == .target, targetImage, isRendering {
+                ProgressView().controlSize(.mini)
+                Text(L10n.string("Generating translated image…"))
+            } else if side == .target, targetImage, renderFailed {
+                Button(L10n.string("Failed to prepare translated image. Retry.")) { renderRetry += 1 }
+                    .buttonStyle(.plain).foregroundStyle(theme.accent).translateXControlCursor()
+            } else {
+                Text(L10n.string(side == .source ? (sourceText ? "Correct recognized text, then retranslate a region" : "Select an image region to find its translation")
+                                 : "Edit text to update the translated image"))
+            }
+            Spacer(minLength: 1)
+            if imageVisible {
+                icon("minus", "Zoom out") { zoom = max(1, zoom - 0.25) }.disabled(zoom <= 1 || model.isComposing)
+                Button("\(Int(zoom * 100))%") { zoom = 1 }.buttonStyle(.plain).translateXControlCursor()
+                    .translateXTooltip(L10n.string("Fit image")).disabled(model.isComposing)
+                icon("plus", "Zoom in") { zoom = min(3, zoom + 0.25) }.disabled(zoom >= 3 || model.isComposing)
+            }
+            if side == .target {
+                ScreenshotActionMenu(title: "Save", savesImage: true, items: [
+                    ScreenshotMenuItem(title: "Save translated image", enabled: !document.translations.isEmpty) { save(.translatedImage) },
+                    ScreenshotMenuItem(title: "Save original image") { save(.originalImage) }
+                ]).disabled(model.isComposing)
+                    .translateXTooltip(L10n.string("Save")).accessibilityLabel(Text(L10n.string("Save")))
+                    .accessibilityIdentifier("screenshot.save")
+            }
+        }.font(.system(size: 10)).foregroundStyle(theme.muted).lineLimit(1).frame(height: 28)
     }
-    private func translatedPane(_ document: ScreenshotDocument) -> some View {
-        VStack(spacing: 8) {
-            HStack {
-                language(.target)
-                Spacer(minLength: 2)
-                CopyButton(text: model.translatedText, label: "Copy translation", size: 26).disabled(model.isComposing)
-            }.frame(height: 28)
-            regionEditors(document, side: .target)
-        }.padding(compact ? 12 : 16)
-    }
+
     private func regionEditors(_ document: ScreenshotDocument, side: TranslationSide) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                if document.regions.isEmpty {
-                    Text(model.phase == .recognizing ? "Recognizing text…" : "No recognized text")
-                        .font(.system(size: 13)).foregroundStyle(theme.muted).padding(.top, 8)
-                }
-                ForEach(document.readingGroups) { group in
-                    HStack(alignment: .top, spacing: 12) {
-                        ForEach(group.regions) { region in
-                            ScreenshotRegionEditor(
-                                text: side == .source ? region.text : document.translations[region.id] ?? "",
-                                placeholder: side == .source ? "" : L10n.string("Translation pending"),
-                                fontSize: region.role == .heading ? (compact ? 18 : 20) : (compact ? 14 : 16),
-                                accessibilityName: side == .source ? "Original text" : "Translation, editable",
-                                onEdit: { model.editScreenshotRegion(region.id, text: $0, side: side, isComposing: $1) },
-                                onSubmit: primaryAction,
-                                canUndo: { model.canUndoWorkspaceChange }, canRedo: { model.canRedoWorkspaceChange },
-                                undo: { model.undoWorkspaceChange() }, redo: { model.redoWorkspaceChange() },
-                                onCancel: { if model.isBusy { model.cancel(); return true }; return false }
-                            )
-                            .frame(maxWidth: region.role == .price ? 74 : .infinity)
-                            .accessibilityIdentifier("screenshot.region.\(side).\(region.id)")
-                        }
-                    }.padding(.bottom, group.regions.first?.role == .listItem ? 5 : 13)
-                }
-            }.frame(maxWidth: .infinity, alignment: .leading).translateXScrollContent()
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    if document.regions.isEmpty {
+                        Text(model.phase == .recognizing ? "Recognizing text…" : "No recognized text")
+                            .font(.system(size: 13)).foregroundStyle(theme.muted)
+                    }
+                    ForEach(Array(document.regions.enumerated()), id: \.element.id) { index, region in
+                        regionEditor(region, index: index, document: document, side: side).id(region.id)
+                    }
+                }.frame(maxWidth: .infinity, alignment: .leading).translateXScrollContent()
+            }
+            .onChange(of: selectedRegion) { if let selectedRegion { proxy.scrollTo(selectedRegion, anchor: .center) } }
+            .onAppear { if let selectedRegion { proxy.scrollTo(selectedRegion, anchor: .center) } }
         }.accessibilityIdentifier("screenshot.\(side == .source ? "originalText" : "translatedText")")
     }
 
-    private func imageCanvas(_ document: ScreenshotDocument, overlays: Bool) -> some View {
+    private func regionEditor(_ region: ScreenshotRegion, index: Int, document: ScreenshotDocument, side: TranslationSide) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Text("\(index + 1)").monospacedDigit().frame(minWidth: 18, minHeight: 18)
+                    .background(theme.control, in: RoundedRectangle(cornerRadius: 4))
+                Text(L10n.string(side == .source ? "Recognized text" : document.isTranslationEdited(region.id) ? "Edited translation" : "Translation"))
+                if side == .source, region.confidence < 0.5 {
+                    Image(systemName: "exclamationmark.triangle").translateXTooltip(L10n.string("Check recognized text"))
+                }
+                Spacer(minLength: 2)
+                if side == .source {
+                    Button { model.submitScreenshotRegion(region.id) } label: {
+                        HStack(spacing: 4) { ScreenshotSymbol(symbol: .retranslate); Text(L10n.string("Retranslate")) }
+                            .padding(.horizontal, 5).frame(height: 24)
+                    }.buttonStyle(ScreenshotIconButtonStyle(tint: theme.accent))
+                        .disabled(model.isBusy || model.isComposing || !model.canTranslate || model.needsSourceLanguage || model.needsReverseLanguage)
+                        .translateXTooltip(L10n.string("Retranslate this region"))
+                        .accessibilityIdentifier("screenshot.retranslate.\(region.id)")
+                } else if document.isTranslationEdited(region.id) {
+                    icon("arrow.uturn.backward", "Restore this translation") { model.restoreScreenshotRegionTranslation(region.id) }
+                        .disabled(model.isComposing)
+                }
+            }.font(.system(size: 10)).foregroundStyle(theme.muted).frame(height: 24)
+            ScreenshotRegionEditor(
+                text: side == .source ? region.text : document.translations[region.id] ?? "",
+                placeholder: side == .source ? "" : L10n.string("Translation pending"),
+                fontSize: region.role == .heading ? (compact ? 18 : 20) : (compact ? 14 : 16),
+                accessibilityName: side == .source ? "Original text" : "Translation, editable",
+                onEdit: { value, composing in
+                    // Keep typing and scrolling independent. Image clicks select
+                    // a region; an edit must not scroll its own editor mid-input.
+                    model.editScreenshotRegion(region.id, text: value, side: side, isComposing: composing)
+                },
+                onSubmit: { if model.isBusy { model.cancel() } else { model.submitScreenshotRegion(region.id) } },
+                canUndo: { model.canUndoWorkspaceChange }, canRedo: { model.canRedoWorkspaceChange },
+                undo: { model.undoWorkspaceChange() }, redo: { model.redoWorkspaceChange() },
+                onCancel: { if model.isBusy { model.cancel(); return true }; return false }
+            ).accessibilityIdentifier("screenshot.region.\(side).\(region.id)")
+        }
+        .padding(8)
+        .background(selectedRegion == region.id ? theme.accent.opacity(0.045) : .clear, in: RoundedRectangle(cornerRadius: 8))
+        .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(selectedRegion == region.id ? theme.accent.opacity(0.45) : theme.divider.opacity(0.5), lineWidth: 1).allowsHitTesting(false) }
+    }
+
+    private func imageCanvas(_ document: ScreenshotDocument, side: TranslationSide) -> some View {
         GeometryReader { geometry in
-            let size = ScreenshotDocument.fittedSize(image: document.pixelSize,
-                available: CGSize(width: max(1, geometry.size.width - 20), height: max(1, geometry.size.height - 20)), zoom: overlays ? zoom : 1)
+            let size = ScreenshotDocument.fittedSize(image: document.pixelSize, available: geometry.size, zoom: zoom)
             ScrollView([.horizontal, .vertical]) {
                 ZStack(alignment: .topLeading) {
-                    Image(nsImage: NSImage(cgImage: overlays && !showsOriginal && !document.translations.isEmpty ? renderedImage?.image ?? document.image : document.image,
-                                          size: document.pixelSize))
-                        .resizable().frame(width: size.width, height: size.height)
-                        .accessibilityLabel(Text(L10n.string("Captured image")))
-                    if overlays {
-                        ForEach(document.regions) { region in
-                            regionOverlay(region, document: document, size: size)
-                        }
+                    Image(nsImage: NSImage(cgImage: side == .target ? renderedImage?.image ?? document.image : document.image, size: document.pixelSize))
+                        .resizable().interpolation(.high).frame(width: size.width, height: size.height)
+                        .accessibilityLabel(Text(L10n.string(side == .source ? "Original image" : "Translated image")))
+                    ForEach(Array(document.regions.enumerated()), id: \.element.id) { index, region in
+                        regionOverlay(region, index: index, document: document, size: size, side: side)
                     }
                 }
                 .frame(width: size.width, height: size.height)
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: 5))
-                .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
                 .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .center)
-            }.accessibilityIdentifier(overlays ? "screenshot.imageCanvas" : "screenshot.preview")
+            }.accessibilityIdentifier(side == .source ? "screenshot.preview" : "screenshot.imageCanvas")
         }
     }
-    private func regionOverlay(_ region: ScreenshotRegion, document: ScreenshotDocument, size: CGSize) -> some View {
-        let translated = document.translations[region.id]
-        let metrics = ScreenshotOverlayMetrics(region: region, imageSize: size)
-        let card = metrics.frame
-        let overflows = !showsOriginal && renderedImage?.overflowRegionIDs.contains(region.id) == true
-        return Button { selectedRegion = region.id } label: {
-            Color.clear
-            .frame(width: card.width, height: card.height)
-            .overlay {
-                if overflows {
-                    Rectangle().strokeBorder(Color.orange, style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
+
+    private func regionOverlay(_ region: ScreenshotRegion, index: Int, document: ScreenshotDocument, size: CGSize, side: TranslationSide) -> some View {
+        let card = ScreenshotDocument.displayBounds(region.bounds, in: size)
+        let selected = selectedRegion == region.id
+        let overflows = side == .target && renderedImage?.overflowRegionIDs.contains(region.id) == true
+        return Button {
+            selectedRegion = region.id
+            targetImage = false
+        } label: {
+            Rectangle().fill(selected ? theme.accent.opacity(0.1) : .clear)
+                .overlay { Rectangle().strokeBorder(overflows ? .orange : theme.accent.opacity(selected ? 0.8 : 0.3), style: StrokeStyle(lineWidth: 1, dash: overflows ? [3, 2] : [])) }
+                .overlay(alignment: .topLeading) {
+                    if card.minX >= 18 && card.height >= 12 {
+                        Text("\(index + 1)").font(.system(size: 9, weight: .semibold)).foregroundStyle(.white)
+                            .frame(width: 14, height: 12).background(theme.accent, in: RoundedRectangle(cornerRadius: 2))
+                            .offset(x: -17)
+                    }
                 }
-            }
-            .contentShape(Rectangle())
+                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain).translateXControlCursor()
-        .accessibilityLabel(Text(showsOriginal ? region.text : translated ?? L10n.string("Translation pending")))
+        .buttonStyle(.plain).translateXControlCursor().disabled(model.isComposing)
+        .frame(width: max(1, card.width), height: max(1, card.height)).position(x: card.midX, y: card.midY)
+        .accessibilityLabel(Text(side == .source ? region.text : document.translations[region.id] ?? L10n.string("Translation pending")))
         .translateXTooltip(L10n.string(overflows ? "Screenshot full text" : "Edit region"))
-        .position(x: card.midX, y: card.midY)
-        .popover(isPresented: Binding(get: { selectedRegion == region.id }, set: { if !$0 { selectedRegion = nil } }), arrowEdge: .trailing) {
-            regionDetail(region, translated: translated ?? "")
-        }
+        .accessibilityIdentifier("screenshot.imageRegion.\(side).\(region.id)")
     }
-    private func primaryAction() {
-        if model.phase == .recognizing || model.phase == .translating || model.phase == .preparingLanguages { model.cancel() }
-        else { model.submit() }
-    }
-    private func regionDetail(_ region: ScreenshotRegion, translated: String) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Region translation").font(.system(size: 13, weight: .semibold))
-                Spacer()
-                CopyButton(text: translated, label: "Copy translation", size: 26)
-                icon("xmark", "Close") { selectedRegion = nil }
-            }
-            ScrollView {
-                Text(region.text).font(.system(size: 12)).foregroundStyle(theme.muted).textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }.frame(maxHeight: 100)
-            Divider()
-            TranslationTextEditor(text: Binding(get: { model.screenshot?.translations[region.id] ?? "" }, set: { _ in }),
-                onEdit: { model.editScreenshotRegion(region.id, text: $0, side: .target, isComposing: $1) },
-                onSubmit: { selectedRegion = nil }, fontSize: 15, accessibilityID: "screenshot.regionDetail", accessibilityName: "Translation, editable",
-                managesWorkspaceUndo: true,
-                canUndoWorkspace: { model.canUndoWorkspaceChange }, canRedoWorkspace: { model.canRedoWorkspaceChange },
-                undoWorkspace: { model.undoWorkspaceChange() }, redoWorkspace: { model.redoWorkspaceChange() },
-                onCancel: { selectedRegion = nil; return true })
-                .frame(height: 140)
-            if region.confidence < 0.5 {
-                Text("Check recognized text").font(.system(size: 11)).foregroundStyle(theme.muted)
-            }
-        }.padding(16).frame(width: 300).environment(\.translateXTheme, theme)
+
+    private func icon(_ symbol: String, _ key: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) { Image(systemName: symbol).font(.system(size: 12)).frame(width: 26, height: 26) }
+            .buttonStyle(ScreenshotIconButtonStyle()).accessibilityLabel(Text(L10n.string(key))).translateXTooltip(L10n.string(key))
     }
 }
 

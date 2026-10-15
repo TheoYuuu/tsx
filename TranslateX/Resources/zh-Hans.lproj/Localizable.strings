@@ -1135,3 +1135,35 @@
 "Unable to save the image. Choose another location." = "图片未能保存，请选择其他位置。";
 "Generating translated image…" = "正在生成译图…";
 "Failed to prepare translated image. Retry." = "译图生成失败，点击重试";
+
+"Retranslate" = "重新翻译";
+
+"Image" = "图片";
+
+"Recognized text" = "识别原文";
+
+"Edited translation" = "已修改";
+
+"Retranslate this region" = "重新翻译此区域";
+
+"Restore this translation" = "恢复此段译文";
+
+"Region updated" = "此区域已更新";
+
+"Correct recognized text, then retranslate a region" = "校正识别原文后，可重新翻译此段";
+
+"Select an image region to find its translation" = "点选区域，定位对应译文";
+
+"Edit text to update the translated image" = "可直接修改译文，修改将应用到译图";
+
+"Confirm selection and translate" = "确认框选并翻译";
+
+"Unable to save. Try again." = "无法保存，请重试。";
+
+"Auto · %@" = "自动 · %@";
+
+"Edit in main window" = "在主窗口编辑";
+
+"View full translation" = "查看完整译文";
+
+"Full translation" = "完整译文";
