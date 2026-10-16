@@ -178,12 +178,18 @@ struct AppUpdateInstallationView: View {
     let updates: AppUpdateController
     let presentation: AppUpdatePresentation
     var dialogSize: CGSize? = nil
-    @FocusState private var primaryFocused: Bool
+    private enum ActionFocus: Hashable { case primary, cancel, details }
+    @FocusState private var focusedAction: ActionFocus?
     private var p: ReleaseDialogPalette { .init(theme: theme) }
     private var busy: Bool { [.checking, .downloading, .extracting, .installing].contains(presentation.phase) }
     private var canDismiss: Bool { ![.extracting, .installing].contains(presentation.phase) }
     private var showsNotes: Bool { [.available, .ready].contains(presentation.phase) }
     private var release: AppRelease? { updates.releases.entries.first { $0.version == presentation.version } }
+    private var preferredFocus: ActionFocus? {
+        if busy { return canDismiss ? .cancel : nil }
+        if presentation.phase == .failed || presentation.phase == .current { return .primary }
+        return presentation.informationOnly && presentation.informationURL != nil ? .details : .primary
+    }
 
     var body: some View {
         CompactUpdateDialog(title: title, maximumHeight: dialogSize?.height,
@@ -220,7 +226,8 @@ struct AppUpdateInstallationView: View {
         } footer: {
             ReleaseDialogFooter { ReleaseHistoryLink() } actions: { actions }
         }
-        .onAppear { primaryFocused = true; updates.continueAutomaticUpdate() }
+        .onChange(of: preferredFocus, initial: true) { _, target in focusedAction = target }
+        .onAppear { updates.continueAutomaticUpdate() }
         .onChange(of: presentation) { _, _ in updates.continueAutomaticUpdate() }
         .task { await updates.loadReleaseNotes() }
     }
@@ -231,20 +238,22 @@ struct AppUpdateInstallationView: View {
                 Button(L10n.string("Close")) { updates.dismissUpdate() }
                     .buttonStyle(ReleaseDialogButtonStyle()).keyboardShortcut(.cancelAction)
                 Button(L10n.string("Retry")) { updates.retryUpdate() }
-                    .buttonStyle(ReleaseDialogButtonStyle(primary: true)).focused($primaryFocused)
+                    .buttonStyle(ReleaseDialogButtonStyle(primary: true)).focused($focusedAction, equals: .primary)
                     .keyboardShortcut(.defaultAction)
             } else if presentation.phase == .current {
                 Button(L10n.string("Got it")) { updates.dismissUpdate() }
-                    .buttonStyle(ReleaseDialogButtonStyle(primary: true)).focused($primaryFocused)
+                    .buttonStyle(ReleaseDialogButtonStyle(primary: true)).focused($focusedAction, equals: .primary)
                     .keyboardShortcut(.defaultAction)
             } else {
                 Button(L10n.string(busy ? "Cancel" : "Later")) { updates.dismissUpdate() }
                     .buttonStyle(ReleaseDialogButtonStyle()).disabled(!canDismiss).keyboardShortcut(.cancelAction)
+                    .focused($focusedAction, equals: .cancel)
                 if presentation.informationOnly, let url = presentation.informationURL {
                     Link(L10n.string("View details"), destination: url).buttonStyle(ReleaseDialogButtonStyle(primary: true))
+                        .focused($focusedAction, equals: .details)
                 } else if !busy {
                     Button(L10n.string("Update now")) { updates.installPendingUpdate() }
-                        .buttonStyle(ReleaseDialogButtonStyle(primary: true)).focused($primaryFocused)
+                        .buttonStyle(ReleaseDialogButtonStyle(primary: true)).focused($focusedAction, equals: .primary)
                         .keyboardShortcut(.defaultAction)
                 }
             }

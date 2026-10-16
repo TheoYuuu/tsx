@@ -141,7 +141,7 @@ struct ScreenshotServicePicker: View {
         NativeTranslationServicePicker(model: model, maximumWidth: 142, openSettings: openSettings)
             .padding(1)
             .background(theme.ink.opacity(hovered ? 0.06 : 0), in: RoundedRectangle(cornerRadius: 7))
-            .overlay { RoundedRectangle(cornerRadius: 7).strokeBorder(theme.divider, lineWidth: 1).allowsHitTesting(false) }
+            .overlay { RoundedRectangle(cornerRadius: 7).strokeBorder(theme.divider, lineWidth: theme.increaseContrast ? 1 : 0.5).allowsHitTesting(false) }
             .onHover { hovered = $0 }
             .translateXTooltip(model.serviceDisplayName)
     }

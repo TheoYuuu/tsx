@@ -1,3 +1,5 @@
+import AppKit
+import SwiftUI
 import XCTest
 @testable import TranslateX
 
@@ -195,5 +197,133 @@ final class ReleaseNotesPresentationTests: XCTestCase {
         updates.dismissUpdate()
         updates.offerUpdate(version: "2.1.0", informationOnly: false, informationURL: nil, userInitiated: true) { _ in }
         XCTAssertNil(updates.updatePresentation?.publishedAt, "An undated release must not inherit the previous date.")
+    }
+}
+
+@MainActor
+extension ReleaseNotesPresentationTests {
+    func testOpeningUpdateAtEachInstallationPhaseDoesNotShowDateHint() async throws {
+        for phase in [AppUpdatePresentation.Phase.available, .downloading, .extracting, .ready, .installing] {
+            let updates = tooltipUpdates()
+            updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                                publishedAt: now, userInitiated: true, reply: { _ in })
+            switch phase {
+            case .downloading: updates.downloadStarted {}
+            case .extracting: updates.extractionStarted()
+            case .ready: updates.readyToInstall { _ in }
+            case .installing: updates.installing()
+            default: break
+            }
+            let window = tooltipWindow(content: UpdateTooltipTestContent(updates: updates))
+            defer { window.close() }
+            try await assertNoAutomaticDateHint(in: window)
+            XCTAssertFalse(tooltipAnchors(in: try XCTUnwrap(window.contentView)).isEmpty)
+        }
+    }
+
+    func testCheckAndInstallationTransitionsDoNotShowDateHint() async throws {
+        let updates = tooltipUpdates()
+        updates.showUpdateCheck(cancellation: {})
+        let window = tooltipWindow(content: UpdateTooltipTestContent(updates: updates))
+        defer { window.close() }
+        try await assertNoAutomaticDateHint(in: window)
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            publishedAt: now, userInitiated: true, reply: { _ in })
+        try await assertNoAutomaticDateHint(in: window)
+        updates.downloadStarted {}
+        try await assertNoAutomaticDateHint(in: window)
+        updates.downloadExpected(100)
+        updates.downloadReceived(50)
+        try await assertNoAutomaticDateHint(in: window)
+        updates.extractionStarted()
+        try await assertNoAutomaticDateHint(in: window)
+        updates.extractionProgress(1)
+        try await assertNoAutomaticDateHint(in: window)
+        updates.readyToInstall { _ in }
+        try await assertNoAutomaticDateHint(in: window)
+        updates.installing()
+        try await assertNoAutomaticDateHint(in: window)
+        updates.updateErrored()
+        try await assertNoAutomaticDateHint(in: window)
+        updates.dismissUpdate()
+        try await assertNoAutomaticDateHint(in: window)
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            publishedAt: now, userInitiated: true, reply: { _ in })
+        try await assertNoAutomaticDateHint(in: window)
+    }
+
+    func testPublicationHintOnlyAppearsOnHoverAndLeavesWithPointer() async throws {
+        let window = tooltipWindow(content: ReleaseVersionHeading(version: "2.0.0", publishedAt: now))
+        defer { window.close() }
+        try await assertNoAutomaticDateHint(in: window)
+        let anchor = try XCTUnwrap(tooltipAnchors(in: try XCTUnwrap(window.contentView)).first)
+        // Keyboard traversal must not turn descriptive publication text into
+        // a focused control, even when it is the only content in the host.
+        for _ in 0..<3 {
+            window.selectNextKeyView(nil)
+            try await assertNoAutomaticDateHint(in: window)
+        }
+        let responder = window.firstResponder
+        let entered = try XCTUnwrap(NSEvent.enterExitEvent(with: .mouseEntered, location: .zero,
+            modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil,
+            eventNumber: 0, trackingNumber: 0, userData: nil))
+        let exited = try XCTUnwrap(NSEvent.enterExitEvent(with: .mouseExited, location: .zero,
+            modifierFlags: [], timestamp: 1, windowNumber: window.windowNumber, context: nil,
+            eventNumber: 1, trackingNumber: 0, userData: nil))
+        for _ in 0..<2 {
+            anchor.mouseEntered(with: entered)
+            let hint = try XCTUnwrap(window.childWindows?.first)
+            let label = try XCTUnwrap(hint.contentView?.subviews.first as? NSTextField)
+            XCTAssertEqual(label.stringValue, ReleasePublicationTime.precise(now, locale: L10n.currentLocale,
+                                                                           timeZone: .autoupdatingCurrent))
+            XCTAssertTrue(window.firstResponder === responder)
+            anchor.mouseExited(with: exited)
+            try await assertNoAutomaticDateHint(in: window)
+        }
+    }
+
+    private func tooltipUpdates() -> AppUpdateController {
+        AppUpdateController(bundleIdentifier: "preview", isTesting: true, recordsInstalledVersions: false,
+                            releases: AppReleaseNotesStore(entries: [], allowsNetworkLoading: false))
+    }
+
+    private func tooltipWindow<Content: View>(content: Content) -> QuickPanel {
+        _ = NSApplication.shared
+        let window = QuickPanel(contentRect: NSRect(x: 80, y: 80, width: 800, height: 600),
+                                styleMask: [.titled, .nonactivatingPanel], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        let host = NSHostingView(rootView: content)
+        host.sizingOptions = []
+        window.contentView = host
+        window.makeKeyAndOrderFront(nil)
+        return window
+    }
+
+    private func assertNoAutomaticDateHint(in window: NSWindow,
+                                         file: StaticString = #filePath, line: UInt = #line) async throws {
+        XCTAssertTrue(window.isKeyWindow, file: file, line: line)
+        // Observe multiple render/focus passes, not just the final state: an
+        // automatically shown hint is a regression even if it later disappears.
+        for _ in 0..<15 {
+            window.contentView?.layoutSubtreeIfNeeded()
+            XCTAssertTrue(window.childWindows?.isEmpty ?? true, "Date hint appeared without hover", file: file, line: line)
+            try await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
+    private func tooltipAnchors(in view: NSView) -> [TooltipAnchorView] {
+        if let anchor = view as? TooltipAnchorView { return [anchor] }
+        return view.subviews.flatMap(tooltipAnchors)
+    }
+}
+
+private struct UpdateTooltipTestContent: View {
+    let updates: AppUpdateController
+    var body: some View {
+        if let presentation = updates.updatePresentation {
+            AppUpdateDialogView(updates: updates, presentation: presentation,
+                                dialogSize: CGSize(width: 620, height: 520))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 }

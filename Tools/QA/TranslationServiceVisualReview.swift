@@ -800,6 +800,22 @@ final class TranslationServiceVisualReview: NSObject {
             if let editor = view as? TranslationInputTextView { return [editor] }
             return view.subviews.flatMap { editors(in: $0) }
         }
+        func verifyNoDateHint(in window: NSWindow, _ name: String) async throws {
+            func hasDateAnchor(_ view: NSView) -> Bool {
+                view is TooltipAnchorView || view.subviews.contains(where: hasDateAnchor)
+            }
+            var appeared = false
+            for _ in 0..<15 {
+                window.contentView?.layoutSubtreeIfNeeded()
+                appeared = appeared || (window.childWindows ?? []).contains { child in
+                    (child.contentView?.subviews.first as? NSTextField)?.stringValue.contains("(UTC") == true
+                }
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            let modal = (window.contentView as? WindowSurface<SettingsView>)?.modalHostingView
+                ?? (window.contentView as? WindowSurface<InputTranslationView>)?.modalHostingView
+            try require(window.isKeyWindow && modal.map(hasDateAnchor) == true && !appeared, name)
+        }
         do {
             let preferences = AppPreferences(defaults: defaults)
             preferences.appearance = .light
@@ -868,6 +884,7 @@ final class TranslationServiceVisualReview: NSObject {
             try require(updates.showsMainUpdate && updates.isPresentingMainModal && main.contentView === surface,
                         "The approved update reuses the original main content")
             try require(installReplies == 0, "Showing a manual update still waits for install confirmation")
+            try await verifyNoDateHint(in: main, "Opening the main update does not show the publication hint")
             updates.dismissUpdate()
             try await wait("Dismissing the update restores editors without leaving Main") {
                 main.isKeyWindow && surface.modalHostingView == nil && originalEditors.allSatisfy(\.isInteractionEnabled)
@@ -896,6 +913,27 @@ final class TranslationServiceVisualReview: NSObject {
             }
             try require(windows.inputModel.text == originalDraft && !updates.automaticUpdatesEnabled,
                         "Direct installation preserves the draft and automatic-update preference")
+
+            // Hold every phase in the real settings modal long enough for
+            // SwiftUI's delayed focus and layout updates. No installer runs.
+            updates.offerUpdate(version: "1.0.1", informationOnly: false, informationURL: nil,
+                                userInitiated: true, reply: { _ in })
+            try await verifyNoDateHint(in: settings, "Opening the settings update does not show the publication hint")
+            updates.downloadStarted {}
+            try await verifyNoDateHint(in: settings, "Starting download does not show the publication hint")
+            updates.extractionStarted()
+            try await verifyNoDateHint(in: settings, "Preparing the update does not show the publication hint")
+            updates.extractionProgress(1)
+            try await verifyNoDateHint(in: settings, "Completing verification does not show the publication hint")
+            updates.readyToInstall { _ in }
+            try await verifyNoDateHint(in: settings, "Returning to the install action does not show the publication hint")
+            updates.installing()
+            try await verifyNoDateHint(in: settings, "Starting installation does not show the publication hint")
+            updates.installationDismissed()
+            updates.offerUpdate(version: "1.0.1", informationOnly: false, informationURL: nil,
+                                userInitiated: true, reply: { _ in })
+            try await verifyNoDateHint(in: settings, "Reopening the settings update does not show the publication hint")
+            updates.dismissUpdate()
         } catch ReviewFailure.assertion(let name) {
             failures.append(name)
         } catch {

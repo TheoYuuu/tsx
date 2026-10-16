@@ -77,6 +77,7 @@ struct ScreenshotOverlayView: View {
                         .resizable()
                         .interpolation(.high)
                         .frame(width: size.width, height: size.height)
+                        .shadow(color: .black.opacity(0.06), radius: 8, y: 2)
                         .accessibilityLabel(Text(L10n.string(showsOriginal ? "Original image" : "Translated image")))
                     if !showsOriginal, let rendered {
                         ForEach(document.regions.filter { rendered.overflowRegionIDs.contains($0.id) }) { region in
@@ -121,7 +122,7 @@ struct ScreenshotOverlayView: View {
                 }
                 .padding(1)
                 .frame(height: 30)
-                .overlay { RoundedRectangle(cornerRadius: 7).strokeBorder(theme.divider, lineWidth: 1).allowsHitTesting(false) }
+                .overlay { RoundedRectangle(cornerRadius: 7).strokeBorder(theme.divider, lineWidth: theme.increaseContrast ? 1 : 0.5).allowsHitTesting(false) }
                 Rectangle().fill(theme.divider).frame(width: 1, height: 18).padding(.horizontal, 3).accessibilityHidden(true)
                 primary
                 compare
@@ -140,8 +141,11 @@ struct ScreenshotOverlayView: View {
         }
         .scrollIndicators(.hidden)
         .frame(width: min(controlsWidth, toolbarWidth), height: 44)
-        .background(theme.card, in: RoundedRectangle(cornerRadius: 11))
-        .overlay { RoundedRectangle(cornerRadius: 11).strokeBorder(theme.edge, lineWidth: 1).allowsHitTesting(false) }
+        .background {
+            RoundedRectangle(cornerRadius: 11).fill(theme.card)
+                .shadow(color: .black.opacity(theme.isDark ? 0.13 : 0.10), radius: 10, y: 3)
+        }
+        .overlay { RoundedRectangle(cornerRadius: 11).strokeBorder(theme.edge, lineWidth: theme.increaseContrast ? 1 : 0.5).allowsHitTesting(false) }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text(L10n.string("Translation toolbar")))
         .accessibilityIdentifier("screenshotOverlay.toolbar")

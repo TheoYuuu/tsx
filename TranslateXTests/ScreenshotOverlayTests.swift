@@ -47,6 +47,28 @@ final class ScreenshotOverlayTests: XCTestCase {
         XCTAssertEqual(model.phase, .translating)
     }
 
+    func testShadowDrawingRoomPreservesContentPlacementAndDisablesNativeShadow() async throws {
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        let overlay = ScreenshotOverlayController(windows: windows, model: try await completedModel())
+        defer { overlay.dismiss(restoreFocus: false) }
+        let screen = try XCTUnwrap(NSScreen.main).visibleFrame
+        // Exercise both toolbar positions, including an image close to a screen edge.
+        for y in [screen.minY + 12, screen.midY] {
+            let selection = CGRect(x: screen.minX + 12, y: y, width: 220, height: 160)
+            let placement = ScreenshotOverlayPlacement(selection: selection, visibleFrame: screen)
+            overlay.present(source: nil, selection: selection)
+            let panel = try XCTUnwrap(NSApp.windows.first {
+                $0.identifier?.rawValue == "translatex.screenshotResult" && $0.isVisible
+            })
+            XCTAssertFalse(panel.hasShadow)
+            XCTAssertEqual(placement.imageFrame, selection)
+            XCTAssertEqual(panel.frame.insetBy(dx: ScreenshotOverlayPlacement.shadowInset,
+                                               dy: ScreenshotOverlayPlacement.shadowInset), placement.frame)
+            XCTAssertEqual(panel.contentView?.bounds.size, panel.frame.size)
+        }
+    }
+
     func testCaptureReadsAutomaticPreferenceAfterSynchronizingTheService() throws {
         let windows = try isolatedWindows()
         defer { windows.shutdown() }

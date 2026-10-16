@@ -46,7 +46,7 @@ final class ScreenshotOverlayController: NSObject {
         } ?? NSScreen.main
         let placement = ScreenshotOverlayPlacement(selection: selection,
             visibleFrame: screen?.visibleFrame ?? CGRect(x: 0, y: 0, width: 900, height: 700))
-        let panel = self.panel ?? ScreenshotResultPanel(contentRect: placement.frame,
+        let panel = self.panel ?? ScreenshotResultPanel(contentRect: placement.panelFrame,
             styleMask: [.borderless], backing: .buffered, defer: false)
         self.panel = panel
         panel.identifier = NSUserInterfaceItemIdentifier("translatex.screenshotResult")
@@ -58,7 +58,9 @@ final class ScreenshotOverlayController: NSObject {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.hasShadow = true
+        // Each surface draws its own light shadow; the system shadow would
+        // darken both the image and the transparent gap around the toolbar.
+        panel.hasShadow = false
         panel.onClose = { [weak self] in self?.dismiss() }
         panel.onEscape = { [weak self] in self?.handleEscape() }
         // The transparent space around a small selection must remain clear.
@@ -76,7 +78,7 @@ final class ScreenshotOverlayController: NSObject {
         host.sizingOptions = []
         host.safeAreaRegions = []
         panel.contentView = host
-        panel.setFrame(placement.frame, display: false)
+        panel.setFrame(placement.panelFrame, display: false)
         scheduleRender(delay: .zero)
         installObservers()
         panel.makeKeyAndOrderFront(nil)
@@ -339,6 +341,7 @@ private struct ScreenshotOverlayRoot: View {
                 showsFullText: $presentation.showsFullText, onManageServices: onManageServices,
                 onClose: onClose, onRecapture: onRecapture, onEditInMain: onEditInMain, onCopy: onCopy, onSave: onSave)
                 .background { AppleTranslationHost(model: model) }
+                .padding(ScreenshotOverlayPlacement.shadowInset)
         }
     }
 }
@@ -350,6 +353,11 @@ struct ScreenshotOverlayPlacement {
     let imageFrame: CGRect
     let toolbarAbove: Bool
     static let toolbarHeight: CGFloat = 52
+    static let shadowInset: CGFloat = 24
+
+    /// Transparent drawing room for the soft shadows, without moving or
+    /// resizing the selected image or the existing controls.
+    var panelFrame: CGRect { frame.insetBy(dx: -Self.shadowInset, dy: -Self.shadowInset) }
 
     init(selection: CGRect, visibleFrame: CGRect) {
         let safe = visibleFrame.insetBy(dx: 8, dy: 8)

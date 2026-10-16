@@ -136,7 +136,9 @@ private struct ReleasePublicationLabel: View {
     private func label(now: Date) -> some View {
         Text(ReleasePublicationTime.label(for: date, now: now))
             .font(.system(size: 12)).foregroundStyle(ReleaseDialogPalette(theme: theme).secondary)
-            .frame(minHeight: 20).focusable().focusEffectDisabled()
+            // Publication is descriptive text, not an initial keyboard focus
+            // target. Keep the precise date in hover and accessibility hints.
+            .frame(minHeight: 20)
             .translateXTooltip(ReleasePublicationTime.precise(date, locale: L10n.currentLocale, timeZone: .autoupdatingCurrent))
     }
 }
