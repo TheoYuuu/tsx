@@ -47,6 +47,126 @@ final class ScreenshotOverlayTests: XCTestCase {
         XCTAssertEqual(model.phase, .translating)
     }
 
+    func testDragUsesInitialAnchorAndIgnoresClickJitter() throws {
+        let screen = CGRect(x: 0, y: 0, width: 1600, height: 1000)
+        let frame = CGRect(x: 300, y: 250, width: 768, height: 350)
+        let pointer = CGPoint(x: 500, y: 450)
+        var drag = ScreenshotOverlayDrag(panelFrame: frame, pointer: pointer, toolbarAbove: false)
+        XCTAssertNil(drag.frame(at: CGPoint(x: 501, y: 451), visibleFrames: [screen]))
+        XCTAssertEqual(drag.frame(at: CGPoint(x: 570, y: 490), visibleFrames: [screen]), frame.offsetBy(dx: 70, dy: 40))
+        XCTAssertEqual(drag.frame(at: CGPoint(x: 590, y: 460), visibleFrames: [screen]), frame.offsetBy(dx: 90, dy: 10))
+        XCTAssertEqual(drag.frame(at: pointer, visibleFrames: [screen]), frame, "Returning the mouse restores the initial position without cumulative drift")
+    }
+
+    func testDragCrossesDisplaysAndKeepsContentVisibleWithoutConfiningShadows() throws {
+        let screens = [CGRect(x: 0, y: 0, width: 1440, height: 900),
+                       CGRect(x: -1280, y: -200, width: 1280, height: 800)]
+        let frame = CGRect(x: 100, y: 200, width: 768, height: 350)
+        for above in [true, false] {
+            var drag = ScreenshotOverlayDrag(panelFrame: frame, pointer: CGPoint(x: 400, y: 400), toolbarAbove: above)
+            for pointer in [CGPoint(x: -1000, y: 200), CGPoint(x: -1280, y: -200), CGPoint(x: -1280, y: 600)] {
+                let moved = try XCTUnwrap(drag.frame(at: pointer, visibleFrames: screens))
+                XCTAssertEqual(moved.size, frame.size)
+                XCTAssertTrue(screens[1].insetBy(dx: 8, dy: 8).contains(moved.insetBy(dx: 24, dy: 24)))
+            }
+            let corner = try XCTUnwrap(drag.frame(at: CGPoint(x: 0, y: 0), visibleFrames: [screens[0]]))
+            XCTAssertEqual(corner.minX, -16, "Only visible content, not transparent shadow padding, is constrained")
+            XCTAssertEqual(corner.minY, -16)
+        }
+    }
+
+    func testDragToSmallerScreenKeepsScaleAndToolbarEdgeReachable() throws {
+        let screen = CGRect(x: -1024, y: 0, width: 1024, height: 700)
+        let frame = CGRect(x: 0, y: 0, width: 1448, height: 948)
+        for above in [true, false] {
+            var drag = ScreenshotOverlayDrag(panelFrame: frame, pointer: CGPoint(x: 400, y: 400), toolbarAbove: above)
+            let moved = try XCTUnwrap(drag.frame(at: CGPoint(x: -700, y: 200), visibleFrames: [screen]))
+            let content = moved.insetBy(dx: 24, dy: 24)
+            XCTAssertEqual(moved.size, frame.size)
+            XCTAssertEqual(content.midX, screen.midX)
+            XCTAssertEqual(above ? content.maxY : content.minY, above ? screen.maxY - 8 : screen.minY + 8)
+        }
+    }
+
+    func testImageMouseEventsMoveWholePanelAndRenderingDoesNotResetPosition() async throws {
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        let model = try await completedModel()
+        let overlay = ScreenshotOverlayController(windows: windows, model: model)
+        defer { overlay.dismiss(restoreFocus: false) }
+        let screen = try XCTUnwrap(NSScreen.main).visibleFrame
+        let selection = CGRect(x: screen.midX - 180, y: screen.midY, width: 360, height: 216)
+        overlay.present(source: nil, selection: selection)
+        let panel = try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.screenshotResult" && $0.isVisible })
+        panel.contentView?.layoutSubtreeIfNeeded()
+        let surface = try XCTUnwrap(dragView(in: try XCTUnwrap(panel.contentView)))
+        let bounds = panel.convertToScreen(surface.convert(surface.bounds, to: nil))
+        XCTAssertEqual(bounds.minX, selection.minX, accuracy: 0.01)
+        XCTAssertEqual(bounds.minY, selection.minY, accuracy: 0.01)
+        XCTAssertEqual(bounds.width, selection.width, accuracy: 0.01)
+        XCTAssertEqual(bounds.height, selection.height, accuracy: 0.01)
+        let initial = panel.frame
+        let image = try XCTUnwrap(model.screenshot?.image)
+        let pointer = CGPoint(x: bounds.midX, y: bounds.midY)
+        func event(_ type: NSEvent.EventType, _ point: CGPoint) throws -> NSEvent {
+            try XCTUnwrap(NSEvent.mouseEvent(with: type, location: panel.convertPoint(fromScreen: point),
+                modifierFlags: [], timestamp: 0, windowNumber: panel.windowNumber, context: nil,
+                eventNumber: 0, clickCount: 1, pressure: 1))
+        }
+        surface.mouseDown(with: try event(.leftMouseDown, pointer))
+        surface.mouseDragged(with: try event(.leftMouseDragged, CGPoint(x: pointer.x + 40, y: pointer.y - 30)))
+        XCTAssertEqual(panel.frame, initial.offsetBy(dx: 40, dy: -30))
+        // The next event is relative to the moved window; the screen anchor is unchanged.
+        surface.mouseDragged(with: try event(.leftMouseDragged, CGPoint(x: pointer.x + 70, y: pointer.y - 40)))
+        let moved = initial.offsetBy(dx: 70, dy: -40)
+        XCTAssertEqual(panel.frame, moved)
+        surface.mouseUp(with: try event(.leftMouseUp, pointer))
+        overlay.handleImageDrag(.moved(pointer))
+        XCTAssertEqual(panel.frame, moved, "Mouse-up ends the drag")
+        let region = try XCTUnwrap(model.screenshot?.regions.first)
+        model.editScreenshotRegion(region.id, text: "Updated fixture translation.", side: .target)
+        try await Task.sleep(for: .milliseconds(250))
+        XCTAssertEqual(panel.frame, moved, "Preview updates must not recreate or reposition the panel")
+        XCTAssertTrue(overlay.image(for: .originalImage) === image, "Dragging and the border never modify export pixels")
+        XCTAssertEqual(panel.contentView?.bounds.size, initial.size)
+    }
+
+    func testImageDragIsBlockedByMenusAndSheetsAndClearedOnDismissal() async throws {
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        let overlay = ScreenshotOverlayController(windows: windows, model: try await completedModel())
+        defer { overlay.dismiss(restoreFocus: false) }
+        overlay.present(source: nil, selection: CGRect(x: 200, y: 300, width: 350, height: 200))
+        let panel = try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.screenshotResult" && $0.isVisible })
+        let initial = panel.frame
+        let pointer = CGPoint(x: initial.midX, y: initial.midY)
+        let menu = NSMenu()
+        overlay.handleImageDrag(.began(pointer))
+        NotificationCenter.default.post(name: NSMenu.didBeginTrackingNotification, object: menu)
+        overlay.handleImageDrag(.moved(CGPoint(x: pointer.x + 50, y: pointer.y)))
+        XCTAssertEqual(panel.frame, initial)
+        NotificationCenter.default.post(name: NSMenu.didEndTrackingNotification, object: menu)
+        try await Task.sleep(for: .milliseconds(20))
+        overlay.handleImageDrag(.moved(CGPoint(x: pointer.x + 50, y: pointer.y)))
+        XCTAssertEqual(panel.frame, initial, "Closing a menu cannot resume the previous drag")
+        let sheet = NSPanel(contentRect: CGRect(x: 0, y: 0, width: 200, height: 100), styleMask: [.titled], backing: .buffered, defer: false)
+        panel.beginSheet(sheet, completionHandler: nil)
+        overlay.handleImageDrag(.began(pointer))
+        overlay.handleImageDrag(.moved(CGPoint(x: pointer.x + 50, y: pointer.y)))
+        XCTAssertEqual(panel.frame, initial)
+        panel.endSheet(sheet)
+        sheet.orderOut(nil)
+        overlay.handleImageDrag(.began(pointer))
+        overlay.dismiss(restoreFocus: false)
+        overlay.handleImageDrag(.moved(CGPoint(x: pointer.x + 50, y: pointer.y)))
+        XCTAssertFalse(overlay.isVisible)
+    }
+
+    private func dragView(in view: NSView) -> ScreenshotImageDragView? {
+        if let surface = view as? ScreenshotImageDragView { return surface }
+        return view.subviews.lazy.compactMap { self.dragView(in: $0) }.first
+    }
+
     func testShadowDrawingRoomPreservesContentPlacementAndDisablesNativeShadow() async throws {
         let windows = try isolatedWindows()
         defer { windows.shutdown() }

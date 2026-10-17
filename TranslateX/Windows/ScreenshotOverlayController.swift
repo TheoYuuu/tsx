@@ -20,6 +20,8 @@ final class ScreenshotOverlayController: NSObject {
     private var renderedDocumentID: UUID?
     private let currentScreenLayout: @MainActor () -> [CaptureDisplay]
     private var presentedScreenLayout: [CaptureDisplay] = []
+    private var imageDrag: ScreenshotOverlayDrag?
+    private var toolbarAbove = false
     var onDismiss: (() -> Void)?
     var onRecapture: (() -> Void)?
 
@@ -46,6 +48,8 @@ final class ScreenshotOverlayController: NSObject {
         } ?? NSScreen.main
         let placement = ScreenshotOverlayPlacement(selection: selection,
             visibleFrame: screen?.visibleFrame ?? CGRect(x: 0, y: 0, width: 900, height: 700))
+        imageDrag = nil
+        toolbarAbove = placement.toolbarAbove
         let panel = self.panel ?? ScreenshotResultPanel(contentRect: placement.panelFrame,
             styleMask: [.borderless], backing: .buffered, defer: false)
         self.panel = panel
@@ -73,7 +77,8 @@ final class ScreenshotOverlayController: NSObject {
             onEditInMain: { [weak self] in self?.editInMain() },
             onCopy: { [weak self] in self?.copy($0) },
             onSave: { [weak self] in self?.save($0) },
-            onRetryRender: { [weak self] in self?.scheduleRender(delay: .zero) })
+            onRetryRender: { [weak self] in self?.scheduleRender(delay: .zero) },
+            onImageDrag: { [weak self] in self?.handleImageDrag($0) })
         let host = NSHostingView(rootView: root)
         host.sizingOptions = []
         host.safeAreaRegions = []
@@ -88,6 +93,7 @@ final class ScreenshotOverlayController: NSObject {
     func dismiss(restoreFocus: Bool = true) {
         let shouldRestore = restoreFocus && panel?.isKeyWindow == true && NSApp.isActive
         generation = UUID()
+        imageDrag = nil
         renderTask?.cancel(); renderTask = nil
         feedbackTask?.cancel(); feedbackTask = nil
         model.clear(keepingUndo: false)
@@ -111,6 +117,23 @@ final class ScreenshotOverlayController: NSObject {
             sourceApplication.activate(options: [])
         }
         sourceApplication = nil
+    }
+
+    func handleImageDrag(_ event: ScreenshotImageDragEvent) {
+        guard let panel, panel.isVisible, panel.attachedSheet == nil,
+              trackedMenus.isEmpty, !presentation.showsFullText else {
+            imageDrag = nil
+            return
+        }
+        switch event {
+        case .began(let pointer):
+            imageDrag = ScreenshotOverlayDrag(panelFrame: panel.frame, pointer: pointer, toolbarAbove: toolbarAbove)
+        case .moved(let pointer):
+            guard let frame = imageDrag?.frame(at: pointer, visibleFrames: NSScreen.screens.map(\.visibleFrame)) else { return }
+            panel.setFrameOrigin(frame.origin)
+        case .ended:
+            imageDrag = nil
+        }
     }
 
     func editInMain() {
@@ -255,6 +278,7 @@ final class ScreenshotOverlayController: NSObject {
     }
 
     @objc private func menuBegan(_ note: Notification) {
+        imageDrag = nil
         if let menu = note.object as? NSMenu { trackedMenus.insert(ObjectIdentifier(menu)) }
         panel?.isTrackingMenu = !trackedMenus.isEmpty
     }
@@ -331,6 +355,7 @@ private struct ScreenshotOverlayRoot: View {
     let onCopy: (ScreenshotOutput) -> Void
     let onSave: (ScreenshotOutput) -> Void
     let onRetryRender: () -> Void
+    let onImageDrag: (ScreenshotImageDragEvent) -> Void
     var body: some View {
         TranslateXThemeHost(preferences: preferences) {
             ScreenshotOverlayView(model: model, catalog: catalog, rendered: presentation.rendered,
@@ -338,11 +363,54 @@ private struct ScreenshotOverlayRoot: View {
                 toolbarAbove: placement.toolbarAbove, imageOffsetX: placement.imageFrame.minX - placement.frame.minX,
                 operationMessage: presentation.message,
                 isRendering: presentation.isRendering, renderFailed: presentation.renderFailed, onRetryRender: onRetryRender,
+                onImageDrag: onImageDrag,
                 showsFullText: $presentation.showsFullText, onManageServices: onManageServices,
                 onClose: onClose, onRecapture: onRecapture, onEditInMain: onEditInMain, onCopy: onCopy, onSave: onSave)
                 .background { AppleTranslationHost(model: model) }
                 .padding(ScreenshotOverlayPlacement.shadowInset)
         }
+    }
+}
+
+enum ScreenshotImageDragEvent {
+    case began(CGPoint), moved(CGPoint), ended
+}
+
+/// Keep a screen-space anchor: converting each event using the already-moved
+/// window must not accumulate offsets or make the image jump during rendering.
+struct ScreenshotOverlayDrag {
+    let panelFrame: CGRect
+    let pointer: CGPoint
+    let toolbarAbove: Bool
+    private var hasMoved = false
+
+    init(panelFrame: CGRect, pointer: CGPoint, toolbarAbove: Bool) {
+        self.panelFrame = panelFrame
+        self.pointer = pointer
+        self.toolbarAbove = toolbarAbove
+    }
+
+    mutating func frame(at location: CGPoint, visibleFrames: [CGRect]) -> CGRect? {
+        let dx = location.x - pointer.x, dy = location.y - pointer.y
+        hasMoved = hasMoved || hypot(dx, dy) >= 3
+        guard hasMoved else { return nil }
+        let proposed = panelFrame.offsetBy(dx: dx, dy: dy)
+        // Choose by the pointer, so dragging across a display boundary can
+        // leave the original screen. Negative display origins are valid.
+        guard let screen = visibleFrames.min(by: { $0.distanceSquared(to: location) < $1.distanceSquared(to: location) }) else {
+            return proposed
+        }
+        let safe = screen.insetBy(dx: 8, dy: 8)
+        var content = proposed.insetBy(dx: ScreenshotOverlayPlacement.shadowInset, dy: ScreenshotOverlayPlacement.shadowInset)
+        content.origin.x = content.width <= safe.width
+            ? min(max(content.minX, safe.minX), safe.maxX - content.width)
+            : safe.midX - content.width / 2
+        content.origin.y = content.height <= safe.height
+            ? min(max(content.minY, safe.minY), safe.maxY - content.height)
+            : toolbarAbove ? safe.maxY - content.height : safe.minY
+        // A smaller destination screen must not rescale the picture mid-drag.
+        // If it cannot all fit, retain the toolbar at the visible edge.
+        return content.insetBy(dx: -ScreenshotOverlayPlacement.shadowInset, dy: -ScreenshotOverlayPlacement.shadowInset)
     }
 }
 
@@ -379,4 +447,9 @@ struct ScreenshotOverlayPlacement {
 
 private extension CGRect {
     var area: CGFloat { isNull || isInfinite ? 0 : width * height }
+    func distanceSquared(to point: CGPoint) -> CGFloat {
+        let dx = max(minX - point.x, 0, point.x - maxX)
+        let dy = max(minY - point.y, 0, point.y - maxY)
+        return dx * dx + dy * dy
+    }
 }

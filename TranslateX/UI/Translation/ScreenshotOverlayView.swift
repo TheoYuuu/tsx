@@ -5,7 +5,7 @@ enum ScreenshotOutput {
     case originalText, translatedText, originalImage, translatedImage
 }
 
-/// A captured image stays at its screen position. Only the compact controls
+/// A captured image starts at its screen position. Only the compact controls
 /// below (or above) it use the app's appearance; the image keeps its own colors.
 @MainActor
 struct ScreenshotOverlayView: View {
@@ -20,6 +20,7 @@ struct ScreenshotOverlayView: View {
     var isRendering = false
     var renderFailed = false
     var onRetryRender: () -> Void = {}
+    var onImageDrag: (ScreenshotImageDragEvent) -> Void = { _ in }
     @Binding var showsFullText: Bool
     var onManageServices: () -> Void = {}
     let onClose: () -> Void
@@ -77,7 +78,14 @@ struct ScreenshotOverlayView: View {
                         .resizable()
                         .interpolation(.high)
                         .frame(width: size.width, height: size.height)
+                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 4)
+                                .strokeBorder(Color(.sRGB, red: 179 / 255, green: 207 / 255, blue: 242 / 255), lineWidth: 1.5)
+                                .allowsHitTesting(false)
+                        }
                         .shadow(color: .black.opacity(0.06), radius: 8, y: 2)
+                        .overlay { ScreenshotImageDragSurface(onDrag: onImageDrag) }
                         .accessibilityLabel(Text(L10n.string(showsOriginal ? "Original image" : "Translated image")))
                     if !showsOriginal, let rendered {
                         ForEach(document.regions.filter { rendered.overflowRegionIDs.contains($0.id) }) { region in
@@ -291,5 +299,35 @@ struct ScreenshotOverlayView: View {
         .frame(width: min(440, max(280, toolbarWidth - 24)))
         .environment(\.translateXTheme, theme)
         .accessibilityIdentifier("screenshotOverlay.fullTextContent")
+    }
+}
+
+/// This surface belongs only to the image layer. The overflow buttons and
+/// contextual actions above it retain their own mouse handling.
+private struct ScreenshotImageDragSurface: NSViewRepresentable {
+    let onDrag: (ScreenshotImageDragEvent) -> Void
+
+    func makeNSView(context: Context) -> ScreenshotImageDragView { ScreenshotImageDragView() }
+    func updateNSView(_ view: ScreenshotImageDragView, context: Context) { view.onDrag = onDrag }
+}
+
+@MainActor
+final class ScreenshotImageDragView: NSView {
+    var onDrag: (ScreenshotImageDragEvent) -> Void = { _ in }
+    override var mouseDownCanMoveWindow: Bool { false }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func resetCursorRects() { addCursorRect(bounds, cursor: .openHand) }
+    override func mouseDown(with event: NSEvent) {
+        guard let window else { return }
+        onDrag(.began(window.convertPoint(toScreen: event.locationInWindow)))
+    }
+    override func mouseDragged(with event: NSEvent) {
+        guard let window else { return }
+        onDrag(.moved(window.convertPoint(toScreen: event.locationInWindow)))
+    }
+    override func mouseUp(with event: NSEvent) { onDrag(.ended) }
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if newWindow == nil { onDrag(.ended) }
+        super.viewWillMove(toWindow: newWindow)
     }
 }

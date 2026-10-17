@@ -478,7 +478,7 @@
     },
     "TranslateX.xcodeproj/project.pbxproj": {
       "mode": "100644",
-      "sha256": "7e4bb08d41767de533313de6c6c9b359233417080269e017cfca1b3f9161af71"
+      "sha256": "2a6ee7134f39cbdf140353ac99dd929b2bd3a00b579dec3e72ce0d842f114bce"
     },
     "TranslateX.xcodeproj/project.xcworkspace/contents.xcworkspacedata": {
       "mode": "100644",
@@ -786,7 +786,7 @@
     },
     "TranslateX/Resources/PublishedReleaseNotes.json": {
       "mode": "100644",
-      "sha256": "6d654471a2beab1630e32b826b2534a81b2c42c7b536da0f2f837e564863f0aa"
+      "sha256": "884c524e8502eeeae41a9f842c7b90213e3f94d89b37c503b966b5333088cc6a"
     },
     "TranslateX/Resources/en.lproj/InfoPlist.strings": {
       "mode": "100644",
@@ -1162,7 +1162,7 @@
     },
     "TranslateX/UI/Translation/ScreenshotOverlayView.swift": {
       "mode": "100644",
-      "sha256": "3bd6cdf77abd80cfa066f62856b409241800b759bee1ac3fdc6b15923f58ca07"
+      "sha256": "ddf7ffd9adbb42ee9213a75e655f8c910edc0d51bf974ba3fe83695ad7777d6e"
     },
     "TranslateX/UI/Translation/ScreenshotTranslationWorkspace.swift": {
       "mode": "100644",
@@ -1206,7 +1206,7 @@
     },
     "TranslateX/Windows/ScreenshotOverlayController.swift": {
       "mode": "100644",
-      "sha256": "f274aba9b776e87c06e1bf01b1c79890912bcb28e305655339209200db423f6d"
+      "sha256": "fd9855c02ebfb95b957b4398729716a63491e58cbfe66d54f99b87861d645a77"
     },
     "TranslateX/Windows/WindowCoordinator.swift": {
       "mode": "100644",
@@ -1382,7 +1382,7 @@
     },
     "TranslateXTests/ScreenshotOverlayTests.swift": {
       "mode": "100644",
-      "sha256": "4e23d83cd3f2bce727cdf9e49183b2dda48ead2ee87f4c9c25ef2691f84ace61"
+      "sha256": "0045ddfe88674f0a327d0f7d29feba3ee28d4e7c02be597b7fc0ecffe0524129"
     },
     "TranslateXTests/ScreenshotWorkflowTests.swift": {
       "mode": "100644",
@@ -1518,7 +1518,7 @@
     },
     "project.yml": {
       "mode": "100644",
-      "sha256": "5598a17a29edc2d2f471b3ad0eed44b73d98b1865392d7c99608860436e18a0e"
+      "sha256": "e78290057cf88e6532229b02e07904b6ba6259229c3f86c71991399e01b788d5"
     }
   },
   "version": 1

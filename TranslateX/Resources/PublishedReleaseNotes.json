@@ -1,8 +1,14 @@
 [
   {
+    "version": "1.3.4",
+    "notes": "## 中文\n\n- **更清晰的截图边界** 截图采用固定柔晴蓝细边框和轻微圆角，在不同主题与材质下保持一致；图片内容、工具条样式和间距保持原样。\n- **拖动图片与工具条** 按住截图即可整体移动图片与工具条，原图和译图均可拖动；切换对照或刷新译图后保留位置，复制与保存仍输出完整图片。\n\n## English\n\n- **Clearer screenshot edges** A fixed soft-blue border and subtle rounded corners stay consistent across themes and materials, preserving image content, toolbar styling, and spacing.\n- **Move the image and toolbar together** Drag either the original or translated image to reposition the entire overlay. Comparing images or refreshing the translation preserves its position; copying and saving still use the complete image.\n",
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.4"
+  },
+  {
     "version": "1.3.3",
     "notes": "## 中文\n\n- **更轻盈的截图浮层** 减轻图片与单行工具条的阴影，细化边框，适配浅色和深色外观；现有布局与功能保持不变。\n- **更新日期提示修复** 打开更新弹窗及切换下载、验证、安装阶段时，不再自动显示并滞留精确日期提示；悬停查看完整日期仍然可用。\n\n## English\n\n- **Lighter screenshot overlays** Softer, separate shadows and finer borders for the image and single-row toolbar in light and dark appearances, preserving the existing layout and controls.\n- **Update date tooltip fix** Opening update dialogs or moving between download, verification, and installation no longer opens a persistent date tooltip automatically. Hovering still shows the full publication date.\n",
-    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.3"
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.3",
+    "publishedAt": "2026-10-16T16:53:28Z"
   },
   {
     "version": "1.3.2",
