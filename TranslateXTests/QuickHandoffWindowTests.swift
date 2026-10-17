@@ -212,6 +212,9 @@ final class QuickHandoffWindowTests: XCTestCase {
         let (windows, updates, _) = try updateWindowFixture()
         defer { windows.shutdown() }
         let result = try await complete(windows.inputModel, text: "Constructed update draft.", translated: "更新前保留的译文。")
+        // Mount a completed workspace without a live Apple session configuration:
+        // a mocked completed request must not run again when its host attaches.
+        windows.inputModel.acceptHandoff(try XCTUnwrap(windows.inputModel.makeHandoff()))
         let completedRequest = windows.inputModel.request
         var settingsRequests = 0
         windows.onSettings = { settingsRequests += 1 }
@@ -222,6 +225,9 @@ final class QuickHandoffWindowTests: XCTestCase {
         let editors = updateEditors(in: surface)
         let editorContents = editors.map(\.string)
         XCTAssertTrue(editors.allSatisfy(\.isEditable))
+        try await waitForUpdateWindowState { main.firstResponder is TranslationInputTextView }
+        let previousEditor = try XCTUnwrap(editors.last)
+        XCTAssertTrue(main.makeFirstResponder(previousEditor))
 
         updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
                             userInitiated: true, reply: { _ in })
@@ -247,6 +253,7 @@ final class QuickHandoffWindowTests: XCTestCase {
         updates.dismissUpdate()
         try await waitForUpdateWindowState {
             surface.modalHostingView == nil && editors.allSatisfy(\.isInteractionEnabled)
+                && main.firstResponder === previousEditor
         }
         XCTAssertFalse(updates.showsMainUpdate)
         XCTAssertFalse(updates.isPresentingMainModal)
@@ -258,6 +265,140 @@ final class QuickHandoffWindowTests: XCTestCase {
         XCTAssertEqual(windows.inputModel.text, "Constructed update draft.")
         XCTAssertEqual(windows.inputModel.result, result)
         XCTAssertEqual(windows.inputModel.request, completedRequest, "Showing or dismissing the update must not replace the completed request.")
+    }
+
+    func testClosingStartupNotesFocusesTheOriginalEditorWhenOnlyTheWindowHadFocus() async throws {
+        let monitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(monitor) }
+        let (windows, updates, defaults) = try updateWindowFixture()
+        defer { windows.shutdown() }
+        windows.showMain()
+        let main = try visibleUpdateMainWindow()
+        let surface = try XCTUnwrap(main.contentView as? WindowSurface<InputTranslationView>)
+        // Startup notes can arrive before the deferred initial editor focus.
+        // Keep the real window responder in place before presenting them.
+        XCTAssertTrue(main.makeFirstResponder(nil))
+        XCTAssertTrue(main.firstResponder === main)
+        defaults.set("1.0.0", forKey: "TSXLastLaunchedReleaseVersion")
+        updates.prepareInstalledReleaseNotes()
+        try await waitForUpdateWindowState {
+            surface.modalHostingView != nil && self.updateEditors(in: surface).count == 2
+        }
+        let sourceEditor = try XCTUnwrap(updateEditors(in: surface).first {
+            $0.accessibilityIdentifier() == "translation.input"
+        })
+        XCTAssertEqual(updates.mainReleaseNotesPresentation, .installed(version: "1.1.0"))
+        XCTAssertFalse(sourceEditor.isInteractionEnabled)
+
+        windows.dismissMainReleaseNotes()
+        try await waitForUpdateWindowState {
+            surface.modalHostingView == nil && sourceEditor.isInteractionEnabled
+                && main.firstResponder === sourceEditor
+        }
+        XCTAssertNil(updates.mainReleaseNotesPresentation)
+        XCTAssertTrue(main.isVisible)
+        XCTAssertTrue(main.firstResponder === sourceEditor,
+                      "A window-only responder must fall back to the original-text editor after startup notes close.")
+    }
+
+    func testHeldEscapeAfterClosingUpdateDoesNotDismissTheMainWindow() async throws {
+        let monitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(monitor) }
+        let (windows, updates, _) = try updateWindowFixture()
+        defer { windows.shutdown() }
+        windows.showMain()
+        let main = try visibleUpdateMainWindow()
+        let surface = try XCTUnwrap(main.contentView as? WindowSurface<InputTranslationView>)
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            userInitiated: true, reply: { _ in })
+        try await waitForUpdateWindowState { surface.modalHostingView != nil }
+        let freshEscape = try escapeEvent(in: main, isRepeat: false)
+        XCTAssertFalse(windows.handleTranslationEscape(freshEscape), "The modal handles the initial Escape.")
+        updates.dismissUpdate()
+        try await waitForUpdateWindowState { surface.modalHostingView == nil }
+
+        XCTAssertTrue(windows.handleTranslationEscape(try escapeEvent(in: main, isRepeat: true)))
+        XCTAssertTrue(main.isVisible, "Key repeats after dismissing a modal must not dismiss the workspace.")
+        let translationWindow = try XCTUnwrap(main as? TranslationWindow)
+        translationWindow.isTrackingMenu = true
+        XCTAssertFalse(windows.handleTranslationEscape(try escapeEvent(in: main, isRepeat: true)),
+                       "Native menu tracking keeps priority over the update Escape guard.")
+        translationWindow.isTrackingMenu = false
+        XCTAssertTrue(windows.handleTranslationEscape(freshEscape))
+        XCTAssertFalse(main.isVisible, "A separate Escape continues to dismiss the workspace normally.")
+    }
+
+    func testHeldReturnCannotActivateTheNextUpdateActionInEitherWindow() async throws {
+        let monitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(monitor) }
+        for location in [AppUpdateLocation.mainWindow, .settings] {
+            let (windows, updates, _) = try updateWindowFixture()
+            defer { windows.shutdown() }
+            updates.start()
+            XCTAssertTrue(updates.started)
+            // Finish the startup information probe before the explicit check;
+            // the controller correctly ignores a second check while it is busy.
+            updates.foundNoUpdate()
+            updates.finishedCheck()
+            let window: NSWindow
+            if location == .settings {
+                let shortcuts = ShortcutSettings(preferences: windows.preferences, manager: ShortcutManager(),
+                                                 onAction: { _ in }, onBindingsChanged: {})
+                windows.showSettings(shortcuts: shortcuts)
+                window = try XCTUnwrap(NSApp.windows.first {
+                    $0.identifier?.rawValue == "translatex.settings" && $0.isVisible
+                })
+            } else {
+                windows.showMain()
+                window = try visibleUpdateMainWindow()
+            }
+            updates.checkForUpdates(in: location)
+            XCTAssertEqual(updates.updateLocation, location)
+            updates.showUpdateCheck(cancellation: {})
+            updates.updateErrored()
+            XCTAssertEqual(updates.updatePresentation?.phase, .failed)
+
+            let initialReturn = try returnEvent(in: window, isRepeat: false)
+            XCTAssertFalse(windows.handleTranslationKeyEvent(initialReturn), "The initial Return reaches Retry.")
+            updates.retryUpdate()
+            updates.showUpdateCheck(cancellation: {})
+            XCTAssertTrue(windows.handleTranslationKeyEvent(try returnEvent(in: window, isRepeat: true)),
+                          "Checking in \(location) consumes held Return.")
+            var installations = 0
+            updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                                userInitiated: true) { if $0 == .install { installations += 1 } }
+            XCTAssertEqual(updates.updatePresentation?.phase, .available)
+            for keypad in [false, true] {
+                let repeatedReturn = try returnEvent(in: window, isRepeat: true, keypad: keypad)
+                let consumed = windows.handleTranslationKeyEvent(repeatedReturn)
+                XCTAssertTrue(consumed, "A held Return must not reach Update Now after Retry succeeds in \(location).")
+                if !consumed { updates.installPendingUpdate() }
+            }
+            XCTAssertEqual(installations, 0)
+
+            let menu = NSMenu()
+            NotificationCenter.default.post(name: NSMenu.didBeginTrackingNotification, object: menu)
+            XCTAssertFalse(windows.handleTranslationKeyEvent(try returnEvent(in: window, isRepeat: true)),
+                           "Native menus keep Return priority in both windows.")
+            NotificationCenter.default.post(name: NSMenu.didEndTrackingNotification, object: menu)
+            XCTAssertFalse(windows.handleTranslationKeyEvent(initialReturn))
+            updates.installPendingUpdate()
+            XCTAssertEqual(installations, 1, "A separately pressed Return can activate the newly displayed action.")
+        }
+    }
+
+    private func returnEvent(in window: NSWindow, isRepeat: Bool, keypad: Bool = false) throws -> NSEvent {
+        try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+                                      windowNumber: window.windowNumber, context: nil,
+                                      characters: "\r", charactersIgnoringModifiers: "\r",
+                                      isARepeat: isRepeat, keyCode: keypad ? 76 : 36))
+    }
+
+    private func escapeEvent(in window: NSWindow, isRepeat: Bool) throws -> NSEvent {
+        try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+                                      windowNumber: window.windowNumber, context: nil,
+                                      characters: "\u{1b}", charactersIgnoringModifiers: "\u{1b}",
+                                      isARepeat: isRepeat, keyCode: 53))
     }
 
     func testUpdateWaitsForServiceDraftExitBeforeShowingItsMainModal() async throws {

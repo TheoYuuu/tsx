@@ -1,24 +1,23 @@
 import SwiftUI
 
 enum UpdateDialogLayout {
-    static let minimumSize = CGSize(width: 520, height: 400)
-    static let maximumSize = CGSize(width: 620, height: 520)
+    static let notesWidth: CGFloat = 520
+    static let taskWidth: CGFloat = 420
+    static let compactHeight: CGFloat = 214
+    static let maximumSize = CGSize(width: notesWidth, height: 520)
 
     static func maximumHeight(in window: CGSize) -> CGFloat {
         min(maximumSize.height, max(0, window.height - 80))
     }
 
-    static func size(in window: CGSize) -> CGSize {
-        let smallestWindow = TranslationLayout.sideBySide.minimumSize(for: .main)
-        return CGSize(
-            width: min(maximumSize.width, minimumSize.width + max(0, window.width - smallestWindow.width),
-                       max(0, window.width - 40)),
-            height: min(maximumSize.height, minimumSize.height + max(0, window.height - smallestWindow.height),
-                        maximumHeight(in: window)))
+    /// Height is a ceiling: short notes and task results measure their content.
+    static func size(in window: CGSize, showsNotes: Bool = true) -> CGSize {
+        CGSize(width: min(showsNotes ? notesWidth : taskWidth, max(0, window.width - 40)),
+               height: maximumHeight(in: window))
     }
 }
 
-/// Shared geometry for available, installed and historical release notes.
+/// Shared geometry for release notes, update checks and installation status.
 /// The scroll area alone yields space when the parent window is resized.
 struct CompactUpdateDialog<Content: View, Footer: View>: View {
     @Environment(\.translateXTheme) private var theme
@@ -26,13 +25,17 @@ struct CompactUpdateDialog<Content: View, Footer: View>: View {
     var maximumHeight: CGFloat? = nil
     var minimumHeight: CGFloat = 0
     var maximumWidth: CGFloat = 520
+    var titleMetricKey = "update.title"
+    var updatePhase: AppUpdatePresentation.Phase? = nil
     var canDismiss = true
     let onDismiss: () -> Void
     @ViewBuilder let content: () -> Content
     @ViewBuilder let footer: () -> Footer
+    @State private var scrollTarget = UpdateDialogScrollTarget()
     @State private var contentHeight: CGFloat = 160
     @State private var headerHeight: CGFloat = 74
     @State private var footerHeight: CGFloat = 80
+    @FocusState private var contentFocused: Bool
     private var p: ReleaseDialogPalette { .init(theme: theme) }
     private var scrollHeight: CGFloat {
         min(max(contentHeight, minimumHeight - headerHeight - footerHeight),
@@ -48,14 +51,16 @@ struct CompactUpdateDialog<Content: View, Footer: View>: View {
                         .frame(width: 32, height: 32).padding(.leading, -4).accessibilityHidden(true)
                     Text(title).font(.system(size: 18, weight: .semibold))
                         .fixedSize(horizontal: false, vertical: true)
-                        .serviceDesignMetric("update.title")
+                        .serviceDesignMetric(titleMetricKey)
                 }
                 Spacer(minLength: 0)
                 Button(action: onDismiss) {
                     Image(systemName: "xmark").font(.system(size: 14, weight: .regular))
                 }
-                .buttonStyle(ReleaseDialogCloseStyle()).disabled(!canDismiss)
+                .buttonStyle(ReleaseDialogCloseStyle())
+                .updateDialogKeyboardAction(enabled: canDismiss, action: onDismiss).disabled(!canDismiss)
                 .accessibilityLabel(L10n.string("Close"))
+                .accessibilityIdentifier("update.close")
                 .padding(.trailing, -4)
             }
             .padding(.horizontal, 24).padding(.top, 21).padding(.bottom, 21)
@@ -65,8 +70,14 @@ struct CompactUpdateDialog<Content: View, Footer: View>: View {
                 content().frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 24)
                     .translateXScrollContent(overlayVerticalIndicator: true)
+                    .background(UpdateDialogScrollAnchor(target: scrollTarget).frame(width: 0, height: 0))
                     .onGeometryChange(for: CGFloat.self) { $0.size.height.rounded(.up) } action: { contentHeight = $0 }
             }
+            // Enter the dialog through its content, without highlighting an
+            // action. Tab navigation and the default/cancel shortcuts stay live.
+            .focusable(updatePhase != nil || contentHeight > scrollHeight + 1, interactions: .edit)
+            .focusEffectDisabled()
+            .focused($contentFocused)
             .frame(height: scrollHeight).serviceDesignMetric("update.notes")
             footer().padding(.horizontal, 24).padding(.top, 24).padding(.bottom, 22)
                 .fixedSize(horizontal: false, vertical: true)
@@ -77,7 +88,101 @@ struct CompactUpdateDialog<Content: View, Footer: View>: View {
         .background(p.paper, in: RoundedRectangle(cornerRadius: 17))
         .overlay { RoundedRectangle(cornerRadius: 17).strokeBorder(p.line).allowsHitTesting(false) }
         .shadow(color: .black.opacity(theme.isDark ? 0.21 : 0.08), radius: 30, y: 10)
+        .onKeyPress(keys: [.upArrow, .downArrow, .pageUp, .pageDown, .home, .end]) { press in
+            return scrollTarget.scroll(press.key, modifiers: press.modifiers) ? .handled : .ignored
+        }
         .serviceDesignMetric("update.dialog")
+        .onChange(of: updatePhase, initial: true) { _, phase in
+            if phase != nil { contentFocused = true }
+        }
+    }
+}
+
+/// Explicit focus keeps the update flow keyboard-operable without changing the
+/// system's navigation preference. Its focused wrapper owns Space activation.
+private struct UpdateDialogKeyboardAction: ViewModifier {
+    @Environment(\.isEnabled) private var isEnabled
+    let enabled: Bool
+    let action: () -> Void
+
+    func body(content: Content) -> some View {
+        content.focusable(enabled && isEnabled, interactions: .automatic)
+            .onKeyPress(.space, phases: [.down, .repeat]) { press in
+                guard enabled, isEnabled,
+                      press.modifiers.intersection([.command, .control, .option, .shift]).isEmpty else { return .ignored }
+                if press.phase == .down { action() }
+                return .handled
+            }
+    }
+}
+
+extension View {
+    func updateDialogKeyboardAction(enabled: Bool = true, action: @escaping () -> Void) -> some View {
+        modifier(UpdateDialogKeyboardAction(enabled: enabled, action: action))
+    }
+}
+
+/// Keyboard scrolling is local to the active dialog's overflowing body. The
+/// native clip view retains the same overlay scroller as every other page.
+@MainActor
+final class UpdateDialogScrollTarget {
+    weak var scrollView: NSScrollView?
+
+    func scroll(_ key: KeyEquivalent, modifiers: EventModifiers = []) -> Bool {
+        // Navigation keys may carry native keypad/function flags. Ignore only
+        // actual shortcut/selection modifiers, rather than rejecting those keys.
+        guard modifiers.intersection([.command, .control, .option, .shift]).isEmpty else { return false }
+        guard let scrollView, let document = scrollView.documentView else { return false }
+        let clip = scrollView.contentView
+        let range = max(0, document.bounds.height - clip.bounds.height)
+        guard range > 1 else { return false }
+        let origin = clip.bounds.minY - document.bounds.minY
+        let current = document.isFlipped ? origin : range - origin
+        let page = max(1, clip.bounds.height - 24)
+        let destination: CGFloat
+        switch key {
+        case .upArrow: destination = current - 32
+        case .downArrow: destination = current + 32
+        case .pageUp: destination = current - page
+        case .pageDown: destination = current + page
+        case .home: destination = 0
+        case .end: destination = range
+        default: return false
+        }
+        let offset = min(range, max(0, destination))
+        clip.scroll(to: NSPoint(x: clip.bounds.minX,
+                               y: document.bounds.minY + (document.isFlipped ? offset : range - offset)))
+        scrollView.reflectScrolledClipView(clip)
+        return true
+    }
+}
+
+struct UpdateDialogScrollAnchor: NSViewRepresentable {
+    let target: UpdateDialogScrollTarget
+    func makeNSView(context: Context) -> AnchorView { AnchorView(target: target) }
+    func updateNSView(_ view: AnchorView, context: Context) {
+        view.target = target
+        view.connect()
+    }
+    static func dismantleNSView(_ view: AnchorView, coordinator: ()) { view.target.scrollView = nil }
+
+    final class AnchorView: NSView {
+        var target: UpdateDialogScrollTarget
+        init(target: UpdateDialogScrollTarget) { self.target = target; super.init(frame: .zero) }
+        required init?(coder: NSCoder) { nil }
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+        override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); connect() }
+        override func viewDidMoveToSuperview() { super.viewDidMoveToSuperview(); connect() }
+        override func layout() { super.layout(); connect() }
+        func connect() {
+            target.scrollView = enclosingScrollView
+            if target.scrollView == nil {
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
+                    target.scrollView = enclosingScrollView
+                }
+            }
+        }
     }
 }
 
@@ -171,13 +276,16 @@ struct ReleaseDialogTextStyle: ButtonStyle {
 
 struct ReleaseDialogButtonStyle: ButtonStyle {
     var primary = false
+    var fixedWidth: CGFloat? = nil
     @Environment(\.translateXTheme) private var theme
     @Environment(\.isEnabled) private var enabled
     @State private var hovered = false
     func makeBody(configuration: Configuration) -> some View {
         let p = ReleaseDialogPalette(theme: theme)
-        configuration.label.font(.system(size: 12, weight: .medium)).padding(.horizontal, 13)
-            .frame(minWidth: primary ? 92 : 64).frame(height: 34)
+        configuration.label.font(.system(size: 12, weight: .medium))
+            .padding(.horizontal, fixedWidth == nil ? 13 : 0)
+            .frame(minWidth: fixedWidth ?? (primary ? 92 : 64), maxWidth: fixedWidth)
+            .frame(height: 34)
             .foregroundStyle(enabled ? (primary ? .white : p.ink) : p.muted)
             .background(primary && enabled ? p.primary.opacity(configuration.isPressed ? 0.8 : hovered ? 0.95 : 1) : p.surface,
                         in: RoundedRectangle(cornerRadius: 8))

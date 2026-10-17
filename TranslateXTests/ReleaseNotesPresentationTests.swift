@@ -9,27 +9,32 @@ final class ReleaseNotesPresentationTests: XCTestCase {
                        CGSize(width: 520, height: 360))
         for layout in TranslationLayout.allCases {
             XCTAssertEqual(UpdateDialogLayout.size(in: layout.defaultSize(for: .main)),
-                           CGSize(width: 620, height: layout == .sideBySide ? 518 : 520))
+                           CGSize(width: 520, height: layout == .sideBySide ? 518 : 520))
         }
         XCTAssertEqual(UpdateDialogLayout.size(in: CGSize(width: 2_000, height: 1_200)),
-                       CGSize(width: 620, height: 520))
+                       CGSize(width: 520, height: 520))
     }
 
-    func testAvailableUpdateDialogResizesEachAxisWithinTheWindow() {
+    func testDialogWidthsStayFixedWhileTheContentHeightLimitTracksTheWindow() {
         let sizes = [CGSize(width: 660, height: 440), CGSize(width: 710, height: 500),
                      CGSize(width: 760, height: 560), CGSize(width: 980, height: 598)]
         let dialogs = sizes.map { UpdateDialogLayout.size(in: $0) }
-        XCTAssertEqual(dialogs[1], CGSize(width: 570, height: 420))
+        XCTAssertEqual(dialogs[1], CGSize(width: 520, height: 420))
         for (window, dialog) in zip(sizes, dialogs) {
             XCTAssertLessThanOrEqual(dialog.width, window.width - 40)
             XCTAssertLessThanOrEqual(dialog.height, window.height - 80)
         }
         XCTAssertEqual(UpdateDialogLayout.size(in: CGSize(width: 980, height: 440)),
-                       CGSize(width: 620, height: 360))
+                       CGSize(width: 520, height: 360))
         XCTAssertEqual(UpdateDialogLayout.size(in: CGSize(width: 660, height: 780)),
                        CGSize(width: 520, height: 520))
         XCTAssertEqual(UpdateDialogLayout.size(in: CGSize(width: 500, height: 350)),
                        CGSize(width: 460, height: 270))
+        for window in sizes + [CGSize(width: 2_000, height: 1_200)] {
+            XCTAssertEqual(UpdateDialogLayout.size(in: window, showsNotes: false).width, 420)
+        }
+        XCTAssertEqual(UpdateDialogLayout.size(in: CGSize(width: 400, height: 350), showsNotes: false),
+                       CGSize(width: 360, height: 270))
     }
 
     func testReleaseNotesHeightCapsAt520AndKeepsVerticalMargins() {
@@ -202,7 +207,180 @@ final class ReleaseNotesPresentationTests: XCTestCase {
 
 @MainActor
 extension ReleaseNotesPresentationTests {
+    func testOverflowingUpdateBodyKeyboardScrollingPreservesDirectionAndBounds() throws {
+        for flipped in [true, false] {
+            let scroll = updateScrollFixture(documentHeight: 1_000, flipped: flipped)
+            let target = UpdateDialogScrollTarget()
+            target.scrollView = scroll
+            let maximum = try XCTUnwrap(scroll.documentView).bounds.height - scroll.contentView.bounds.height
+            func offsetFromTop() -> CGFloat {
+                let offset = scroll.contentView.bounds.minY
+                return flipped ? offset : maximum - offset
+            }
+
+            XCTAssertTrue(target.scroll(.home))
+            XCTAssertEqual(offsetFromTop(), 0, accuracy: 0.5)
+            XCTAssertTrue(target.scroll(.downArrow, modifiers: .numericPad),
+                          "Native navigation keys carry keypad flags without being shortcut chords.")
+            let arrowDistance = offsetFromTop()
+            XCTAssertGreaterThan(arrowDistance, 0)
+            XCTAssertLessThan(arrowDistance, scroll.contentView.bounds.height)
+            XCTAssertTrue(target.scroll(.upArrow))
+            XCTAssertEqual(offsetFromTop(), 0, accuracy: 0.5)
+
+            XCTAssertTrue(target.scroll(.pageDown))
+            XCTAssertGreaterThan(offsetFromTop(), arrowDistance)
+            XCTAssertLessThanOrEqual(offsetFromTop(), scroll.contentView.bounds.height)
+            XCTAssertTrue(target.scroll(.pageUp))
+            XCTAssertEqual(offsetFromTop(), 0, accuracy: 0.5)
+
+            XCTAssertTrue(target.scroll(.end, modifiers: [.numericPad, .capsLock]))
+            XCTAssertEqual(offsetFromTop(), maximum, accuracy: 0.5)
+            for modifier in [EventModifiers.shift, .command, .control, .option] {
+                XCTAssertFalse(target.scroll(.home, modifiers: modifier))
+                XCTAssertEqual(offsetFromTop(), maximum, accuracy: 0.5,
+                               "Selection and system shortcuts must retain their normal handling.")
+            }
+            for key in [KeyEquivalent.downArrow, .pageDown, .end] {
+                XCTAssertTrue(target.scroll(key), "An overflow body consumes its scroll keys even at the boundary.")
+                XCTAssertEqual(offsetFromTop(), maximum, accuracy: 0.5)
+            }
+            XCTAssertTrue(target.scroll(.home))
+            for key in [KeyEquivalent.upArrow, .pageUp, .home] {
+                XCTAssertTrue(target.scroll(key))
+                XCTAssertEqual(offsetFromTop(), 0, accuracy: 0.5)
+            }
+            XCTAssertFalse(target.scroll(.leftArrow), "Unrelated keys retain their normal responder handling.")
+            XCTAssertEqual(offsetFromTop(), 0, accuracy: 0.5)
+        }
+    }
+
+    func testUpdateBodyWithoutOverflowDoesNotConsumeScrollKeys() {
+        let keys: [KeyEquivalent] = [.upArrow, .downArrow, .pageUp, .pageDown, .home, .end]
+        let target = UpdateDialogScrollTarget()
+        for key in keys { XCTAssertFalse(target.scroll(key)) }
+        for flipped in [true, false] {
+            let scroll = updateScrollFixture(documentHeight: 40, flipped: flipped)
+            target.scrollView = scroll
+            let originalBounds = scroll.contentView.bounds
+            for key in keys {
+                XCTAssertFalse(target.scroll(key))
+                XCTAssertEqual(scroll.contentView.bounds, originalBounds)
+            }
+        }
+    }
+
+    private func updateScrollFixture(documentHeight: CGFloat, flipped: Bool) -> NSScrollView {
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 420, height: 180))
+        scroll.scrollerStyle = .overlay
+        scroll.hasVerticalScroller = true
+        scroll.documentView = UpdateScrollTestDocument(frame: NSRect(x: 0, y: 0, width: 420, height: documentHeight),
+                                                       flipped: flipped)
+        scroll.layoutSubtreeIfNeeded()
+        return scroll
+    }
+
+    func testAllTaskStatesUseTheCompactBaselineInALargeHost() async throws {
+        let inputMonitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(inputMonitor) }
+        let presentations: [AppUpdatePresentation] = [
+            .init(phase: .checking), .init(version: "2.0.0", phase: .downloading, progress: 0.42),
+            .init(version: "2.0.0", phase: .extracting), .init(version: "2.0.0", phase: .installing),
+            .init(version: "2.0.0", phase: .failed), .init(phase: .failed, isCheckFailure: true),
+            .init(phase: .current)
+        ]
+        for presentation in presentations {
+            let measurement = UpdateDialogMeasurement()
+            let window = tooltipWindow(content: MeasuredUpdateDialog(measurement: measurement) {
+                AppUpdateDialogView(updates: self.tooltipUpdates(), presentation: presentation,
+                                    dialogSize: CGSize(width: 520, height: 520))
+            })
+            defer { window.close() }
+            try await settleLayout(in: window)
+            XCTAssertEqual(measurement.size.width, 420, accuracy: 1)
+            XCTAssertEqual(measurement.size.height, 214, accuracy: 1, "Unexpected height for \(presentation.phase)")
+        }
+    }
+
+    func testSmallReleaseNotesUseTheirContentHeight() async throws {
+        let inputMonitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(inputMonitor) }
+        let release = AppRelease(version: "2.0.0", publishedAt: now, notes: "- A short constructed fix.",
+                                 url: URL(string: "https://example.invalid/release")!)
+        let updates = AppUpdateController(bundleIdentifier: "preview", isTesting: true,
+            recordsInstalledVersions: false,
+            releases: AppReleaseNotesStore(entries: [release], allowsNetworkLoading: false))
+        let measurement = UpdateDialogMeasurement()
+        let window = tooltipWindow(content: MeasuredUpdateDialog(measurement: measurement) {
+            AppUpdateDialogView(updates: updates,
+                presentation: .init(version: "2.0.0", phase: .available, publishedAt: self.now),
+                dialogSize: CGSize(width: 520, height: 520))
+        })
+        defer { window.close() }
+        try await settleLayout(in: window)
+        XCTAssertEqual(measurement.size.width, 520, accuracy: 1)
+        XCTAssertGreaterThan(measurement.size.height, 214)
+        XCTAssertLessThan(measurement.size.height, 400, "Short notes must not inherit the old 400-point minimum.")
+    }
+
+    func testLongErrorWrapsAndScrollsOnlyTheBodyAtTheSharedHeightLimit() async throws {
+        let inputMonitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(inputMonitor) }
+        let measurement = UpdateDialogMeasurement()
+        let longMessage = Array(repeating: "A constructed update error with enough detail to wrap over several lines.", count: 80)
+            .joined(separator: " ")
+        let window = tooltipWindow(content: MeasuredUpdateDialog(measurement: measurement) {
+            CompactUpdateDialog(title: "Update could not be completed", maximumHeight: 520,
+                                minimumHeight: 214, maximumWidth: 420, onDismiss: {}) {
+                Text(longMessage).font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
+            } footer: {
+                HStack { Spacer(); Button("Retry") {}.buttonStyle(ReleaseDialogButtonStyle(primary: true, fixedWidth: 64)) }
+            }
+            .frame(width: 420)
+        })
+        defer { window.close() }
+        try await settleLayout(in: window)
+        XCTAssertEqual(measurement.size.width, 420, accuracy: 1)
+        XCTAssertEqual(measurement.size.height, 520, accuracy: 1)
+        let scroll = try XCTUnwrap(scrollViews(in: try XCTUnwrap(window.contentView)).first)
+        XCTAssertEqual(scroll.frame.width, 420, accuracy: 1, "The overlay indicator belongs at the modal's outer edge.")
+        XCTAssertLessThan(scroll.frame.height, measurement.size.height - 100, "The header and footer stay outside the scrolling body.")
+        XCTAssertGreaterThan(try XCTUnwrap(scroll.documentView).frame.height, scroll.contentSize.height)
+        XCTAssertEqual(scroll.scrollerStyle, .overlay)
+        XCTAssertTrue(scroll.autohidesScrollers)
+        XCTAssertTrue(scroll.verticalScroller is TranslateXScroller)
+        XCTAssertEqual(scroll.verticalScroller?.controlSize, .small)
+        let anchor = try XCTUnwrap(updateScrollAnchors(in: try XCTUnwrap(window.contentView)).first)
+        XCTAssertTrue(anchor.target.scrollView === scroll, "Keyboard scrolling must connect to the real hosted body scroll view.")
+        XCTAssertTrue(anchor.target.scroll(.home))
+        let top = scroll.contentView.bounds.origin
+        XCTAssertTrue(anchor.target.scroll(.end))
+        let range = try XCTUnwrap(scroll.documentView).bounds.height - scroll.contentView.bounds.height
+        XCTAssertGreaterThan(range, 0)
+        XCTAssertEqual(abs(scroll.contentView.bounds.minY - top.y), range, accuracy: 0.5)
+        XCTAssertTrue(anchor.target.scroll(.home))
+        XCTAssertEqual(scroll.contentView.bounds.minY, top.y, accuracy: 0.5)
+        XCTAssertEqual(scroll.contentView.bounds.minX, top.x, accuracy: 0.5)
+    }
+
+    func testRetryButtonHasTheSameFixedSizeInBothLanguages() async throws {
+        let inputMonitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(inputMonitor) }
+        for title in ["Retry", "重试"] {
+            let measurement = UpdateDialogMeasurement()
+            let window = tooltipWindow(content: MeasuredUpdateDialog(measurement: measurement) {
+                Button(title) {}.buttonStyle(ReleaseDialogButtonStyle(primary: true, fixedWidth: 64))
+            })
+            defer { window.close() }
+            try await settleLayout(in: window)
+            XCTAssertEqual(measurement.size.width, 64, accuracy: 0.5)
+            XCTAssertEqual(measurement.size.height, 34, accuracy: 0.5)
+        }
+    }
+
     func testOpeningUpdateAtEachInstallationPhaseDoesNotShowDateHint() async throws {
+        let inputMonitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(inputMonitor) }
         for phase in [AppUpdatePresentation.Phase.available, .downloading, .extracting, .ready, .installing] {
             let updates = tooltipUpdates()
             updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
@@ -217,11 +395,15 @@ extension ReleaseNotesPresentationTests {
             let window = tooltipWindow(content: UpdateTooltipTestContent(updates: updates))
             defer { window.close() }
             try await assertNoAutomaticDateHint(in: window)
-            XCTAssertFalse(tooltipAnchors(in: try XCTUnwrap(window.contentView)).isEmpty)
+            XCTAssertEqual(tooltipAnchors(in: try XCTUnwrap(window.contentView)).isEmpty,
+                           ![.available, .ready].contains(phase),
+                           "Only release-note states retain the publication heading.")
         }
     }
 
     func testCheckAndInstallationTransitionsDoNotShowDateHint() async throws {
+        let inputMonitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(inputMonitor) }
         let updates = tooltipUpdates()
         updates.showUpdateCheck(cancellation: {})
         let window = tooltipWindow(content: UpdateTooltipTestContent(updates: updates))
@@ -253,6 +435,8 @@ extension ReleaseNotesPresentationTests {
     }
 
     func testPublicationHintOnlyAppearsOnHoverAndLeavesWithPointer() async throws {
+        let inputMonitor = try isolateUnscriptedWindowInput()
+        defer { NSEvent.removeMonitor(inputMonitor) }
         let window = tooltipWindow(content: ReleaseVersionHeading(version: "2.0.0", publishedAt: now))
         defer { window.close() }
         try await assertNoAutomaticDateHint(in: window)
@@ -287,6 +471,23 @@ extension ReleaseNotesPresentationTests {
                             releases: AppReleaseNotesStore(entries: [], allowsNetworkLoading: false))
     }
 
+    private func settleLayout(in window: NSWindow) async throws {
+        for _ in 0..<20 {
+            window.contentView?.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
+    private func scrollViews(in view: NSView) -> [NSScrollView] {
+        if let scroll = view as? NSScrollView { return [scroll] }
+        return view.subviews.flatMap(scrollViews)
+    }
+
+    private func updateScrollAnchors(in view: NSView) -> [UpdateDialogScrollAnchor.AnchorView] {
+        if let anchor = view as? UpdateDialogScrollAnchor.AnchorView { return [anchor] }
+        return view.subviews.flatMap(updateScrollAnchors)
+    }
+
     private func tooltipWindow<Content: View>(content: Content) -> QuickPanel {
         _ = NSApplication.shared
         let window = QuickPanel(contentRect: NSRect(x: 80, y: 80, width: 800, height: 600),
@@ -295,13 +496,18 @@ extension ReleaseNotesPresentationTests {
         let host = NSHostingView(rootView: content)
         host.sizingOptions = []
         window.contentView = host
+        // Hover and keyboard assertions require this isolated test host to be
+        // active; a preceding window test may have returned focus elsewhere.
+        NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         return window
     }
 
     private func assertNoAutomaticDateHint(in window: NSWindow,
                                          file: StaticString = #filePath, line: UInt = #line) async throws {
-        XCTAssertTrue(window.isKeyWindow, file: file, line: line)
+        XCTAssertTrue(window.isKeyWindow,
+                      "Tooltip host lost key status: visible=\(window.isVisible), active=\(NSApp.isActive), host=\(window.windowNumber), key=\(NSApp.keyWindow?.windowNumber ?? -1)",
+                      file: file, line: line)
         // Observe multiple render/focus passes, not just the final state: an
         // automatically shown hint is a regression even if it later disappears.
         for _ in 0..<15 {
@@ -317,12 +523,39 @@ extension ReleaseNotesPresentationTests {
     }
 }
 
+@MainActor
+private final class UpdateDialogMeasurement {
+    var size: CGSize = .zero
+}
+
+@MainActor
+private final class UpdateScrollTestDocument: NSView {
+    private let usesFlippedCoordinates: Bool
+    override var isFlipped: Bool { usesFlippedCoordinates }
+    init(frame: NSRect, flipped: Bool) {
+        self.usesFlippedCoordinates = flipped
+        super.init(frame: frame)
+    }
+    required init?(coder: NSCoder) { nil }
+}
+
+private struct MeasuredUpdateDialog<Content: View>: View {
+    let measurement: UpdateDialogMeasurement
+    @ViewBuilder let content: () -> Content
+    var body: some View {
+        content()
+            .onGeometryChange(for: CGSize.self) { $0.size } action: { measurement.size = $0 }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
 private struct UpdateTooltipTestContent: View {
     let updates: AppUpdateController
     var body: some View {
         if let presentation = updates.updatePresentation {
             AppUpdateDialogView(updates: updates, presentation: presentation,
-                                dialogSize: CGSize(width: 620, height: 520))
+                                dialogSize: UpdateDialogLayout.size(in: CGSize(width: 800, height: 600),
+                                    showsNotes: [.available, .ready].contains(presentation.phase)))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }

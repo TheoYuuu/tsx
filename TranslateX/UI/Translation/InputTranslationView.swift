@@ -84,6 +84,7 @@ private struct MainUpdateEntry: View {
     @State private var visible = false
     @State private var waving = false
     @State private var waveStarted = Date()
+    @State private var restoresFocusAfterUpdate = false
     private var p: TranslationServicePalette { .init(theme: theme) }
     private var characters: [Character] { Array(L10n.string("New version available")) }
     private var animates: Bool {
@@ -92,7 +93,7 @@ private struct MainUpdateEntry: View {
     }
 
     var body: some View {
-        Button { updates.performUpdateAction() } label: {
+        Button(action: showUpdate) {
             TimelineView(.animation(minimumInterval: 1 / 60, paused: !animates || !waving)) { context in
                 let elapsed = context.date.timeIntervalSince(waveStarted)
                 HStack(spacing: 6) {
@@ -116,6 +117,7 @@ private struct MainUpdateEntry: View {
         .foregroundStyle(p.accent)
         .background(hovered ? p.accent.opacity(0.14) : p.accentSoft, in: RoundedRectangle(cornerRadius: 7))
         .fixedSize()
+        .updateDialogKeyboardAction(action: showUpdate)
         .focused($focused)
         .onHover { hovered = $0 }
         .translateXControlCursor()
@@ -124,6 +126,15 @@ private struct MainUpdateEntry: View {
         .accessibilityIdentifier("main.updateAvailable")
         .serviceDesignMetric("main.updateAvailable")
         .background(TranslateXWindowVisibility { visible = $0 })
+        .onChange(of: updates.isPresentingMainModal) { _, presenting in
+            guard !presenting, restoresFocusAfterUpdate else { return }
+            restoresFocusAfterUpdate = false
+            // Re-enable the workspace before returning focus to this entry.
+            DispatchQueue.main.async {
+                guard !updates.isPresentingMainModal else { return }
+                focused = true
+            }
+        }
         .task(id: animates) {
             waving = false
             guard animates else { return }
@@ -138,6 +149,12 @@ private struct MainUpdateEntry: View {
                 }
             } catch { waving = false }
         }
+    }
+
+    private func showUpdate() {
+        restoresFocusAfterUpdate = true
+        focused = false
+        updates.performUpdateAction()
     }
 
     private func lift(index: Int, elapsed: TimeInterval) -> CGFloat {

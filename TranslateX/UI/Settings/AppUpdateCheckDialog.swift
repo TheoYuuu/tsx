@@ -1,21 +1,26 @@
 import SwiftUI
 
-/// A single presentation slot replaces the check dialog with the existing
-/// installation view. Release notes and installation progress keep their layout.
+/// The check and installation flows share one presentation slot and modal shell.
 struct AppUpdateDialogView: View {
     let updates: AppUpdateController
     let presentation: AppUpdatePresentation
     let dialogSize: CGSize
 
+    private var resolvedSize: CGSize {
+        let showsNotes = !presentation.usesCheckDialog
+            && (presentation.phase == .available || presentation.phase == .ready)
+        return CGSize(width: min(showsNotes ? UpdateDialogLayout.notesWidth : UpdateDialogLayout.taskWidth, dialogSize.width), height: dialogSize.height)
+    }
+
     var body: some View {
         Group {
             if presentation.usesCheckDialog {
-                AppUpdateCheckDialog(updates: updates, phase: presentation.phase)
-                    .frame(width: min(360, dialogSize.width))
+                AppUpdateCheckDialog(updates: updates, presentation: presentation, dialogSize: resolvedSize)
             } else {
-                AppUpdateInstallationView(updates: updates, presentation: presentation, dialogSize: dialogSize)
+                AppUpdateInstallationView(updates: updates, presentation: presentation, dialogSize: resolvedSize)
             }
         }
+        .frame(width: resolvedSize.width)
         // Never retain an outgoing check view during an animated transition.
         .transaction { $0.animation = nil }
     }
@@ -24,71 +29,84 @@ struct AppUpdateDialogView: View {
 struct AppUpdateCheckDialog: View {
     @Environment(\.translateXTheme) private var theme
     let updates: AppUpdateController
-    let phase: AppUpdatePresentation.Phase
-    @FocusState private var primaryFocused: Bool
+    let presentation: AppUpdatePresentation
+    let dialogSize: CGSize
     private var p: ReleaseDialogPalette { .init(theme: theme) }
+    private var phase: AppUpdatePresentation.Phase { presentation.phase }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(L10n.string(phase == .checking ? "Checking for updates"
-                            : phase == .current ? "You're up to date" : "Could not check for updates"))
-                .font(.system(size: 15, weight: .semibold))
-                .fixedSize(horizontal: false, vertical: true)
-                .serviceDesignMetric("update.check.title")
-            if phase == .checking {
-                ProgressView().progressViewStyle(.linear).tint(p.blue)
-                    .accessibilityLabel(L10n.string("Checking for updates"))
-                    .padding(.top, 18)
-            } else {
-                Text(L10n.string(phase == .current ? "The latest available version is already installed."
-                                 : "Unable to connect to the update server. Please try again later."))
+        CompactUpdateDialog(title: title, maximumHeight: dialogSize.height,
+                            minimumHeight: UpdateDialogLayout.compactHeight,
+                            maximumWidth: dialogSize.width, titleMetricKey: "update.check.title",
+                            updatePhase: phase,
+                            onDismiss: updates.dismissUpdate) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(message)
                     .font(.system(size: 12)).foregroundStyle(p.secondary)
-                    .fixedSize(horizontal: false, vertical: true).padding(.top, 12)
+                    .frame(minHeight: 20, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(secondaryMessage)
+                    .font(.system(size: 11)).foregroundStyle(p.muted)
+                    .frame(minHeight: 17, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                if phase == .checking {
+                    ProgressView().progressViewStyle(.linear).tint(p.blue)
+                        .frame(height: 5)
+                        .accessibilityLabel(L10n.string("Checking for updates"))
+                }
             }
+        } footer: {
             HStack(spacing: 8) {
                 Spacer(minLength: 0)
                 if phase == .checking {
                     Button(L10n.string("Cancel")) { updates.dismissUpdate() }
-                        .buttonStyle(UpdateCheckButtonStyle()).keyboardShortcut(.cancelAction)
-                        .focused($primaryFocused).serviceDesignMetric("update.check.cancel")
+                        .buttonStyle(ReleaseDialogButtonStyle(fixedWidth: 64))
+                        .updateDialogKeyboardAction(action: updates.dismissUpdate)
+                        .keyboardShortcut(.cancelAction)
+                        .serviceDesignMetric("update.check.cancel")
                 } else if phase == .failed {
                     Button(L10n.string("Close")) { updates.dismissUpdate() }
-                        .buttonStyle(UpdateCheckButtonStyle()).keyboardShortcut(.cancelAction)
+                        .buttonStyle(ReleaseDialogButtonStyle(fixedWidth: 64))
+                        .updateDialogKeyboardAction(action: updates.dismissUpdate)
+                        .keyboardShortcut(.cancelAction)
                         .serviceDesignMetric("update.check.close")
                     Button(L10n.string("Retry")) { updates.retryUpdate() }
-                        .buttonStyle(UpdateCheckButtonStyle(primary: true)).keyboardShortcut(.defaultAction)
-                        .focused($primaryFocused).serviceDesignMetric("update.check.retry")
+                        .buttonStyle(ReleaseDialogButtonStyle(primary: true, fixedWidth: 64))
+                        .updateDialogKeyboardAction(action: updates.retryUpdate)
+                        .keyboardShortcut(.defaultAction)
+                        .serviceDesignMetric("update.check.retry")
                 } else {
                     Button(L10n.string("Got it")) { updates.dismissUpdate() }
-                        .buttonStyle(UpdateCheckButtonStyle(primary: true)).keyboardShortcut(.defaultAction)
-                        .focused($primaryFocused)
+                        .buttonStyle(ReleaseDialogButtonStyle(primary: true, fixedWidth: 64))
+                        .updateDialogKeyboardAction(action: updates.dismissUpdate)
+                        .keyboardShortcut(.defaultAction)
+                        .serviceDesignMetric("update.check.gotIt")
                 }
-            }.padding(.top, 20)
+            }
         }
-        .padding(.horizontal, 24).padding(.top, 23).padding(.bottom, 20)
-        .foregroundStyle(p.ink).frame(maxWidth: .infinity)
-        .background(p.paper, in: RoundedRectangle(cornerRadius: 17))
-        .overlay { RoundedRectangle(cornerRadius: 17).strokeBorder(p.line).allowsHitTesting(false) }
-        .shadow(color: .black.opacity(theme.isDark ? 0.21 : 0.08), radius: 30, y: 10)
         .serviceDesignMetric("update.check.dialog")
-        .onAppear { primaryFocused = true }
-        .onChange(of: phase) { _, _ in primaryFocused = true }
+        .onExitCommand { updates.dismissUpdate() }
     }
-}
 
-private struct UpdateCheckButtonStyle: ButtonStyle {
-    var primary = false
-    @Environment(\.translateXTheme) private var theme
-    @State private var hovered = false
+    private var title: String {
+        L10n.string(phase == .checking ? "Checking for updates"
+                    : phase == .current ? "You're up to date" : "Could not check for updates")
+    }
 
-    func makeBody(configuration: Configuration) -> some View {
-        let p = ReleaseDialogPalette(theme: theme)
-        configuration.label.font(.system(size: 12, weight: .medium))
-            .frame(width: 64, height: 34)
-            .foregroundStyle(primary ? .white : p.ink)
-            .background(primary ? p.primary.opacity(configuration.isPressed ? 0.8 : hovered ? 0.95 : 1) : p.surface,
-                        in: RoundedRectangle(cornerRadius: 8))
-            .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(primary ? .clear : hovered ? p.muted : p.line) }
-            .contentShape(RoundedRectangle(cornerRadius: 8)).onHover { hovered = $0 }.translateXControlCursor()
+    private var message: String {
+        switch phase {
+        case .checking:
+            return L10n.string("Connecting to the update server")
+        case .current:
+            return L10n.string("The latest available version is already installed.")
+        default:
+            return presentation.errorMessage
+                ?? L10n.string("Unable to connect to the update server. Please try again later.")
+        }
+    }
+
+    private var secondaryMessage: String {
+        if phase == .failed { return L10n.string("Your current version is still available.") }
+        return String(format: L10n.string("Current version v%@"), updates.currentVersion)
     }
 }

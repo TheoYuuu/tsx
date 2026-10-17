@@ -1167,3 +1167,12 @@
 "View full translation" = "View full translation";
 
 "Full translation" = "Full translation";
+
+/* Compact update status */
+"Please try again later." = "Please try again later.";
+"Your current version is still available." = "Your current version is still available.";
+"Checking the integrity of the update files" = "Checking the integrity of the update files";
+"Cancel download" = "Cancel download";
+"Unable to complete the update request. Check your network connection and try again. If you use a proxy or VPN, confirm that it can reach the update server." = "Unable to complete the update request. Check your network connection and try again. If you use a proxy or VPN, confirm that it can reach the update server.";
+"TSX could not verify the downloaded update. Please try downloading the update again." = "TSX could not verify the downloaded update. Please try downloading the update again.";
+"There is not enough free space to prepare the update. Free up some disk space and try again." = "There is not enough free space to prepare the update. Free up some disk space and try again.";

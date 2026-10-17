@@ -60,6 +60,8 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     private var settingsShortcuts: ShortcutSettings?
     private weak var inputEditor: TranslationInputTextView?
     private weak var inputTranslationEditor: TranslationInputTextView?
+    private weak var mainModalPreviousResponder: NSResponder?
+    private weak var settingsModalPreviousResponder: NSResponder?
     private var needsInputFocus = false
     private var panel: QuickPanel?
     private var panelPermission: SystemPermission?
@@ -346,6 +348,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         syncSettingsModal()
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        installTranslationKeyMonitor()
     }
 
     private func saveScreenshot(_ output: ScreenshotOutput) {
@@ -439,11 +442,18 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     private func syncSettingsModal() {
         guard let surface = settingsWindow?.contentView as? WindowSurface<SettingsView> else { return }
         if let updates, updates.isPresentingSettingsModal {
-            if surface.modalHostingView == nil { settingsWindow?.makeFirstResponder(nil) }
+            if surface.modalHostingView == nil {
+                settingsModalPreviousResponder = settingsWindow?.firstResponder
+                settingsWindow?.makeFirstResponder(nil)
+            }
             // Match the main window: dim above the glass and its edge lighting.
             surface.presentModal { SettingsUpdateOverlay(updates: updates) }
-        } else {
+        } else if surface.modalHostingView != nil {
             surface.dismissModal()
+            if let window = settingsWindow {
+                restoreModalResponder(settingsModalPreviousResponder, in: window)
+            }
+            settingsModalPreviousResponder = nil
         }
     }
 
@@ -461,6 +471,9 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     private func syncMainModal() {
         guard let surface = mainWindow?.contentView as? WindowSurface<InputTranslationView> else { return }
         let presenting = updates?.isPresentingMainModal == true
+        if presenting, surface.modalHostingView == nil {
+            mainModalPreviousResponder = mainWindow?.firstResponder
+        }
         inputEditor?.setInteractionEnabled(!presenting)
         inputTranslationEditor?.setInteractionEnabled(!presenting)
         if presenting, let updates {
@@ -473,9 +486,27 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
             }
         } else if surface.modalHostingView != nil {
             surface.dismissModal()
-            needsInputFocus = true
-            focusInputWhenReady()
+            let restored = mainWindow.map {
+                restoreModalResponder(mainModalPreviousResponder, in: $0)
+                    || restoreModalResponder(inputEditor, in: $0)
+            } ?? false
+            mainModalPreviousResponder = nil
+            needsInputFocus = !restored
+            if needsInputFocus { focusInputWhenReady() }
         }
+    }
+
+    /// Restore synchronously so the entry's SwiftUI focus can settle afterwards,
+    /// without a queued editor-focus request replacing the user's chosen control.
+    @discardableResult
+    private func restoreModalResponder(_ responder: NSResponder?, in window: NSWindow) -> Bool {
+        // Setting this window's responder never activates it. Preserve focus even
+        // when the modal finishes while another application temporarily has key.
+        // A startup modal may open before any control has focus. Restoring the
+        // window itself must still allow the original-text editor fallback.
+        guard let responder, responder !== window else { return false }
+        if let view = responder as? NSView, view.window !== window { return false }
+        return window.makeFirstResponder(responder)
     }
 
     /// Startup notes are part of the existing translation workspace. Keep its
@@ -601,16 +632,35 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         guard translationKeyMonitor == nil else { return }
         translationKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let consumed = MainActor.assumeIsolated {
-                guard let self, event.keyCode == 53, event.window === self.mainWindow,
-                      self.mainWindow?.isTrackingMenu != true, self.mainWindow?.attachedSheet == nil,
-                      (self.mainWindow?.firstResponder as? NSTextView)?.hasMarkedText() != true,
-                      self.updates?.isPresentingMainModal != true else { return false }
-                self.dismissTranslation()
-                return true
+                self?.handleTranslationKeyEvent(event) ?? false
             }
             return consumed ? nil : event
         }
         observeMenuTracking()
+    }
+
+    func handleTranslationKeyEvent(_ event: NSEvent) -> Bool {
+        if event.type == .keyDown, [36, 76].contains(event.keyCode), event.isARepeat,
+           let window = event.window, window === mainWindow || window === settingsWindow,
+           trackedMenus.isEmpty, (window as? TranslationWindow)?.isTrackingMenu != true,
+           window.attachedSheet == nil, (window.firstResponder as? NSTextView)?.hasMarkedText() != true {
+            let presenting = window === mainWindow ? updates?.isPresentingMainModal : updates?.isPresentingSettingsModal
+            // One held Return is one action, even when Retry changes the default
+            // button to Update Now before the user releases the key.
+            if presenting == true { return true }
+        }
+        return handleTranslationEscape(event)
+    }
+
+    func handleTranslationEscape(_ event: NSEvent) -> Bool {
+        guard event.type == .keyDown, event.keyCode == 53, event.window === mainWindow,
+              mainWindow?.isTrackingMenu != true, mainWindow?.attachedSheet == nil,
+              (mainWindow?.firstResponder as? NSTextView)?.hasMarkedText() != true else { return false }
+        // A held Escape that closes a modal must not also close its workspace.
+        if event.isARepeat { return true }
+        guard updates?.isPresentingMainModal != true else { return false }
+        dismissTranslation()
+        return true
     }
 
     /// Hide our content before the user chooses pixels. Restore only the window

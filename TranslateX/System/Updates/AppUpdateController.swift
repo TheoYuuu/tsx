@@ -21,9 +21,62 @@ struct AppUpdatePresentation: Equatable {
     var informationOnly = false
     var publishedAt: Date?
     var isCheckFailure = false
+    var downloadedBytes: UInt64 = 0
+    var totalDownloadBytes: UInt64?
+    var failure: AppUpdateFailure?
+
+    var errorMessage: String? { failure?.message }
 
     var usesCheckDialog: Bool {
         phase == .checking || phase == .current || (phase == .failed && isCheckFailure)
+    }
+}
+
+/// Only known error codes become user-facing text. SDK descriptions and their
+/// underlying metadata may contain URLs, local paths or other private details.
+enum AppUpdateFailure: Equatable, Sendable {
+    case networkUnavailable, invalidUpdate, insufficientSpace
+
+    static func classify(_ error: any Error) -> Self? {
+        var current = error as NSError
+        // Sparkle wraps download and file errors. Bound traversal even if an
+        // unexpected error supplies a cyclic or unusually deep cause chain.
+        for _ in 0..<8 {
+            if current.domain == NSURLErrorDomain {
+                switch URLError.Code(rawValue: current.code) {
+                case .notConnectedToInternet, .networkConnectionLost, .timedOut,
+                     .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
+                    return .networkUnavailable
+                default: break
+                }
+            }
+            if current.domain == NSCocoaErrorDomain,
+               current.code == CocoaError.Code.fileWriteOutOfSpace.rawValue {
+                return .insufficientSpace
+            }
+            if current.domain == SUSparkleErrorDomain {
+                switch current.code {
+                case Int(SUError.signatureError.rawValue), Int(SUError.validationError.rawValue),
+                     Int(SUError.unarchivingError.rawValue), Int(SUError.notValidUpdateError.rawValue):
+                    return .invalidUpdate
+                default: break
+                }
+            }
+            guard let underlying = current.userInfo[NSUnderlyingErrorKey] as? NSError else { return nil }
+            current = underlying
+        }
+        return nil
+    }
+
+    var message: String {
+        switch self {
+        case .networkUnavailable:
+            L10n.string("Unable to complete the update request. Check your network connection and try again. If you use a proxy or VPN, confirm that it can reach the update server.")
+        case .invalidUpdate:
+            L10n.string("TSX could not verify the downloaded update. Please try downloading the update again.")
+        case .insufficientSpace:
+            L10n.string("There is not enough free space to prepare the update. Free up some disk space and try again.")
+        }
     }
 }
 
@@ -174,19 +227,15 @@ final class AppUpdateController {
             beginUpdateCheck(in: location, installing: location == .settings ? version : nil)
         }
         else {
-            updateLocation = location
-            directlyRequestedVersion = nil
-            automaticSession = false
-            lastCheckFailed = false
-            isChecking = true
-            backend?.checkInformation()
+            beginUpdateCheck(in: location, installing: nil)
         }
     }
 
     func retryUpdate() {
+        guard let presentation = updatePresentation, presentation.phase == .failed else { return }
         let location = updateLocation
         dismissUpdate()
-        if location == .settings { performUpdateAction(in: .settings) }
+        if location == .settings && !presentation.isCheckFailure { performUpdateAction(in: .settings) }
         else { checkForUpdates(in: location) }
     }
 
@@ -321,10 +370,11 @@ final class AppUpdateController {
         else { updateReply = reply }
     }
     func installing() { cancellation = nil; updateReply = nil; setPhase(.installing, progress: nil) }
-    func updateErrored() {
+    func updateErrored(_ error: (any Error)? = nil) {
         let isCheckFailure = updatePresentation?.phase == .checking
         checkFailed(); cancellation = nil; updateReply = nil
-        present(.init(version: availableVersion, phase: .failed, isCheckFailure: isCheckFailure))
+        present(.init(version: availableVersion, phase: .failed, isCheckFailure: isCheckFailure,
+                      failure: error.flatMap { AppUpdateFailure.classify($0) }))
     }
     func updateNotFound() {
         foundNoUpdate(); cancellation = nil; updateReply = nil
@@ -339,6 +389,9 @@ final class AppUpdateController {
     private func setPhase(_ phase: AppUpdatePresentation.Phase, progress: Double?) {
         var presentation = updatePresentation ?? .init(version: availableVersion, phase: phase, publishedAt: availablePublishedAt)
         presentation.phase = phase; presentation.progress = progress
+        presentation.downloadedBytes = phase == .downloading ? receivedDownloadBytes : 0
+        presentation.totalDownloadBytes = phase == .downloading && expectedDownloadBytes > 0 ? expectedDownloadBytes : nil
+        presentation.failure = nil
         present(presentation)
     }
     private func present(_ presentation: AppUpdatePresentation) {

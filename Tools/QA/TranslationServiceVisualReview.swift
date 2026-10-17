@@ -720,8 +720,12 @@ final class TranslationServiceVisualReview: NSObject {
         let localSync = CommandLine.arguments.contains("--review-local-sync")
         let allProviders = CommandLine.arguments.contains("--review-all-providers")
         let states = CommandLine.arguments.contains("--review-states")
-        let batch = dropdownContextsReview || refinementReview || serviceEditorReview || serviceUsageReview || languageSettingsReview || serviceListReview || languageReview || CommandLine.arguments.contains("--review-batch") || allProviders || states || interactions || layouts || brand || workspace || inputFeedback || localSync || toolbar || toolbarMotion || captureReview
-        let scenes = dropdownContextsReview ? ["main-minimum", "quick-minimum", "main-capture-stacked-minimum"] : refinementReview ? ["general", "general-minimum", "general-controls", "general-controls-minimum", "usage-card", "usage-card-hover-minimum", "usage-summary-minimum", "usage-manager-minimum", "usage-empty-minimum"] : serviceEditorReview ? ["edit", "edit-minimum"] : serviceUsageChartsReview ? ["usage-7", "usage-30-minimum", "usage-samples-minimum"] : serviceUsageReview ? ["usage-card", "usage-card-hover-minimum", "usage-7", "usage-30-minimum", "usage-day-minimum", "usage-samples-minimum", "usage-empty-minimum", "usage-account-empty", "usage-account-deepseek-minimum", "usage-account-deepl-minimum"] : languageSettingsReview ? ["general", "general-minimum"] : serviceListReview ? ["list-untested", "list-selected", "list-history", "list-long-name", "list-empty"] : languageReview ? ["general", "general-controls", "shortcuts", "privacy", "main-minimum", "quick-stacked-minimum", "main-failed", "test-error"] : captureReview ? ["main-capture-dense-text", "main-capture-dense-image", "main-capture-text", "main-capture-menu-image", "main-capture-menu-original", "main-capture-stacked-minimum", "main-capture-recognizing", "main-capture-failed", "quick-capture-minimum", "quick-capture-menu-image"] : toolbarMotion ? ["main-motion", "main-motion-reduced", "main-motion-off", "quick-motion", "quick-motion-reduced", "quick-motion-off"] : toolbar ? ["main", "main-failed", "main-stopped-empty", "main-requesting", "main-empty", "main-minimum", "main-stacked-minimum", "main-manual-minimum", "quick", "quick-failed", "quick-stacked-minimum", "quick-stacked-minimum-manual-long-name", "list", "list-history"] : localSync ? ["main-numeric", "main-same-language", "main-swapped", "main-swapped-stacked-minimum", "main-manual-minimum", "main-uncertain", "quick-numeric-minimum", "quick-same-language-stacked-minimum", "quick-swapped", "quick-swapped-stacked-minimum"] : inputFeedback ? ["main-numeric", "main-uncertain", "main-manual-minimum", "main-requesting", "main-partial", "quick-numeric-minimum", "quick-uncertain-stacked-minimum", "quick-stacked-minimum-manual-long-name"] : workspace ? ["main-edited", "main-stopped-empty", "main-partial", "main-manual", "main-minimum", "main-stacked-minimum", "quick-edited", "quick-stopped-empty", "quick-partial", "quick-minimum", "quick-stacked-minimum", "quick-stacked-minimum-manual-long-name", "quick-long"] : brand ? ["main", "main-stacked", "main-stacked-minimum"] : layouts ? ["general", "general-controls", "main", "main-stacked", "main-stacked-minimum", "quick", "quick-stacked", "quick-stacked-long", "quick-stacked-minimum"] : interactions ? ["general", "shortcuts", "privacy", "list", "add", "edit", "quick", "quick-long", "quick-minimum"] : allProviders ? TranslationServiceKind.allCases.map(\.rawValue) : states ?
+        let updateDialogs = CommandLine.arguments.contains("--review-update-dialogs")
+        let updateScenes = ["small", "large", "download", "verify", "failed", "checking", "current", "check-failed",
+                            "failed-long", "check-failed-long", "large-minimum", "failed-long-settings"]
+            .map { "main-update-state-" + $0 }
+        let batch = updateDialogs || dropdownContextsReview || refinementReview || serviceEditorReview || serviceUsageReview || languageSettingsReview || serviceListReview || languageReview || CommandLine.arguments.contains("--review-batch") || allProviders || states || interactions || layouts || brand || workspace || inputFeedback || localSync || toolbar || toolbarMotion || captureReview
+        let scenes = updateDialogs ? updateScenes : dropdownContextsReview ? ["main-minimum", "quick-minimum", "main-capture-stacked-minimum"] : refinementReview ? ["general", "general-minimum", "general-controls", "general-controls-minimum", "usage-card", "usage-card-hover-minimum", "usage-summary-minimum", "usage-manager-minimum", "usage-empty-minimum"] : serviceEditorReview ? ["edit", "edit-minimum"] : serviceUsageChartsReview ? ["usage-7", "usage-30-minimum", "usage-samples-minimum"] : serviceUsageReview ? ["usage-card", "usage-card-hover-minimum", "usage-7", "usage-30-minimum", "usage-day-minimum", "usage-samples-minimum", "usage-empty-minimum", "usage-account-empty", "usage-account-deepseek-minimum", "usage-account-deepl-minimum"] : languageSettingsReview ? ["general", "general-minimum"] : serviceListReview ? ["list-untested", "list-selected", "list-history", "list-long-name", "list-empty"] : languageReview ? ["general", "general-controls", "shortcuts", "privacy", "main-minimum", "quick-stacked-minimum", "main-failed", "test-error"] : captureReview ? ["main-capture-dense-text", "main-capture-dense-image", "main-capture-text", "main-capture-menu-image", "main-capture-menu-original", "main-capture-stacked-minimum", "main-capture-recognizing", "main-capture-failed", "quick-capture-minimum", "quick-capture-menu-image"] : toolbarMotion ? ["main-motion", "main-motion-reduced", "main-motion-off", "quick-motion", "quick-motion-reduced", "quick-motion-off"] : toolbar ? ["main", "main-failed", "main-stopped-empty", "main-requesting", "main-empty", "main-minimum", "main-stacked-minimum", "main-manual-minimum", "quick", "quick-failed", "quick-stacked-minimum", "quick-stacked-minimum-manual-long-name", "list", "list-history"] : localSync ? ["main-numeric", "main-same-language", "main-swapped", "main-swapped-stacked-minimum", "main-manual-minimum", "main-uncertain", "quick-numeric-minimum", "quick-same-language-stacked-minimum", "quick-swapped", "quick-swapped-stacked-minimum"] : inputFeedback ? ["main-numeric", "main-uncertain", "main-manual-minimum", "main-requesting", "main-partial", "quick-numeric-minimum", "quick-uncertain-stacked-minimum", "quick-stacked-minimum-manual-long-name"] : workspace ? ["main-edited", "main-stopped-empty", "main-partial", "main-manual", "main-minimum", "main-stacked-minimum", "quick-edited", "quick-stopped-empty", "quick-partial", "quick-minimum", "quick-stacked-minimum", "quick-stacked-minimum-manual-long-name", "quick-long"] : brand ? ["main", "main-stacked", "main-stacked-minimum"] : layouts ? ["general", "general-controls", "main", "main-stacked", "main-stacked-minimum", "quick", "quick-stacked", "quick-stacked-long", "quick-stacked-minimum"] : interactions ? ["general", "shortcuts", "privacy", "list", "add", "edit", "quick", "quick-long", "quick-minimum"] : allProviders ? TranslationServiceKind.allCases.map(\.rawValue) : states ?
             ["catalog-loading", "catalog-empty", "catalog-error", "test-running", "test-success", "test-error", "validation", "account-code", "account-committing", "account-ready"] :
             batch ? ["list", "add", "edit", "deepl", "codex"] : [argument("--review-scene", fallback: "edit")]
         let themes = batch && !states ? ["light", "dark", "glass"] : [argument("--review-theme", fallback: "light")]
@@ -737,8 +741,8 @@ final class TranslationServiceVisualReview: NSObject {
                     scroll.reflectScrolledClipView(scroll.contentView)
                 }
                 if scene.hasPrefix("usage-") { await scrollUsageIntoView(scene: scene, window: window) }
-                // Compare the idle state, with no field selected or focused.
-                window.makeFirstResponder(nil)
+                // Update previews retain their real initial keyboard focus.
+                if !scene.hasPrefix("main-update") { window.makeFirstResponder(nil) }
                 try? await Task.sleep(for: .milliseconds(200))
                 let key = "\(scene)-\(theme)"
                 all[key] = frames.mapValues { ["x": $0.minX, "y": $0.minY, "width": $0.width, "height": $0.height] }
@@ -800,7 +804,7 @@ final class TranslationServiceVisualReview: NSObject {
             if let editor = view as? TranslationInputTextView { return [editor] }
             return view.subviews.flatMap { editors(in: $0) }
         }
-        func verifyNoDateHint(in window: NSWindow, _ name: String) async throws {
+        func verifyNoDateHint(in window: NSWindow, expectsAnchor: Bool = true, _ name: String) async throws {
             func hasDateAnchor(_ view: NSView) -> Bool {
                 view is TooltipAnchorView || view.subviews.contains(where: hasDateAnchor)
             }
@@ -814,7 +818,8 @@ final class TranslationServiceVisualReview: NSObject {
             }
             let modal = (window.contentView as? WindowSurface<SettingsView>)?.modalHostingView
                 ?? (window.contentView as? WindowSurface<InputTranslationView>)?.modalHostingView
-            try require(window.isKeyWindow && modal.map(hasDateAnchor) == true && !appeared, name)
+            try require(window.isKeyWindow && modal != nil
+                        && modal.map(hasDateAnchor) == expectsAnchor && !appeared, name)
         }
         do {
             let preferences = AppPreferences(defaults: defaults)
@@ -920,15 +925,15 @@ final class TranslationServiceVisualReview: NSObject {
                                 userInitiated: true, reply: { _ in })
             try await verifyNoDateHint(in: settings, "Opening the settings update does not show the publication hint")
             updates.downloadStarted {}
-            try await verifyNoDateHint(in: settings, "Starting download does not show the publication hint")
+            try await verifyNoDateHint(in: settings, expectsAnchor: false, "Starting download does not show the publication hint")
             updates.extractionStarted()
-            try await verifyNoDateHint(in: settings, "Preparing the update does not show the publication hint")
+            try await verifyNoDateHint(in: settings, expectsAnchor: false, "Preparing the update does not show the publication hint")
             updates.extractionProgress(1)
-            try await verifyNoDateHint(in: settings, "Completing verification does not show the publication hint")
+            try await verifyNoDateHint(in: settings, expectsAnchor: false, "Completing verification does not show the publication hint")
             updates.readyToInstall { _ in }
             try await verifyNoDateHint(in: settings, "Returning to the install action does not show the publication hint")
             updates.installing()
-            try await verifyNoDateHint(in: settings, "Starting installation does not show the publication hint")
+            try await verifyNoDateHint(in: settings, expectsAnchor: false, "Starting installation does not show the publication hint")
             updates.installationDismissed()
             updates.offerUpdate(version: "1.0.1", informationOnly: false, informationURL: nil,
                                 userInitiated: true, reply: { _ in })
@@ -1117,7 +1122,9 @@ final class TranslationServiceVisualReview: NSObject {
                 : preferences.translationLayout.defaultSize(for: .main),
                 for: .main, layout: preferences.translationLayout)
             let windows = WindowCoordinator(preferences: preferences, services: services)
-            let updates = AppUpdateController.visualReview(previewInstalledNotes: scene.hasPrefix("release-notes"),
+            let updateFixture = UpdateDialogReviewState(scene: scene)
+            let updates = updateFixture.map { UpdateDialogReviewBackend.controller(state: $0, defaults: defaults) }
+                ?? AppUpdateController.visualReview(previewInstalledNotes: scene.hasPrefix("release-notes"),
                                                            shortReleaseNotes: scene.contains("short"),
                                                            previewAvailableUpdate: scene.hasPrefix("main-update"),
                                                            compactReleaseNotes: scene.contains("compact"),
@@ -1131,15 +1138,16 @@ final class TranslationServiceVisualReview: NSObject {
                 windows.showSettings(shortcuts: shortcuts)
                 windows.showAbout()
                 if scene.hasPrefix("release-notes") { updates.showRecentReleaseNotes() }
-                if scene.contains("check") { updates.checkForUpdates(in: .settings) }
+                if scene.contains("check") || updateFixture != nil { updates.checkForUpdates(in: .settings) }
             } else if scene.hasPrefix("main-update") {
                 windows.showMain()
-                if scene.contains("modal") || scene.contains("check") { updates.performUpdateAction() }
+                if updateFixture != nil { updates.checkForUpdates(in: .mainWindow) }
+                else if scene.contains("modal") || scene.contains("check") { updates.performUpdateAction() }
             } else {
                 if scene.contains("recent") { updates.showRecentReleaseNotes(in: .mainWindow) }
                 windows.showMainReleaseNotes()
             }
-            window = NSApp.windows.first { $0.identifier?.rawValue == (scene.contains("settings") ? "translatex.settings" : "translatex.main") }
+            window = NSApp.windows.first { $0.isVisible && $0.identifier?.rawValue == (scene.contains("settings") ? "translatex.settings" : "translatex.main") }
             window?.level = .floating
             window?.appearance = NSAppearance(named: theme.hasPrefix("dark") ? .darkAqua : .aqua)
             NSApp.activate(ignoringOtherApps: true)
@@ -1322,6 +1330,105 @@ private struct WorkspaceReviewProvider: TranslationProvider {
         try await Task.sleep(for: .milliseconds(400))
         try Task.checkCancellation()
         return TranslationResult(text: request.target == "en" ? source : target, source: request.source, target: request.target)
+    }
+}
+
+private enum UpdateDialogReviewState: String {
+    case small, large, download, verify, failed
+    case failedLong = "failed-long"
+    case checking, current
+    case checkFailed = "check-failed"
+    case checkFailedLong = "check-failed-long"
+
+    init?(scene: String) {
+        guard scene.hasPrefix("main-update-state-") else { return nil }
+        self.init(rawValue: String(scene.dropFirst("main-update-state-".count))
+            .replacingOccurrences(of: "-settings", with: "")
+            .replacingOccurrences(of: "-minimum", with: ""))
+    }
+}
+
+/// Holds each production dialog state for review. All update data and callbacks
+/// remain in memory; retries never reach Sparkle or a remote service.
+@MainActor
+private final class UpdateDialogReviewBackend: AppUpdaterBackend {
+    weak var owner: AppUpdateController?
+    var canCheckForUpdates = true
+    var automaticallyChecksForUpdates = false
+    var automaticallyDownloadsUpdates = false
+    private let state: UpdateDialogReviewState
+    private var checks = 0
+    private var pending: Task<Void, Never>?
+    private let publication = Date().addingTimeInterval(-3_600)
+
+    init(state: UpdateDialogReviewState) { self.state = state }
+
+    static func controller(state: UpdateDialogReviewState, defaults: UserDefaults) -> AppUpdateController {
+        let backend = UpdateDialogReviewBackend(state: state)
+        let chinese = state == .large
+            ? (1...18).map { "- **构造改进 \($0)** 改善窗口切换、双栏编辑和更新状态展示，保留当前输入并支持键盘操作。" }.joined(separator: "\n")
+            : "- 修复双栏编辑清空后仍保留旧内容的问题。\n- 改善更新窗口的尺寸和键盘操作。"
+        let english = state == .large
+            ? (1...18).map { "- **Constructed improvement \($0)** Improve window switching, editing and update states while preserving the current draft and keyboard navigation." }.joined(separator: "\n")
+            : "- Clear stale content after clearing the other pane.\n- Improve update dialog sizing and keyboard navigation."
+        let release = AppRelease(version: "1.3.4", publishedAt: backend.publication,
+            notes: "## 中文\n\(chinese)\n## English\n\(english)",
+            url: URL(string: "https://example.invalid/constructed-release")!)
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+            isReleaseBuild: true, currentVersion: "1.3.3", defaults: defaults, recordsInstalledVersions: false,
+            backend: backend, releases: AppReleaseNotesStore(entries: [release], allowsNetworkLoading: false))
+        backend.owner = updates
+        updates.start()
+        return updates
+    }
+
+    func start() throws {}
+    func checkInformation() {
+        owner?.foundUpdate("1.3.4", publishedAt: publication)
+        owner?.finishedCheck()
+    }
+    func checkUpdates() {
+        checks += 1
+        owner?.showUpdateCheck { [weak self] in
+            self?.pending?.cancel()
+            self?.owner?.finishedCheck()
+        }
+        if checks > 1 {
+            pending = Task { [weak self] in
+                do { try await Task.sleep(for: .milliseconds(800)) } catch { return }
+                guard let self, !Task.isCancelled else { return }
+                offer()
+                owner?.finishedCheck()
+            }
+            return
+        }
+        switch state {
+        case .checking: return
+        case .current: owner?.updateNotFound()
+        case .checkFailed: owner?.updateErrored()
+        case .checkFailedLong: owner?.updateErrored(URLError(.timedOut))
+        default:
+            offer()
+            switch state {
+            case .download: holdDownload()
+            case .verify: holdDownload(); owner?.extractionStarted()
+            case .failed: holdDownload(); owner?.updateErrored()
+            case .failedLong: holdDownload(); owner?.updateErrored(URLError(.timedOut))
+            default: break
+            }
+        }
+        owner?.finishedCheck()
+    }
+    private func offer() {
+        owner?.offerUpdate(version: "1.3.4", informationOnly: false, informationURL: nil,
+                           publishedAt: publication, userInitiated: true) { [weak self] choice in
+            if choice == .install { self?.holdDownload() }
+        }
+    }
+    private func holdDownload() {
+        owner?.downloadStarted { [weak self] in self?.owner?.finishedCheck() }
+        owner?.downloadExpected(80_000_000)
+        owner?.downloadReceived(33_600_000)
     }
 }
 

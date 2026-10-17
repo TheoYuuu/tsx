@@ -150,6 +150,7 @@ private final class UpdateBackendFixture: AppUpdaterBackend {
         didSet { defaults?.set(automaticallyDownloadsUpdates, forKey: "SUAutomaticallyUpdate") }
     }
     var calls: [String] = []
+    var onCheckUpdates: (() -> Void)?
     init(defaults: UserDefaults? = nil) {
         self.defaults = defaults
         automaticallyChecksForUpdates = defaults?.bool(forKey: "SUEnableAutomaticChecks") ?? false
@@ -157,7 +158,7 @@ private final class UpdateBackendFixture: AppUpdaterBackend {
     }
     func start() throws { calls.append("start") }
     func checkInformation() { calls.append("information") }
-    func checkUpdates() { calls.append("update") }
+    func checkUpdates() { calls.append("update"); onCheckUpdates?() }
 }
 
 extension AppUpdateControllerTests {
@@ -198,6 +199,111 @@ extension AppUpdateControllerTests {
         XCTAssertEqual(updates.updatePresentation?.usesCheckDialog, true)
         updates.dismissUpdate()
         XCTAssertNil(updates.updatePresentation)
+    }
+
+    func testRepeatedRetryDoesNotCancelOrRestartTheNewCheck() {
+        for location in [AppUpdateLocation.mainWindow, .settings] {
+            let (updates, backend) = aboutUpdateFixture()
+            updates.performUpdateAction(in: location)
+            updates.showUpdateCheck(cancellation: {})
+            updates.updateErrored(URLError(.timedOut))
+
+            updates.retryUpdate()
+            updates.retryUpdate()
+            XCTAssertEqual(backend.calls.filter { $0 == "update" }.count, 2)
+            XCTAssertTrue(updates.isChecking)
+            XCTAssertNil(updates.updatePresentation)
+
+            var cancellations = 0
+            updates.showUpdateCheck { cancellations += 1; updates.finishedCheck() }
+            updates.retryUpdate()
+            XCTAssertEqual(updates.updatePresentation?.phase, .checking)
+            XCTAssertEqual(updates.updateLocation, location)
+            XCTAssertEqual(cancellations, 0, "A repeated retry cannot cancel its replacement check.")
+            XCTAssertEqual(backend.calls.filter { $0 == "update" }.count, 2)
+            XCTAssertNil(updates.updatePresentation?.failure)
+            updates.dismissUpdate()
+            XCTAssertEqual(cancellations, 1)
+        }
+    }
+
+    func testRetryDoesNotDismissAnOfferOrAnActiveDownload() {
+        let (updates, backend) = aboutUpdateFixture()
+        var choices: [SPUUserUpdateChoice] = []
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            userInitiated: true) { choices.append($0) }
+        updates.retryUpdate()
+        XCTAssertEqual(updates.updatePresentation?.phase, .available)
+        XCTAssertTrue(choices.isEmpty)
+
+        var cancellations = 0
+        updates.downloadStarted { cancellations += 1 }
+        updates.retryUpdate()
+        XCTAssertEqual(updates.updatePresentation?.phase, .downloading)
+        XCTAssertEqual(cancellations, 0)
+        XCTAssertEqual(backend.calls, ["start", "information"])
+    }
+
+    func testUpdateFailureUsesSafeCodesWithoutEchoingSDKMetadata() {
+        let privateMarker = "constructed-update-error-metadata"
+        let underlying = NSError(domain: NSURLErrorDomain, code: URLError.networkConnectionLost.rawValue,
+            userInfo: [NSLocalizedDescriptionKey: privateMarker,
+                       NSURLErrorFailingURLStringErrorKey: "https://example.invalid/\(privateMarker)"])
+        let wrapped = NSError(domain: SUSparkleErrorDomain, code: Int(SUError.downloadError.rawValue),
+            userInfo: [NSLocalizedDescriptionKey: privateMarker,
+                       NSFilePathErrorKey: "/constructed/\(privateMarker)", NSUnderlyingErrorKey: underlying])
+        let updates = AppUpdateController(bundleIdentifier: "preview", isTesting: true)
+        updates.downloadStarted {}
+        updates.updateErrored(wrapped)
+        XCTAssertEqual(updates.updatePresentation?.failure, .networkUnavailable)
+        XCTAssertEqual(updates.updatePresentation?.errorMessage, AppUpdateFailure.networkUnavailable.message)
+        XCTAssertFalse(updates.updatePresentation?.errorMessage?.contains(privateMarker) ?? true)
+        XCTAssertTrue(updates.updatePresentation?.errorMessage?.contains("VPN") == true,
+                      "A classified network error offers a useful, safely generated recovery explanation.")
+        XCTAssertEqual(updates.updatePresentation?.usesCheckDialog, false)
+
+        updates.showUpdateCheck(cancellation: {})
+        updates.updateErrored(wrapped)
+        XCTAssertEqual(updates.updatePresentation?.usesCheckDialog, true)
+        XCTAssertEqual(updates.updatePresentation?.failure, .networkUnavailable)
+
+        updates.updateErrored(NSError(domain: "ConstructedUnknownUpdateError", code: 1,
+                                     userInfo: [NSLocalizedDescriptionKey: privateMarker]))
+        XCTAssertNil(updates.updatePresentation?.failure)
+        XCTAssertNil(updates.updatePresentation?.errorMessage, "Unknown descriptions must use the UI's fixed fallback.")
+    }
+
+    func testUpdateVerificationAndStorageFailuresHaveFixedRecoveryMessages() {
+        for code in [SUError.signatureError, .validationError, .unarchivingError, .notValidUpdateError] {
+            XCTAssertEqual(AppUpdateFailure.classify(NSError(domain: SUSparkleErrorDomain, code: Int(code.rawValue))),
+                           .invalidUpdate)
+        }
+        let storage = NSError(domain: NSCocoaErrorDomain, code: CocoaError.Code.fileWriteOutOfSpace.rawValue)
+        XCTAssertEqual(AppUpdateFailure.classify(storage), .insufficientSpace)
+        let wrapped = NSError(domain: SUSparkleErrorDomain, code: Int(SUError.downloadError.rawValue),
+                              userInfo: [NSUnderlyingErrorKey: storage])
+        XCTAssertEqual(AppUpdateFailure.classify(wrapped), .insufficientSpace)
+        XCTAssertNil(AppUpdateFailure.classify(NSError(domain: "ConstructedUnknownDomain",
+                                                       code: Int(SUError.signatureError.rawValue))),
+                     "A matching numeric code from another domain must not invent a verification failure.")
+    }
+
+    func testCheckFailureMessageSurvivesSparkleDelegateAndCompletionCallbacks() {
+        let error = NSError(domain: SUSparkleErrorDomain, code: Int(SUError.appcastError.rawValue),
+                            userInfo: [NSUnderlyingErrorKey: URLError(.timedOut)])
+        for delegateFirst in [false, true] {
+            let updates = AppUpdateController(bundleIdentifier: "preview", isTesting: true)
+            updates.showUpdateCheck(cancellation: {})
+            if delegateFirst { updates.checkAborted(error) }
+            updates.updateErrored(error)
+            if !delegateFirst { updates.checkAborted(error) }
+            updates.finishedCheck()
+            updates.installationDismissed()
+            XCTAssertEqual(updates.updatePresentation?.phase, .failed)
+            XCTAssertEqual(updates.updatePresentation?.usesCheckDialog, true)
+            XCTAssertEqual(updates.updatePresentation?.failure, .networkUnavailable)
+            XCTAssertEqual(updates.updatePresentation?.errorMessage, AppUpdateFailure.networkUnavailable.message)
+        }
     }
 
     func testDownloadAndInstallFailuresKeepExistingPresentation() {
@@ -272,7 +378,7 @@ extension AppUpdateControllerTests {
         let (updates, backend) = aboutUpdateFixture()
         updates.foundNoUpdate()
         updates.performUpdateAction(in: .settings)
-        XCTAssertEqual(backend.calls, ["start", "information", "information"])
+        XCTAssertEqual(backend.calls, ["start", "information", "update"])
         var choice: SPUUserUpdateChoice?
         updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
                             userInitiated: true) { choice = $0 }
@@ -281,6 +387,44 @@ extension AppUpdateControllerTests {
         updates.installPendingUpdate()
         XCTAssertEqual(choice, .install)
         XCTAssertFalse(updates.showsMainUpdate)
+    }
+
+    func testAboutUnknownVersionUsesTheVisibleCheckPathForCurrentAndFailureResults() {
+        for fails in [false, true] {
+            let (updates, backend) = aboutUpdateFixture()
+            updates.foundNoUpdate()
+            XCTAssertNil(updates.availableVersion)
+            var checkingPresentations = 0
+            var cancellations = 0
+            updates.onPresentUpdate = { [weak updates] in
+                if let updates, updates.updatePresentation?.phase == .checking {
+                    checkingPresentations += 1
+                    XCTAssertTrue(updates.showsSettingsUpdate)
+                    XCTAssertEqual(updates.updatePresentation?.usesCheckDialog, true)
+                }
+            }
+            backend.onCheckUpdates = { [weak updates] in
+                guard let updates else { return }
+                updates.showUpdateCheck { cancellations += 1 }
+                if fails { updates.updateErrored(URLError(.timedOut)) }
+                else { updates.updateNotFound() }
+                updates.finishedCheck()
+            }
+
+            updates.performUpdateAction(in: .settings)
+
+            XCTAssertEqual(backend.calls, ["start", "information", "update"],
+                           "The About action uses the cancellable user-driver path; only launch uses the information probe.")
+            XCTAssertEqual(checkingPresentations, 1)
+            XCTAssertEqual(updates.updatePresentation?.phase, fails ? .failed : .current)
+            XCTAssertEqual(updates.updatePresentation?.usesCheckDialog, true)
+            XCTAssertTrue(updates.showsSettingsUpdate)
+            XCTAssertFalse(updates.showsMainUpdate)
+            XCTAssertFalse(updates.isChecking)
+            updates.dismissUpdate()
+            XCTAssertNil(updates.updatePresentation)
+            XCTAssertEqual(cancellations, 0, "Closing a completed check must not cancel a finished request.")
+        }
     }
 
     func testAboutDoesNotAutomaticallyInstallAChangedCandidateOrInformationOnlyUpdate() {
@@ -311,7 +455,7 @@ extension AppUpdateControllerTests {
         XCTAssertNil(choice, "A late offer cannot reuse canceled install intent.")
     }
 
-    func testAboutRetryStaysInSettingsAndRequiresANewExplicitAction() {
+    func testAboutCheckFailureRetryWaitsForConfirmationEvenWithKnownVersion() {
         let (updates, backend) = aboutUpdateFixture()
         updates.performUpdateAction(in: .settings)
         updates.showUpdateCheck(cancellation: {})
@@ -323,12 +467,39 @@ extension AppUpdateControllerTests {
         var choices: [SPUUserUpdateChoice] = []
         updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
                             userInitiated: true) { choices.append($0) }
-        XCTAssertEqual(choices, [.install])
+        XCTAssertTrue(choices.isEmpty, "Retrying a check must not restore the earlier direct-install intent.")
+        XCTAssertEqual(updates.updatePresentation?.phase, .available)
+        XCTAssertTrue(updates.showsSettingsUpdate)
+        XCTAssertFalse(updates.showsMainUpdate)
         XCTAssertEqual(backend.calls.filter { $0 == "update" }.count, 2)
+        updates.continueAutomaticUpdate()
+        XCTAssertTrue(choices.isEmpty)
+        updates.installPendingUpdate()
+        XCTAssertEqual(choices, [.install], "The offered version waits for a new Update now action.")
         updates.downloadStarted {}
         updates.updateErrored()
         updates.readyToInstall { choices.append($0) }
         XCTAssertEqual(choices, [.install], "A failed attempt cannot authorize a late installation reply.")
+    }
+
+    func testAboutInstallationFailureRetryPreservesExplicitInstallAction() {
+        let (updates, backend) = aboutUpdateFixture()
+        updates.performUpdateAction(in: .settings)
+        var choices: [SPUUserUpdateChoice] = []
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            userInitiated: true) { choices.append($0) }
+        XCTAssertEqual(choices, [.install])
+        updates.downloadStarted {}
+        updates.updateErrored(URLError(.networkConnectionLost))
+        XCTAssertEqual(updates.updatePresentation?.isCheckFailure, false)
+
+        updates.retryUpdate()
+        updates.offerUpdate(version: "2.0.0", informationOnly: false, informationURL: nil,
+                            userInitiated: true) { choices.append($0) }
+        XCTAssertEqual(choices, [.install, .install])
+        XCTAssertEqual(backend.calls.filter { $0 == "update" }.count, 2)
+        XCTAssertTrue(updates.showsSettingsUpdate)
+        XCTAssertFalse(updates.showsMainUpdate)
     }
 
     func testMainEntryRefocusesAnAboutDownloadWithoutMovingItOrRestartingIt() {
@@ -707,6 +878,39 @@ extension AppUpdateControllerTests {
         XCTAssertEqual(updates.updatePresentation?.progress, 1)
         updates.extractionProgress(.nan)
         XCTAssertNil(updates.updatePresentation?.progress)
+    }
+
+    func testDownloadPresentationPublishesBytesBeforeTotalIsKnownAndResetsBetweenPhases() {
+        let updates = AppUpdateController(bundleIdentifier: "preview", isTesting: true)
+        updates.downloadStarted {}
+        let initial = updates.updatePresentation
+        XCTAssertEqual(initial?.downloadedBytes, 0)
+        XCTAssertNil(initial?.totalDownloadBytes)
+
+        updates.downloadReceived(10)
+        XCTAssertEqual(updates.updatePresentation?.downloadedBytes, 10)
+        XCTAssertNil(updates.updatePresentation?.totalDownloadBytes)
+        XCTAssertNil(updates.updatePresentation?.progress)
+        XCTAssertNotEqual(updates.updatePresentation, initial,
+                          "Byte-only changes must update the observable presentation even without a known total.")
+
+        updates.downloadExpected(100)
+        XCTAssertEqual(updates.updatePresentation?.totalDownloadBytes, 100)
+        XCTAssertEqual(updates.updatePresentation?.downloadedBytes, 10)
+        XCTAssertEqual(updates.updatePresentation?.progress, 0.1)
+        updates.downloadReceived(UInt64.max)
+        XCTAssertEqual(updates.updatePresentation?.downloadedBytes, UInt64.max)
+        XCTAssertEqual(updates.updatePresentation?.progress, 1)
+
+        updates.extractionStarted()
+        XCTAssertEqual(updates.updatePresentation?.downloadedBytes, 0)
+        XCTAssertNil(updates.updatePresentation?.totalDownloadBytes)
+        updates.updateErrored(URLError(.timedOut))
+        XCTAssertNotNil(updates.updatePresentation?.errorMessage)
+        updates.downloadStarted {}
+        XCTAssertEqual(updates.updatePresentation?.downloadedBytes, 0)
+        XCTAssertNil(updates.updatePresentation?.totalDownloadBytes)
+        XCTAssertNil(updates.updatePresentation?.errorMessage)
     }
 
     func testFirstInstallAndDebugBuildDoNotClaimAnUpgrade() throws {

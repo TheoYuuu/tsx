@@ -1167,3 +1167,12 @@
 "View full translation" = "查看完整译文";
 
 "Full translation" = "完整译文";
+
+/* Compact update status */
+"Please try again later." = "请稍后重试。";
+"Your current version is still available." = "当前版本仍可继续使用。";
+"Checking the integrity of the update files" = "正在检查更新文件的完整性";
+"Cancel download" = "取消下载";
+"Unable to complete the update request. Check your network connection and try again. If you use a proxy or VPN, confirm that it can reach the update server." = "暂时无法完成更新请求。请检查网络连接后重试；如果使用代理或 VPN，请确认它能够连接更新服务器。";
+"TSX could not verify the downloaded update. Please try downloading the update again." = "TSX 无法验证下载的更新文件，请重新下载后重试。";
+"There is not enough free space to prepare the update. Free up some disk space and try again." = "磁盘可用空间不足，无法准备更新。请释放部分空间后重试。";

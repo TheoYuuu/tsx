@@ -115,6 +115,9 @@ final class WindowSurface<Content: View & SendableMetatype>: NSView {
         host.frame = bounds
         addSubview(host, positioned: .above, relativeTo: nil)
         modalHostingView = host
+        // Give SwiftUI's focus engine an entry point after the workspace's
+        // responder is suspended. Repeated presentation keeps the current focus.
+        window?.makeFirstResponder(host)
     }
 
     func dismissModal() {

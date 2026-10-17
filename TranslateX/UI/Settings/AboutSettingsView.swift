@@ -4,6 +4,8 @@ struct AboutSettingsView: View {
     @Environment(\.translateXTheme) private var theme
     let updates: AppUpdateController
     @AppStorage("TSXSupportPromptDismissed") private var supportDismissed = false
+    @FocusState private var updateActionFocused: Bool
+    @State private var returnsFocusToUpdateAction = false
     private var p: TranslationServicePalette { .init(theme: theme) }
 
     var body: some View {
@@ -62,6 +64,15 @@ struct AboutSettingsView: View {
             .translateXScrollContent()
         }
         .foregroundStyle(p.ink)
+        .onChange(of: updates.isPresentingSettingsModal) { wasPresented, isPresented in
+            guard wasPresented, !isPresented, returnsFocusToUpdateAction else { return }
+            returnsFocusToUpdateAction = false
+            Task { @MainActor in
+                await Task.yield()
+                guard !updates.isPresentingSettingsModal else { return }
+                updateActionFocused = true
+            }
+        }
     }
 
     private var identity: some View {
@@ -75,7 +86,7 @@ struct AboutSettingsView: View {
                     .overlay { RoundedRectangle(cornerRadius: 5).strokeBorder(p.line) }
             }
             Spacer(minLength: 16)
-            Button { updates.performUpdateAction(in: .settings) } label: {
+            Button(action: requestUpdate) {
                 HStack(spacing: 7) {
                     if updates.isChecking { ProgressView().controlSize(.mini) }
                     else { Image(systemName: updates.availableVersion == nil ? "arrow.clockwise" : "square.and.arrow.down") }
@@ -83,9 +94,18 @@ struct AboutSettingsView: View {
                 }
             }
             .buttonStyle(TranslationServiceButtonStyle(kind: .primary))
+            .updateDialogKeyboardAction(action: requestUpdate)
+            .focused($updateActionFocused)
+            .accessibilityIdentifier("settings.checkForUpdates")
             .disabled(!updates.canCheckForUpdates || updates.isChecking)
         }
         .padding(.horizontal, 18).padding(.vertical, 16)
+    }
+
+    private func requestUpdate() {
+        returnsFocusToUpdateAction = true
+        updateActionFocused = false
+        updates.performUpdateAction(in: .settings)
     }
 
     private var links: some View {
@@ -155,7 +175,8 @@ struct SettingsUpdateOverlay: View {
                                     ? (theme.isDark ? 0.20 : 0.07) : (theme.isDark ? 0.46 : 0.23)).ignoresSafeArea()
                     .contentShape(Rectangle()).onTapGesture {}
                 if updates.showsSettingsUpdate, let presentation = updates.updatePresentation {
-                    let dialogSize = UpdateDialogLayout.size(in: geometry.size)
+                    let dialogSize = UpdateDialogLayout.size(in: geometry.size,
+                                                            showsNotes: [.available, .ready].contains(presentation.phase))
                     AppUpdateDialogView(updates: updates, presentation: presentation, dialogSize: dialogSize)
                         .frame(width: dialogSize.width)
                 } else if let mode = updates.releaseNotesPresentation {
@@ -174,86 +195,132 @@ struct SettingsUpdateOverlay: View {
 }
 
 struct AppUpdateInstallationView: View {
+    @Environment(\.openURL) private var openURL
     @Environment(\.translateXTheme) private var theme
     let updates: AppUpdateController
     let presentation: AppUpdatePresentation
     var dialogSize: CGSize? = nil
-    private enum ActionFocus: Hashable { case primary, cancel, details }
-    @FocusState private var focusedAction: ActionFocus?
     private var p: ReleaseDialogPalette { .init(theme: theme) }
     private var busy: Bool { [.checking, .downloading, .extracting, .installing].contains(presentation.phase) }
     private var canDismiss: Bool { ![.extracting, .installing].contains(presentation.phase) }
     private var showsNotes: Bool { [.available, .ready].contains(presentation.phase) }
     private var release: AppRelease? { updates.releases.entries.first { $0.version == presentation.version } }
-    private var preferredFocus: ActionFocus? {
-        if busy { return canDismiss ? .cancel : nil }
-        if presentation.phase == .failed || presentation.phase == .current { return .primary }
-        return presentation.informationOnly && presentation.informationURL != nil ? .details : .primary
-    }
 
     var body: some View {
         CompactUpdateDialog(title: title, maximumHeight: dialogSize?.height,
-                            minimumHeight: showsNotes ? (dialogSize?.height ?? 0) : 0,
-                            maximumWidth: dialogSize?.width ?? 520, canDismiss: canDismiss,
+                            minimumHeight: showsNotes ? 0 : UpdateDialogLayout.compactHeight,
+                            maximumWidth: dialogSize?.width ?? (showsNotes ? UpdateDialogLayout.notesWidth : UpdateDialogLayout.taskWidth),
+                            updatePhase: presentation.phase,
+                            canDismiss: canDismiss,
                             onDismiss: { updates.dismissUpdate() }) {
-            VStack(alignment: .leading, spacing: 0) {
-                if let version = presentation.version {
-                    ReleaseVersionHeading(version: version, badge: L10n.string("New version"),
-                                          publishedAt: release?.publishedAt ?? presentation.publishedAt,
-                                          currentVersion: updates.currentVersion)
-                }
-                if showsNotes {
+            if showsNotes {
+                VStack(alignment: .leading, spacing: 0) {
+                    if let version = presentation.version {
+                        ReleaseVersionHeading(version: version, badge: L10n.string("New version"),
+                                              publishedAt: release?.publishedAt ?? presentation.publishedAt,
+                                              currentVersion: updates.currentVersion)
+                    }
                     if let notes = release?.localizedNotes(languageIdentifier: L10n.currentLanguageIdentifier), !notes.isEmpty {
                         ReleaseMarkdownContent(text: ReleaseNotesPresentation.content(notes, version: presentation.version ?? ""))
                             .padding(.top, 18)
                     } else {
                         Text(L10n.string("Release notes are not available here yet. You can view them on GitHub."))
                             .font(.system(size: 12)).foregroundStyle(p.secondary).padding(.top, 18)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
+                    if let status { statusText(status).padding(.top, 18) }
                 }
-                if let status {
-                    Text(status).font(.system(size: 12)).foregroundStyle(p.secondary).lineSpacing(6)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.top, presentation.version == nil ? 0 : 18)
-                }
-                if busy {
-                    Group {
-                        if let progress = presentation.progress { ProgressView(value: progress).tint(p.blue) }
-                        else { ProgressView().controlSize(.small).frame(maxWidth: .infinity) }
-                    }.padding(.top, 18)
-                }
+            } else {
+                taskContent
             }
         } footer: {
-            ReleaseDialogFooter { ReleaseHistoryLink() } actions: { actions }
+            if showsNotes {
+                ReleaseDialogFooter { ReleaseHistoryLink() } actions: { actions }
+            } else {
+                HStack { Spacer(minLength: 0); actions }
+            }
         }
-        .onChange(of: preferredFocus, initial: true) { _, target in focusedAction = target }
         .onAppear { updates.continueAutomaticUpdate() }
         .onChange(of: presentation) { _, _ in updates.continueAutomaticUpdate() }
         .task { await updates.loadReleaseNotes() }
+    }
+
+    private var taskContent: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let status { statusText(status) }
+            if presentation.phase == .downloading {
+                HStack {
+                    Text(downloadSize)
+                    Spacer(minLength: 8)
+                    if let progress = presentation.progress {
+                        Text(progress, format: .percent.precision(.fractionLength(0)))
+                            .monospacedDigit()
+                    }
+                }
+                .font(.system(size: 11)).foregroundStyle(p.muted).frame(minHeight: 17)
+                .padding(.top, 8)
+            } else if presentation.phase == .extracting {
+                Text(L10n.string("Checking the integrity of the update files"))
+                    .font(.system(size: 11)).foregroundStyle(p.muted)
+                    .fixedSize(horizontal: false, vertical: true).frame(minHeight: 17, alignment: .leading)
+                    .padding(.top, 8)
+            } else if presentation.phase == .failed {
+                Text(L10n.string("Your current version is still available."))
+                    .font(.system(size: 11)).foregroundStyle(p.muted)
+                    .fixedSize(horizontal: false, vertical: true).frame(minHeight: 17, alignment: .leading)
+                    .padding(.top, 8)
+            }
+            if busy {
+                ProgressView(value: presentation.phase == .downloading ? presentation.progress : nil)
+                    .progressViewStyle(.linear).tint(p.blue).frame(height: 5)
+                    .accessibilityLabel(status ?? title)
+                    .padding(.top, 8)
+            }
+        }.frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func statusText(_ text: String) -> some View {
+        Text(text).font(.system(size: 12)).foregroundStyle(p.secondary).lineSpacing(5)
+            .fixedSize(horizontal: false, vertical: true).frame(minHeight: 20, alignment: .leading)
+    }
+
+    private var downloadSize: String {
+        let received = ByteCountFormatter.string(fromByteCount: Int64(clamping: presentation.downloadedBytes), countStyle: .file)
+        if let total = presentation.totalDownloadBytes {
+            return received + " / " + ByteCountFormatter.string(fromByteCount: Int64(clamping: total), countStyle: .file)
+        }
+        return received
     }
 
     private var actions: some View {
         HStack(spacing: 8) {
             if presentation.phase == .failed {
                 Button(L10n.string("Close")) { updates.dismissUpdate() }
-                    .buttonStyle(ReleaseDialogButtonStyle()).keyboardShortcut(.cancelAction)
+                    .buttonStyle(ReleaseDialogButtonStyle(fixedWidth: 64)).keyboardShortcut(.cancelAction)
+                    .updateDialogKeyboardAction(action: updates.dismissUpdate)
+                    .accessibilityIdentifier("update.failure.close")
                 Button(L10n.string("Retry")) { updates.retryUpdate() }
-                    .buttonStyle(ReleaseDialogButtonStyle(primary: true)).focused($focusedAction, equals: .primary)
+                    .buttonStyle(ReleaseDialogButtonStyle(primary: true, fixedWidth: 64))
+                    .updateDialogKeyboardAction(action: updates.retryUpdate)
                     .keyboardShortcut(.defaultAction)
+                    .accessibilityIdentifier("update.failure.retry").serviceDesignMetric("update.failure.retry")
             } else if presentation.phase == .current {
                 Button(L10n.string("Got it")) { updates.dismissUpdate() }
-                    .buttonStyle(ReleaseDialogButtonStyle(primary: true)).focused($focusedAction, equals: .primary)
+                    .buttonStyle(ReleaseDialogButtonStyle(primary: true))
+                    .updateDialogKeyboardAction(action: updates.dismissUpdate)
                     .keyboardShortcut(.defaultAction)
             } else {
-                Button(L10n.string(busy ? "Cancel" : "Later")) { updates.dismissUpdate() }
-                    .buttonStyle(ReleaseDialogButtonStyle()).disabled(!canDismiss).keyboardShortcut(.cancelAction)
-                    .focused($focusedAction, equals: .cancel)
+                Button(L10n.string(presentation.phase == .downloading ? "Cancel download" : busy ? "Cancel" : "Later")) { updates.dismissUpdate() }
+                    .buttonStyle(ReleaseDialogButtonStyle()).keyboardShortcut(.cancelAction)
+                    .updateDialogKeyboardAction(enabled: canDismiss, action: updates.dismissUpdate)
+                    .disabled(!canDismiss)
                 if presentation.informationOnly, let url = presentation.informationURL {
                     Link(L10n.string("View details"), destination: url).buttonStyle(ReleaseDialogButtonStyle(primary: true))
-                        .focused($focusedAction, equals: .details)
+                        .updateDialogKeyboardAction { openURL(url) }
                 } else if !busy {
                     Button(L10n.string("Update now")) { updates.installPendingUpdate() }
-                        .buttonStyle(ReleaseDialogButtonStyle(primary: true)).focused($focusedAction, equals: .primary)
+                        .buttonStyle(ReleaseDialogButtonStyle(primary: true))
+                        .updateDialogKeyboardAction(action: updates.installPendingUpdate)
                         .keyboardShortcut(.defaultAction)
                 }
             }
@@ -277,7 +344,7 @@ struct AppUpdateInstallationView: View {
         case .downloading: return L10n.string("Downloading the update")
         case .extracting: return L10n.string("Verifying and preparing the update")
         case .installing: return L10n.string("Installing the update")
-        case .failed: return L10n.string("Please try again later. Your current version is unchanged.")
+        case .failed: return presentation.errorMessage ?? L10n.string("Please try again later.")
         case .current: return L10n.string("The latest available version is already installed.")
         }
     }

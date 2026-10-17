@@ -1,8 +1,14 @@
 [
   {
+    "version": "1.3.5",
+    "notes": "## 中文\n\n- **更合适的更新窗口** 小更新按内容调整高度，较多内容可滚动查看；下载、验证和检查结果使用统一的紧凑弹窗，保留原有标题与图标样式。\n- **更清晰的错误提示** 长错误信息自动换行并可滚动，重试按钮尺寸保持一致；正文与操作区间距更加协调。\n- **更自然的键盘操作** 弹窗打开时不自动聚焦操作按钮；支持 Tab 切换、回车确认、空格激活已选按钮和 Esc 关闭可取消的状态，进度刷新不抢走已选择的焦点。\n\n## English\n\n- **Better-sized update dialogs** Small updates fit their content, while longer notes scroll. Download, verification, and check results use consistent compact dialogs with the existing titles and icons.\n- **Clearer error messages** Long errors wrap and scroll, retry buttons keep a consistent size, and content has balanced spacing above the actions.\n- **More natural keyboard control** Opening a dialog no longer focuses an action automatically. Use Tab to navigate, Return to confirm, Space to activate the focused button, and Esc to close cancellable states. Progress updates preserve your chosen focus.\n",
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.5"
+  },
+  {
     "version": "1.3.4",
     "notes": "## 中文\n\n- **更清晰的截图边界** 截图采用固定柔晴蓝细边框和轻微圆角，在不同主题与材质下保持一致；图片内容、工具条样式和间距保持原样。\n- **拖动图片与工具条** 按住截图即可整体移动图片与工具条，原图和译图均可拖动；切换对照或刷新译图后保留位置，复制与保存仍输出完整图片。\n\n## English\n\n- **Clearer screenshot edges** A fixed soft-blue border and subtle rounded corners stay consistent across themes and materials, preserving image content, toolbar styling, and spacing.\n- **Move the image and toolbar together** Drag either the original or translated image to reposition the entire overlay. Comparing images or refreshing the translation preserves its position; copying and saving still use the complete image.\n",
-    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.4"
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.4",
+    "publishedAt": "2026-10-17T04:44:37Z"
   },
   {
     "version": "1.3.3",

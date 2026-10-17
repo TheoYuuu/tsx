@@ -108,7 +108,7 @@ private final class AppSparkleUserDriver: NSObject, SPUUserDriver {
         owner?.updateNotFound(); acknowledgement()
     }
     func showUpdaterError(_ error: any Error, acknowledgement: @escaping () -> Void) {
-        owner?.updateErrored(); acknowledgement()
+        owner?.updateErrored(error); acknowledgement()
     }
     func showDownloadInitiated(cancellation: @escaping () -> Void) { owner?.downloadStarted(cancellation: cancellation) }
     func showDownloadDidReceiveExpectedContentLength(_ expectedContentLength: UInt64) { owner?.downloadExpected(expectedContentLength) }

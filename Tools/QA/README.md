@@ -97,6 +97,22 @@ Scripts/build-screen-fixture.sh
 
 紧凑更新界面另提供 `main-update-modal-compact`、`release-notes-compact`、`release-notes-recent-compact` 和 `release-notes-settings-compact`，覆盖发现更新、更新完成、主窗口历史和设置内历史；主窗口场景可追加 `-minimum`。这些场景使用双语构造说明与相对发布时间，包含应被隐藏的安装说明，沿用生产视图、全局滚动样式及隔离更新器；点击立即更新只模拟进度，不下载、安装或退出真实产品。
 
+八种更新状态另有可停留的 `main-update-state-<状态>` 场景：
+
+| 状态 | 展示内容 |
+| --- | --- |
+| `small` / `large` | 少量／多条双语更新说明，分别验证自然高度和正文滚动 |
+| `download` / `verify` | 固定在 42% 下载／文件验证，便于检查任务弹窗比例 |
+| `failed` / `failed-long` | 更新失败／固定的较长网络错误说明 |
+| `checking` / `current` | 持续检查／已是最新版本 |
+| `check-failed` / `check-failed-long` | 检查失败／较长网络错误说明 |
+
+这些场景可追加 `-settings` 和 `-minimum`，并配合 `--review-interface-language en`、`--review-theme dark`。它们使用正式视图，保留初始键盘焦点，不自动推进进度；失败后重试会显示短暂检查，再进入说明页，等待主动开始模拟下载。全部使用独立临时偏好与内存更新器，不连接真实更新服务、不下载或安装。已存在的自动推进场景仍用于完整状态切换检查。
+
+使用 `--review-update-dialogs` 可批量捕获八种状态、两种长错误、最小窗口长说明和设置内长错误，共 12 个场景。批处理依次覆盖浅色、深色和玻璃材质，完成后自动退出；语言通过 `--review-interface-language` 指定。键盘交互另用单个停留场景检查，批量截图不代替交互验收。
+
+`ReleaseNotesPresentationTests` 另用真实 SwiftUI 宿主检查紧凑状态的 420 × 214 pt 基线、说明页 520 pt 固定宽度与自然高度、重试按钮 64 × 34 pt，以及超长构造文本的高度上限和共用原生滚动条。超长文本仅验证排版；产品错误信息仍由已知错误码生成，不展示任意远端错误正文。
+
 真实普通窗口的键窗口切换使用独立启动的 QA 应用核查；XCTest 宿主可能无法激活应用，不能把非激活宿主的结果当作用户窗口行为，也不能伪造 `isKeyWindow`。完成视觉目录构建后运行：
 
 ```sh

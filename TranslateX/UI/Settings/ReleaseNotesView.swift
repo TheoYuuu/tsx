@@ -65,6 +65,7 @@ struct ReleaseNotesView: View {
             } actions: {
                 Button(L10n.string("Got it"), action: onDismiss)
                     .buttonStyle(ReleaseDialogButtonStyle(primary: true))
+                    .updateDialogKeyboardAction(action: onDismiss)
                     .keyboardShortcut(.defaultAction).focused($acknowledgementFocused)
             }
         }
@@ -75,10 +76,13 @@ struct ReleaseNotesView: View {
 }
 
 struct ReleaseHistoryLink: View {
+    @Environment(\.openURL) private var openURL
+    private let url = URL(string: "https://github.com/TheoYuuu/tsx/releases")!
     var body: some View {
-        Link(destination: URL(string: "https://github.com/TheoYuuu/tsx/releases")!) {
+        Link(destination: url) {
             HStack(spacing: 4) { Text(L10n.string("Full release history")); Image(systemName: "arrow.up.right") }
         }.buttonStyle(ReleaseDialogTextStyle())
+        .updateDialogKeyboardAction { openURL(url) }
     }
 }
 
@@ -97,7 +101,8 @@ struct MainReleaseNotesOverlay: View {
                                         ? (theme.isDark ? 0.20 : 0.07) : (theme.isDark ? 0.46 : 0.23)).ignoresSafeArea()
                         .contentShape(Rectangle()).onTapGesture {}
                     if updates.showsMainUpdate, let presentation = updates.updatePresentation {
-                        let dialogSize = UpdateDialogLayout.size(in: geometry.size)
+                        let dialogSize = UpdateDialogLayout.size(in: geometry.size,
+                                                            showsNotes: [.available, .ready].contains(presentation.phase))
                         AppUpdateDialogView(updates: updates, presentation: presentation,
                                                   dialogSize: dialogSize)
                             .frame(width: dialogSize.width)

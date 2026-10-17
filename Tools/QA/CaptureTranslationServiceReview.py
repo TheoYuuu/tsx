@@ -327,7 +327,7 @@ while time.monotonic() < deadline:
             # Window-only screenshots omit the native glass backdrop. Capture the
             # exact exported review window rectangle over our constructed backdrop.
             rect = job["region"]
-            if len(rect) != 4 or rect[2:] not in ([700, 610], [620, 540], [720, 430], [600, 340],
+            if len(rect) != 4 or rect[2:] not in ([700, 610], [620, 540], [1100, 700], [900, 600], [720, 430], [600, 340],
                     [980, 598], [760, 780], [660, 640], [540, 620], [460, 480], [660, 440], [660, 390],
                     [440, 320], [340, 300]):
                 raise SystemExit("Unexpected review window rectangle")
