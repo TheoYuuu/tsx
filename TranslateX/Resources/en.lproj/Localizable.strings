@@ -1116,6 +1116,8 @@
 "Typed input" = "Typed input";
 "Restore previous translation" = "Restore previous";
 "Restore the content replaced by the last capture" = "Restore the content replaced by the last capture";
+"Return to floating window" = "Back to floating window";
+"Keep current edits and return to the screenshot floating window" = "Keep current edits and return to the screenshot floating window";
 
 // In-place screenshot translation
 "%d passages need the full-text view" = "%d passages need the full-text view";

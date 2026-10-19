@@ -7,15 +7,25 @@ import SwiftUI
 enum TranslateXScrollStyle {
     static func apply(to scrollView: NSScrollView) {
         if scrollView.hasVerticalScroller, !(scrollView.verticalScroller is TranslateXScroller) {
-            scrollView.verticalScroller = TranslateXScroller(frame: .zero)
+            scrollView.verticalScroller = makeScroller(vertical: true)
         }
         if scrollView.hasHorizontalScroller, !(scrollView.horizontalScroller is TranslateXScroller) {
-            scrollView.horizontalScroller = TranslateXScroller(frame: .zero)
+            scrollView.horizontalScroller = makeScroller(vertical: false)
         }
         if scrollView.scrollerStyle != .overlay { scrollView.scrollerStyle = .overlay }
         scrollView.autohidesScrollers = true
         scrollView.verticalScroller?.controlSize = .small
         scrollView.horizontalScroller?.controlSize = .small
+    }
+
+    private static func makeScroller(vertical: Bool) -> TranslateXScroller {
+        // NSScroller establishes its axis from the initial frame. Give each
+        // axis valid knob geometry before mounting instead of depending on a
+        // later AppKit tiling pass to correct a zero-frame horizontal scroller.
+        let thickness = NSScroller.scrollerWidth(for: .small, scrollerStyle: .overlay)
+        return TranslateXScroller(frame: NSRect(x: 0, y: 0,
+            width: vertical ? thickness : thickness * 2,
+            height: vertical ? thickness * 2 : thickness))
     }
 }
 
@@ -91,7 +101,8 @@ struct TranslateXScrollAnchor: NSViewRepresentable {
                     scrollView.observe(\.scrollerStyle) { [weak self] _, _ in self?.scheduleConfiguration() },
                     scrollView.observe(\.verticalScroller) { [weak self] _, _ in self?.scheduleConfiguration() },
                     scrollView.observe(\.horizontalScroller) { [weak self] _, _ in self?.scheduleConfiguration() },
-                    scrollView.observe(\.hasVerticalScroller) { [weak self] _, _ in self?.scheduleConfiguration() }
+                    scrollView.observe(\.hasVerticalScroller) { [weak self] _, _ in self?.scheduleConfiguration() },
+                    scrollView.observe(\.hasHorizontalScroller) { [weak self] _, _ in self?.scheduleConfiguration() }
                 ]
             }
             if overlayVerticalIndicator, !scrollView.hasVerticalScroller { scrollView.hasVerticalScroller = true }

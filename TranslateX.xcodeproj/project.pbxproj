@@ -25,11 +25,13 @@
 		1468D4F4270BC1BC55029928 /* ClaudeTranslationProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77FDEF5CA2BB2A499A88D8D5 /* ClaudeTranslationProvider.swift */; };
 		15ABFCA670781C56C38375F7 /* TranslationServiceNavigationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EB47DBE2031A54CEF5D3397 /* TranslationServiceNavigationTests.swift */; };
 		16469BAC8E6059E7C82A2C1A /* TranslationFailure.swift in Sources */ = {isa = PBXBuildFile; fileRef = 861B753407A1323591C1D57F /* TranslationFailure.swift */; };
+		19B2EA051639E8AABF0E5D2D /* ScreenshotToolbarIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 391DC2C2C95753CD02932D7B /* ScreenshotToolbarIcon.swift */; };
 		213B50DDDEEA5C91AFDBAAF4 /* LanguageSwitchingWindowTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B54E0159EE13F595FED8B14 /* LanguageSwitchingWindowTests.swift */; };
 		2261DCF79B289D6F61A5CD55 /* SelectionTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 459FD9E71077646D377DF01E /* SelectionTypes.swift */; };
 		2345E2A2B93A51ABF2BF69FC /* TranslationUsagePricing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EF5BC9A1178641A75B3B9C3 /* TranslationUsagePricing.swift */; };
 		2576661E8F742A56880E85F0 /* ClaudeTranslationProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7227DC2E5A074C442A55F678 /* ClaudeTranslationProviderTests.swift */; };
 		25CADC2E6DC05848591E7B68 /* RegionSelectionController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61A0678E3C9B4FF7BDF2CEDA /* RegionSelectionController.swift */; };
+		265D097C90A1B34EFFDBD2F6 /* ScreenshotIconNotices.txt in Resources */ = {isa = PBXBuildFile; fileRef = B3810F0A13184BEB9D7757B7 /* ScreenshotIconNotices.txt */; };
 		26D1B4F6E4EC6D520A46F679 /* SystemPermission.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CC3E72DEC62952404F99B3D /* SystemPermission.swift */; };
 		290653B10068F0DE3E565E41 /* UsageDateRangeSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EF2F23ACAE2E56738D927B9 /* UsageDateRangeSelectionTests.swift */; };
 		2F44F27377C8ABE29A9D4B50 /* TranslationHTTPPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F5ECDC7A9D1C9FE6AE04C79 /* TranslationHTTPPolicy.swift */; };
@@ -79,6 +81,7 @@
 		60AFC95E89C56155A0FDA79D /* LocalizedEditorFeedbackTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF5D6D76870F3C9F5E2814E /* LocalizedEditorFeedbackTests.swift */; };
 		619A90718799EA9B6DA0466C /* TranslationFailureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87C4CEDA674B5E09A6BE9C2C /* TranslationFailureTests.swift */; };
 		62A0A26414416AE64A1411AF /* MenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FDD29B6A540287277F9EFE3 /* MenuBarController.swift */; };
+		6463761D2FE592818A03EAB9 /* ScreenshotMoreMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B4F05E26013A1C90E2E5C61 /* ScreenshotMoreMenu.swift */; };
 		649308808A7B7D1058DC1E9E /* ScreenshotDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 054756F3E5F0544B6FD4B72A /* ScreenshotDocument.swift */; };
 		65963BC178C2D7EB2A1B7B1E /* TranslationServiceSecretInputTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3720B655BA4C177E528260C8 /* TranslationServiceSecretInputTests.swift */; };
 		6627AC6AA1DBF246100A40C8 /* LanguageCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE84921159F50A73C56F07D7 /* LanguageCatalog.swift */; };
@@ -252,6 +255,7 @@
 		3502641D7802B97231E2D96C /* TranslationServicePreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServicePreset.swift; sourceTree = "<group>"; };
 		351E9D25A1068BEB0C04D69B /* ReleaseNotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotesView.swift; sourceTree = "<group>"; };
 		3720B655BA4C177E528260C8 /* TranslationServiceSecretInputTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceSecretInputTests.swift; sourceTree = "<group>"; };
+		391DC2C2C95753CD02932D7B /* ScreenshotToolbarIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotToolbarIcon.swift; sourceTree = "<group>"; };
 		3A0FE5A9B01A31225814301B /* TranslationTextEditorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationTextEditorTests.swift; sourceTree = "<group>"; };
 		3A6EECF2EE24E3EA633BC844 /* GoogleCloudTranslationProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleCloudTranslationProviderTests.swift; sourceTree = "<group>"; };
 		3AD407C721477AAEC4F425BC /* OCRServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRServiceTests.swift; sourceTree = "<group>"; };
@@ -278,6 +282,7 @@
 		5673A12FA819CBC332A7141A /* ScreenshotImageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotImageRenderer.swift; sourceTree = "<group>"; };
 		57C21C7D50486546DD72569F /* QuickHandoffWindowTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickHandoffWindowTests.swift; sourceTree = "<group>"; };
 		58ED38C92114F1685C771E26 /* TranslationServiceEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceEditor.swift; sourceTree = "<group>"; };
+		5B4F05E26013A1C90E2E5C61 /* ScreenshotMoreMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotMoreMenu.swift; sourceTree = "<group>"; };
 		5EC07F3E3B7CA327D5CE38D3 /* TranslationServiceNavigationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceNavigationCoordinator.swift; sourceTree = "<group>"; };
 		61A0678E3C9B4FF7BDF2CEDA /* RegionSelectionController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSelectionController.swift; sourceTree = "<group>"; };
 		61D8306DC5AFF62065B1C913 /* LanguageMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageMenu.swift; sourceTree = "<group>"; };
@@ -334,6 +339,7 @@
 		B1CDFEB49589770E9644B760 /* TranslationServiceConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationServiceConfiguration.swift; sourceTree = "<group>"; };
 		B20F4E479707107D6EF12171 /* TranslationHandoffTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationHandoffTests.swift; sourceTree = "<group>"; };
 		B298C13EC0A3C6F85C8B7CA8 /* RemoteTranslationResponseParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteTranslationResponseParser.swift; sourceTree = "<group>"; };
+		B3810F0A13184BEB9D7757B7 /* ScreenshotIconNotices.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = ScreenshotIconNotices.txt; sourceTree = "<group>"; };
 		B3964106D3D477FEE7FB82BD /* GoogleCloudTranslationProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleCloudTranslationProvider.swift; sourceTree = "<group>"; };
 		B4D5867CBAC33A13486DD6BD /* TranslationAccountUsageTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationAccountUsageTests.swift; sourceTree = "<group>"; };
 		B6A18DB93F31CABF7FF04F94 /* ScreenCaptureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenCaptureTests.swift; sourceTree = "<group>"; };
@@ -583,7 +589,9 @@
 				798DA75730CA37408A913210 /* InputTranslationView.swift */,
 				D7C9F99A0B7EEA761F4CF8F5 /* QuickTranslationView.swift */,
 				5448B9F512B5390FE5631C48 /* ScreenshotControls.swift */,
+				5B4F05E26013A1C90E2E5C61 /* ScreenshotMoreMenu.swift */,
 				7D5F152572346E8FC882EABE /* ScreenshotOverlayView.swift */,
+				391DC2C2C95753CD02932D7B /* ScreenshotToolbarIcon.swift */,
 				729CB935CA7567C8200F92FA /* ScreenshotTranslationWorkspace.swift */,
 				F00BE6946AEA55A2C466CAEF /* TranslationCommandBar.swift */,
 				EC080C4D1C36842322F3F2F0 /* TranslationResultView.swift */,
@@ -730,6 +738,7 @@
 				EB29644DF8E7A64A4B362ECC /* GitHubIconNotices.txt */,
 				A991FE8123B7A8DEF86A5A76 /* ProviderLogoNotices.txt */,
 				D4C1A9D73F4F34F1B99B74FA /* PublishedReleaseNotes.json */,
+				B3810F0A13184BEB9D7757B7 /* ScreenshotIconNotices.txt */,
 				AEFF47D254FD37E3F3CD3477 /* InfoPlist.strings */,
 				1462A697DDBE6A9C1507C034 /* Localizable.strings */,
 			);
@@ -878,6 +887,7 @@
 				E990DDC489C356A4FDBEC76B /* Localizable.strings in Resources */,
 				3D446C22A809CE64ADB15759 /* ProviderLogoNotices.txt in Resources */,
 				B340B25022F27E89982FEBFC /* PublishedReleaseNotes.json in Resources */,
+				265D097C90A1B34EFFDBD2F6 /* ScreenshotIconNotices.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -967,8 +977,10 @@
 				DA45C195FDD4A8E83B33A6D3 /* ScreenshotControls.swift in Sources */,
 				649308808A7B7D1058DC1E9E /* ScreenshotDocument.swift in Sources */,
 				334F9BFE17993774D1B30392 /* ScreenshotImageRenderer.swift in Sources */,
+				6463761D2FE592818A03EAB9 /* ScreenshotMoreMenu.swift in Sources */,
 				FA7988816CFEF65A6E7AEE15 /* ScreenshotOverlayController.swift in Sources */,
 				E4B254FB7AAF633C0CE6DB80 /* ScreenshotOverlayView.swift in Sources */,
+				19B2EA051639E8AABF0E5D2D /* ScreenshotToolbarIcon.swift in Sources */,
 				FCABA81706171B9CA0502938 /* ScreenshotTranslationController.swift in Sources */,
 				95159A52B470C78D0901EC96 /* ScreenshotTranslationWorkspace.swift in Sources */,
 				D5C2FFB4FE7C92E1FA48D134 /* SelectionClipboard.swift in Sources */,
@@ -1312,7 +1324,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Config/TranslateX.entitlements;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 97K37J92QD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1323,7 +1335,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.3.5;
+				MARKETING_VERSION = 1.3.6;
 				OTHER_CODE_SIGN_FLAGS = "$(inherited) --options runtime";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TRANSLATEX_APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = TranslateX;
@@ -1342,7 +1354,7 @@
 				CODE_SIGN_ENTITLEMENTS = Config/TranslateX.entitlements;
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 12;
+				CURRENT_PROJECT_VERSION = 13;
 				DEVELOPMENT_TEAM = 97K37J92QD;
 				ENABLE_DEBUG_DYLIB = NO;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1353,7 +1365,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.3.5;
+				MARKETING_VERSION = 1.3.6;
 				OTHER_CODE_SIGN_FLAGS = "$(inherited) --options runtime";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(TRANSLATEX_APP_BUNDLE_IDENTIFIER)";
 				PRODUCT_MODULE_NAME = TranslateX;

@@ -14,12 +14,18 @@ struct LanguageMenu: NSViewRepresentable {
     var minimumWidth: CGFloat = 0
     var maximumWidth: CGFloat = .greatestFiniteMagnitude
     var grouped = false
+    var screenshotChevron = false
+    var allowsCompression = false
     @Environment(\.translateXTheme) private var theme
 
     func makeNSView(context: Context) -> LanguageMenuControl { LanguageMenuControl() }
 
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: LanguageMenuControl, context: Context) -> CGSize? {
-        nsView.intrinsicContentSize
+        var size = nsView.intrinsicContentSize
+        if allowsCompression, let width = proposal.width {
+            size.width = min(size.width, max(44, width))
+        }
+        return size
     }
 
     func updateNSView(_ control: LanguageMenuControl, context: Context) {
@@ -30,6 +36,7 @@ struct LanguageMenu: NSViewRepresentable {
         control.minimumWidth = minimumWidth
         control.maximumWidth = maximumWidth
         control.grouped = grouped
+        control.screenshotChevron = screenshotChevron
         control.hoverColor = NSColor(theme.ink.opacity(0.06))
         control.onSelect = { selection = $0 }
         control.isEnabled = enabled && context.environment.isEnabled
@@ -61,12 +68,20 @@ final class LanguageMenuControl: NSPopUpButton, NSMenuDelegate {
     var minimumWidth: CGFloat = 0
     var maximumWidth: CGFloat = .greatestFiniteMagnitude
     var grouped = false
+    var screenshotChevron = false
     var hoverColor = NSColor.labelColor.withAlphaComponent(0.06)
     private var hovered = false
     private var menuOpen = false
     private var hoverTracking: NSTrackingArea?
     var fillColor = NSColor.controlBackgroundColor
     var edgeColor = NSColor.separatorColor
+
+    // NSPopUpButton adds a leading alignment inset even without a bezel.
+    // Grouped controls draw their own hover fill inside a shared SwiftUI border,
+    // so their drawing bounds must match the space SwiftUI allocated to them.
+    override var alignmentRectInsets: NSEdgeInsets {
+        grouped ? NSEdgeInsets() : super.alignmentRectInsets
+    }
 
     /// Shared language borders surround the controls; their hover fills stay
     /// two points inside that border, including while the native menu tracks.
@@ -100,7 +115,8 @@ final class LanguageMenuControl: NSPopUpButton, NSMenuDelegate {
         if title.length > 0, title.attribute(.attachment, at: title.length - 1, effectiveRange: nil) != nil {
             title.deleteCharacters(in: NSRange(location: title.length - 1, length: 1))
         }
-        let available = max(0, bounds.width - 34)
+        let leadingPadding: CGFloat = screenshotChevron ? 12 : 10
+        let available = max(0, bounds.width - leadingPadding - 24)
         if title.length > 0 {
             let attributes = title.attributes(at: 0, effectiveRange: nil)
             var value = title.string.trimmingCharacters(in: .whitespaces)
@@ -112,10 +128,14 @@ final class LanguageMenuControl: NSPopUpButton, NSMenuDelegate {
         }
         let size = title.size()
         NSGraphicsContext.saveGraphicsState()
-        NSBezierPath(rect: NSRect(x: 10, y: 0, width: max(0, bounds.width - 34), height: bounds.height)).addClip()
-        title.draw(at: NSPoint(x: 10, y: (bounds.height - size.height) / 2))
+        NSBezierPath(rect: NSRect(x: leadingPadding, y: 0, width: available, height: bounds.height)).addClip()
+        title.draw(at: NSPoint(x: leadingPadding, y: (bounds.height - size.height) / 2))
         NSGraphicsContext.restoreGraphicsState()
-        if let image = NSImage(systemSymbolName: "chevron.down", accessibilityDescription: nil) {
+        if screenshotChevron {
+            let ink = contentTintColor ?? .labelColor
+            ScreenshotToolbarIcon.chevronDown.image(size: 11, color: ink.withAlphaComponent(ink.alphaComponent * (isEnabled ? 1 : 0.45)))
+                .draw(in: NSRect(x: bounds.width - 20, y: (bounds.height - 11) / 2, width: 11, height: 11))
+        } else if let image = NSImage(systemSymbolName: "chevron.down", accessibilityDescription: nil) {
             let ink = contentTintColor ?? .labelColor
             image.withSymbolConfiguration(.init(paletteColors: [ink.withAlphaComponent(ink.alphaComponent * (isEnabled ? 1 : 0.45))]))?
                 .draw(in: NSRect(x: bounds.width - 19, y: (bounds.height - 7) / 2, width: 9, height: 7))
@@ -144,7 +164,7 @@ final class LanguageMenuControl: NSPopUpButton, NSMenuDelegate {
     required init?(coder: NSCoder) { nil }
     override var acceptsFirstResponder: Bool { isEnabled }
     override var intrinsicContentSize: NSSize {
-        NSSize(width: min(maximumWidth, max(minimumWidth, ceil(attributedTitle.size().width) + 22)), height: grouped ? 28 : 30)
+        NSSize(width: min(maximumWidth, max(minimumWidth, ceil(attributedTitle.size().width) + (screenshotChevron ? 29 : 22))), height: grouped ? 28 : 30)
     }
 
     func refreshTitle() {

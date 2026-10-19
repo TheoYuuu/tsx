@@ -22,6 +22,7 @@ final class ScreenshotOverlayController: NSObject {
     private var presentedScreenLayout: [CaptureDisplay] = []
     private var imageDrag: ScreenshotOverlayDrag?
     private var toolbarAbove = false
+    private var currentPlacement: ScreenshotOverlayPlacement?
     var onDismiss: (() -> Void)?
     var onRecapture: (() -> Void)?
 
@@ -38,16 +39,22 @@ final class ScreenshotOverlayController: NSObject {
     var isVisible: Bool { panel?.isVisible == true }
 
     func present(source: NSRunningApplication?, selection: CGRect) {
-        sourceApplication = source
-        presentedScreenLayout = currentScreenLayout()
-        generation = UUID()
-        presentation.message = nil
-        presentation.showsFullText = false
+        windows.clearScreenshotReturn()
         let screen = NSScreen.screens.max { a, b in
             a.frame.intersection(selection).area < b.frame.intersection(selection).area
         } ?? NSScreen.main
         let placement = ScreenshotOverlayPlacement(selection: selection,
             visibleFrame: screen?.visibleFrame ?? CGRect(x: 0, y: 0, width: 900, height: 700))
+        present(source: source, placement: placement)
+    }
+
+    private func present(source: NSRunningApplication?, placement: ScreenshotOverlayPlacement) {
+        sourceApplication = source
+        currentPlacement = placement
+        presentedScreenLayout = currentScreenLayout()
+        generation = UUID()
+        presentation.message = nil
+        presentation.showsFullText = false
         imageDrag = nil
         toolbarAbove = placement.toolbarAbove
         let panel = self.panel ?? ScreenshotResultPanel(contentRect: placement.panelFrame,
@@ -104,6 +111,7 @@ final class ScreenshotOverlayController: NSObject {
         panel?.orderOut(nil)
         panel?.contentView = nil
         panel = nil
+        currentPlacement = nil
         presentation.rendered = nil
         presentation.isRendering = false
         presentation.renderFailed = false
@@ -137,10 +145,19 @@ final class ScreenshotOverlayController: NSObject {
     }
 
     func editInMain() {
-        guard model.phase != .recognizing, let handoff = model.makeHandoff() else { return }
+        guard model.phase != .recognizing, let handoff = model.makeHandoff(),
+              let documentID = handoff.screenshot?.id,
+              let placement = currentPlacement, let frame = panel?.frame else { return }
         let source = sourceApplication
         dismiss(restoreFocus: false)
-        windows.acceptScreenshot(handoff, source: source)
+        windows.acceptScreenshot(handoff, source: source) { [weak self] updated in
+            guard let self, updated.screenshot?.id == documentID else { return false }
+            self.model.acceptHandoff(updated)
+            self.model.useScreenshotSourceName()
+            self.present(source: source, placement: placement.restored(at: frame,
+                visibleFrames: NSScreen.screens.map(\.visibleFrame)))
+            return true
+        }
     }
 
     private func observeDocument() {
@@ -253,6 +270,8 @@ final class ScreenshotOverlayController: NSObject {
         removeObservers()
         NotificationCenter.default.addObserver(self, selector: #selector(menuBegan(_:)), name: NSMenu.didBeginTrackingNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(menuEnded(_:)), name: NSMenu.didEndTrackingNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(menuBegan(_:)), name: ScreenshotMoreMenuPanel.didOpen, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(menuEnded(_:)), name: ScreenshotMoreMenuPanel.didClose, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(displaysChanged), name: NSApplication.didChangeScreenParametersNotification, object: nil)
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             let consumed = MainActor.assumeIsolated {
@@ -280,11 +299,15 @@ final class ScreenshotOverlayController: NSObject {
     @objc private func menuBegan(_ note: Notification) {
         imageDrag = nil
         if let menu = note.object as? NSMenu { trackedMenus.insert(ObjectIdentifier(menu)) }
+        if let control = note.object as? ScreenshotActionMenuControl { trackedMenus.insert(ObjectIdentifier(control)) }
         panel?.isTrackingMenu = !trackedMenus.isEmpty
     }
     @objc private func menuEnded(_ note: Notification) {
-        guard let menu = note.object as? NSMenu else { return }
-        let identifier = ObjectIdentifier(menu), expected = generation
+        let identifier: ObjectIdentifier
+        if let menu = note.object as? NSMenu { identifier = ObjectIdentifier(menu) }
+        else if let control = note.object as? ScreenshotActionMenuControl { identifier = ObjectIdentifier(control) }
+        else { return }
+        let expected = generation
         // AppKit can end tracking before the Escape event finishes propagating
         // to the panel. Keep this event inside the menu's dismissal boundary.
         Task { @MainActor [weak self] in
@@ -426,6 +449,32 @@ struct ScreenshotOverlayPlacement {
     /// Transparent drawing room for the soft shadows, without moving or
     /// resizing the selected image or the existing controls.
     var panelFrame: CGRect { frame.insetBy(dx: -Self.shadowInset, dy: -Self.shadowInset) }
+
+    private init(frame: CGRect, imageFrame: CGRect, toolbarAbove: Bool) {
+        self.frame = frame
+        self.imageFrame = imageFrame
+        self.toolbarAbove = toolbarAbove
+    }
+
+    /// Retain the last dragged position and scale; keep the toolbar reachable
+    /// if a display was disconnected while the picture was in the editor.
+    func restored(at panelFrame: CGRect, visibleFrames: [CGRect]) -> Self {
+        var content = panelFrame.insetBy(dx: Self.shadowInset, dy: Self.shadowInset)
+        if let screen = visibleFrames.min(by: {
+            $0.distanceSquared(to: CGPoint(x: content.midX, y: content.midY)) <
+                $1.distanceSquared(to: CGPoint(x: content.midX, y: content.midY))
+        }) {
+            let safe = screen.insetBy(dx: 8, dy: 8)
+            content.origin.x = content.width <= safe.width
+                ? min(max(content.minX, safe.minX), safe.maxX - content.width)
+                : safe.midX - content.width / 2
+            content.origin.y = content.height <= safe.height
+                ? min(max(content.minY, safe.minY), safe.maxY - content.height)
+                : toolbarAbove ? safe.maxY - content.height : safe.minY
+        }
+        return Self(frame: content, imageFrame: imageFrame.offsetBy(dx: content.minX - frame.minX,
+                                                                  dy: content.minY - frame.minY), toolbarAbove: toolbarAbove)
+    }
 
     init(selection: CGRect, visibleFrame: CGRect) {
         let safe = visibleFrame.insetBy(dx: 8, dy: 8)

@@ -6,6 +6,7 @@ import SwiftUI
 struct ScreenshotIconButtonStyle: ButtonStyle {
     var tint: Color? = nil
     var selected = false
+    var hoverInset: CGFloat = 0
     @Environment(\.translateXTheme) private var theme
     @Environment(\.isEnabled) private var enabled
     @State private var hovered = false
@@ -13,8 +14,11 @@ struct ScreenshotIconButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundStyle(enabled ? tint ?? theme.ink : theme.disabledInk)
-            .background(theme.ink.opacity(enabled ? (configuration.isPressed ? 0.12 : hovered || selected ? 0.06 : 0) : 0),
-                        in: RoundedRectangle(cornerRadius: 6))
+            .background {
+                RoundedRectangle(cornerRadius: hoverInset > 0 ? 4 : 6)
+                    .fill(theme.ink.opacity(enabled ? (configuration.isPressed ? 0.12 : hovered || selected ? 0.06 : 0) : 0))
+                    .padding(hoverInset)
+            }
             .contentShape(RoundedRectangle(cornerRadius: 6))
             .onHover { hovered = $0 }
             .translateXControlCursor()
@@ -22,19 +26,40 @@ struct ScreenshotIconButtonStyle: ButtonStyle {
 }
 
 @MainActor
+final class ScreenshotToolbarAnchor {
+    weak var view: NSView?
+    func frame(in window: NSWindow) -> NSRect? {
+        guard let view, view.window === window else { return nil }
+        return view.convert(view.bounds, to: nil)
+    }
+}
+
+struct ScreenshotToolbarAnchorReader: NSViewRepresentable {
+    let anchor: ScreenshotToolbarAnchor
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        anchor.view = view
+        return view
+    }
+    func updateNSView(_ view: NSView, context: Context) { anchor.view = view }
+}
+
+@MainActor
 struct ScreenshotMenuItem {
     var title: String
     var symbol: String? = nil
+    var icon: ScreenshotToolbarIcon? = nil
     var enabled = true
     var action: () -> Void = {}
     static var separator: Self { Self(title: "") }
 }
 
-/// AppKit retains menu-row icons and gives icon-only menus a predictable tint,
-/// hover surface and keyboard behavior in both system appearances.
+/// Save retains native menu behavior; More uses the screenshot action surface.
 struct ScreenshotActionMenu: NSViewRepresentable {
     let title: String
     var savesImage = false
+    var usesToolbarIcons = false
+    var toolbarAnchor: ScreenshotToolbarAnchor? = nil
     let items: [ScreenshotMenuItem]
     @Environment(\.translateXTheme) private var theme
 
@@ -44,34 +69,56 @@ struct ScreenshotActionMenu: NSViewRepresentable {
     }
     func updateNSView(_ control: ScreenshotActionMenuControl, context: Context) {
         control.savesImage = savesImage
+        control.usesToolbarIcons = usesToolbarIcons
+        control.toolbarAnchor = toolbarAnchor
+        control.focusRingType = savesImage && !usesToolbarIcons ? .default : .none
         control.ink = NSColor(theme.ink)
         control.hoverFill = NSColor(theme.ink.opacity(0.06))
+        control.pressedFill = NSColor(theme.ink.opacity(0.12))
+        control.menuBackground = NSColor(theme.card).withAlphaComponent(1)
+        control.menuBorder = NSColor(theme.divider)
+        control.disabledInk = NSColor(theme.disabledInk)
         control.hoverCursor = theme.hoverCursor
         control.isEnabled = context.environment.isEnabled
         control.setAccessibilityLabel(L10n.string(title))
         control.toolTip = L10n.string(title)
         control.configure(items)
     }
+    static func dismantleNSView(_ control: ScreenshotActionMenuControl, coordinator: ()) { control.dismissMoreMenu() }
 }
 
 @MainActor
 final class ScreenshotActionMenuControl: NSPopUpButton, NSMenuDelegate {
     var savesImage = false
+    var usesToolbarIcons = false
     var ink = NSColor.labelColor
     var hoverFill = NSColor.labelColor.withAlphaComponent(0.06)
+    var pressedFill = NSColor.labelColor.withAlphaComponent(0.12)
+    var menuBackground = NSColor.windowBackgroundColor
+    var menuBorder = NSColor.separatorColor
+    var disabledInk = NSColor.disabledControlTextColor
+    weak var toolbarAnchor: ScreenshotToolbarAnchor?
+    private(set) var morePanel: ScreenshotMoreMenuPanel?
     var hoverCursor: HoverCursor = .pointingHand {
         didSet { if hoverCursor != oldValue { window?.invalidateCursorRects(for: self) } }
     }
     private var items: [ScreenshotMenuItem] = []
     private var hovered = false
     private var menuOpen = false
+    private var keyboardFocus = false
     private var tracking: NSTrackingArea?
     override var acceptsFirstResponder: Bool { isEnabled }
     override var intrinsicContentSize: NSSize { NSSize(width: 30, height: 30) }
+    // Toolbar squares have no native bezel extending beyond their layout.
+    // Keep the main-window save control's existing native alignment unchanged.
+    override var alignmentRectInsets: NSEdgeInsets {
+        usesToolbarIcons || !savesImage ? NSEdgeInsets() : super.alignmentRectInsets
+    }
 
     init() {
         super.init(frame: .zero, pullsDown: true)
         isBordered = false
+        focusRingType = .none
         preferredEdge = isFlipped ? .maxY : .minY
         (cell as? NSPopUpButtonCell)?.arrowPosition = .noArrow
         setAccessibilityRole(.menuButton)
@@ -92,9 +139,15 @@ final class ScreenshotActionMenuControl: NSPopUpButton, NSMenuDelegate {
         if isEnabled && (hovered || menuOpen) {
             hoverFill.setFill(); NSBezierPath(roundedRect: bounds, xRadius: 6, yRadius: 6).fill()
         }
-        let image = savesImage ? ScreenshotActionIcon.Symbol.save.menuImage : NSImage(systemSymbolName: "ellipsis", accessibilityDescription: nil)
-        guard let image, let context = NSGraphicsContext.current?.cgContext else { return }
-        let size = ScreenshotDocument.fittedSize(image: image.size, available: CGSize(width: 17, height: 17))
+        if keyboardFocus && !menuOpen && window?.firstResponder === self && (usesToolbarIcons || !savesImage) {
+            ink.withAlphaComponent(0.55).setStroke()
+            let focus = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), xRadius: 6, yRadius: 6)
+            focus.lineWidth = 1; focus.stroke()
+        }
+        let image = savesImage && !usesToolbarIcons ? ScreenshotActionIcon.Symbol.save.menuImage
+            : (savesImage ? ScreenshotToolbarIcon.save : .more).image(size: savesImage ? 18 : 20)
+        guard let context = NSGraphicsContext.current?.cgContext else { return }
+        let size = savesImage && !usesToolbarIcons ? CGSize(width: 17, height: 17) : image.size
         let rect = CGRect(x: (bounds.width - size.width) / 2, y: (bounds.height - size.height) / 2,
                           width: size.width, height: size.height)
         context.saveGState(); context.beginTransparencyLayer(auxiliaryInfo: nil)
@@ -104,6 +157,10 @@ final class ScreenshotActionMenuControl: NSPopUpButton, NSMenuDelegate {
     }
     func configure(_ entries: [ScreenshotMenuItem]) {
         items = entries
+        if let morePanel {
+            guard isEnabled else { dismissMoreMenu(); return }
+            morePanel.update(entries: entries, owner: self)
+        }
         guard !menuOpen else { return }
         let menu = NSMenu(); menu.autoenablesItems = false; menu.delegate = self
         let display = NSMenuItem(title: "", action: nil, keyEquivalent: ""); display.isHidden = true
@@ -112,16 +169,83 @@ final class ScreenshotActionMenuControl: NSPopUpButton, NSMenuDelegate {
             if entry.title.isEmpty { menu.addItem(.separator()); continue }
             let item = NSMenuItem(title: L10n.string(entry.title), action: #selector(choose(_:)), keyEquivalent: "")
             item.target = self; item.representedObject = index; item.isEnabled = entry.enabled
-            item.image = entry.symbol.flatMap { NSImage(systemSymbolName: $0, accessibilityDescription: nil) }
-            if savesImage { item.image = ScreenshotActionIcon.Symbol.save.menuImage }
+            item.image = entry.icon?.image() ?? entry.symbol.flatMap { NSImage(systemSymbolName: $0, accessibilityDescription: nil) }
+            if savesImage { item.image = usesToolbarIcons ? ScreenshotToolbarIcon.save.image() : ScreenshotActionIcon.Symbol.save.menuImage }
             item.image?.size = NSSize(width: 16, height: 16)
             menu.addItem(item)
         }
         self.menu = menu; needsDisplay = true
     }
     @objc private func choose(_ item: NSMenuItem) {
-        guard isEnabled, let index = item.representedObject as? Int, items.indices.contains(index), items[index].enabled else { return }
-        items[index].action()
+        guard let index = item.representedObject as? Int else { return }
+        choose(index: index)
+    }
+    func choose(index: Int) {
+        guard isEnabled, items.indices.contains(index), !items[index].title.isEmpty, items[index].enabled else { return }
+        let action = items[index].action
+        dismissMoreMenu()
+        action()
+    }
+    override func mouseDown(with event: NSEvent) {
+        keyboardFocus = false; needsDisplay = true
+        if savesImage { super.mouseDown(with: event) } else { toggleMoreMenu() }
+    }
+    override func becomeFirstResponder() -> Bool {
+        let accepted = super.becomeFirstResponder()
+        if accepted, NSApp.currentEvent?.type == .keyDown { keyboardFocus = true }
+        needsDisplay = true
+        return accepted
+    }
+    override func resignFirstResponder() -> Bool {
+        let accepted = super.resignFirstResponder()
+        if accepted { needsDisplay = true }
+        return accepted
+    }
+    override func performClick(_ sender: Any?) {
+        if savesImage { super.performClick(sender) } else { toggleMoreMenu(selectFirst: true) }
+    }
+    override func accessibilityPerformPress() -> Bool {
+        if savesImage { return super.accessibilityPerformPress() }
+        guard isEnabled else { return false }
+        toggleMoreMenu(selectFirst: true)
+        return true
+    }
+    override func accessibilityPerformShowMenu() -> Bool {
+        if savesImage { return super.accessibilityPerformShowMenu() }
+        return accessibilityPerformPress()
+    }
+    override var focusRingMaskBounds: NSRect { savesImage ? super.focusRingMaskBounds : bounds }
+    override func drawFocusRingMask() {
+        if savesImage { super.drawFocusRingMask() }
+        else { NSBezierPath(roundedRect: bounds, xRadius: 6, yRadius: 6).fill() }
+    }
+    override func keyDown(with event: NSEvent) {
+        keyboardFocus = true; needsDisplay = true
+        if !savesImage && [36, 49, 125, 126].contains(event.keyCode) { toggleMoreMenu(selectFirst: true) }
+        else { super.keyDown(with: event) }
+    }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil { dismissMoreMenu() }
+    }
+    func toggleMoreMenu(selectFirst: Bool = false) {
+        guard isEnabled, let window else { return }
+        if morePanel != nil { dismissMoreMenu(); return }
+        let panel = ScreenshotMoreMenuPanel(owner: self, entries: items)
+        morePanel = panel
+        menuOpen = true; needsDisplay = true
+        setAccessibilityExpanded(true)
+        NotificationCenter.default.post(name: ScreenshotMoreMenuPanel.didOpen, object: self)
+        panel.present(relativeTo: self, in: window, toolbarFrameInWindow: toolbarAnchor?.frame(in: window), selectFirst: selectFirst)
+    }
+    func dismissMoreMenu() {
+        guard let panel = morePanel else { return }
+        morePanel = nil
+        panel.dismiss()
+        menuOpen = false; needsDisplay = true
+        setAccessibilityExpanded(false)
+        NotificationCenter.default.post(name: ScreenshotMoreMenuPanel.didClose, object: self)
+        configure(items)
     }
     func menuWillOpen(_ menu: NSMenu) { menuOpen = true; needsDisplay = true }
     func menuDidClose(_ menu: NSMenu) { menuOpen = false; configure(items) }
@@ -138,9 +262,11 @@ struct ScreenshotServicePicker: View {
     @State private var hovered = false
 
     var body: some View {
-        NativeTranslationServicePicker(model: model, maximumWidth: 142, openSettings: openSettings)
+        NativeTranslationServicePicker(model: model, maximumWidth: 142, screenshotChevron: true, openSettings: openSettings)
             .padding(1)
-            .background(theme.ink.opacity(hovered ? 0.06 : 0), in: RoundedRectangle(cornerRadius: 7))
+            .background {
+                RoundedRectangle(cornerRadius: 6).fill(theme.ink.opacity(hovered ? 0.06 : 0)).padding(1)
+            }
             .overlay { RoundedRectangle(cornerRadius: 7).strokeBorder(theme.divider, lineWidth: theme.increaseContrast ? 1 : 0.5).allowsHitTesting(false) }
             .onHover { hovered = $0 }
             .translateXTooltip(model.serviceDisplayName)

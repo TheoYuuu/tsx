@@ -1,8 +1,14 @@
 [
   {
+    "version": "1.3.6",
+    "notes": "## 中文\n\n- **编辑后返回截图悬浮窗** 在主窗口修改截图译文后，可从右上角返回原来的截图与工具条，保留编辑内容、语言和窗口位置，无需重新识别或翻译；多次往返仍可恢复截图前的内容。\n- **更整齐的主窗口** 将「恢复上一条」与「返回悬浮窗」集中在右上角，统一按钮样式；对齐双栏语言选择框与内容边缘，为复制按钮增加边框。\n- **精细调整截图工具条** 更新图标与语言箭头，改善悬停留白和按钮间距，移除分隔竖线；更多菜单使用紧凑的图标列表，保留原有配色与圆角。\n- **统一滚动体验** 截图编辑区沿用全局覆盖式滚动条，保持现有宽度；微调完整译文浮层的关闭按钮与滚动条位置，保留正文排版。\n\n## English\n\n- **Return to the screenshot overlay after editing** Use the upper-right action to return from the main window with your edited translation, language choices, and overlay position intact. No new OCR or translation is needed, and repeated round trips preserve the content from before the screenshot.\n- **Better-aligned main window** Restore previous and Back to floating window now share matching buttons at the upper right. Language selectors align with the pane content, and copy buttons have clear borders.\n- **Refined screenshot toolbar** Updated icons and language arrows, balanced hover insets and button spacing, and removed vertical separators. More uses a compact icon list while keeping the existing colors and corner shapes.\n- **Consistent scrolling** Screenshot editing uses the shared overlay scrollbar style at its existing width. The full-translation popover has better-positioned close and scroll controls without changing its text layout.\n",
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.6"
+  },
+  {
     "version": "1.3.5",
     "notes": "## 中文\n\n- **更合适的更新窗口** 小更新按内容调整高度，较多内容可滚动查看；下载、验证和检查结果使用统一的紧凑弹窗，保留原有标题与图标样式。\n- **更清晰的错误提示** 长错误信息自动换行并可滚动，重试按钮尺寸保持一致；正文与操作区间距更加协调。\n- **更自然的键盘操作** 弹窗打开时不自动聚焦操作按钮；支持 Tab 切换、回车确认、空格激活已选按钮和 Esc 关闭可取消的状态，进度刷新不抢走已选择的焦点。\n\n## English\n\n- **Better-sized update dialogs** Small updates fit their content, while longer notes scroll. Download, verification, and check results use consistent compact dialogs with the existing titles and icons.\n- **Clearer error messages** Long errors wrap and scroll, retry buttons keep a consistent size, and content has balanced spacing above the actions.\n- **More natural keyboard control** Opening a dialog no longer focuses an action automatically. Use Tab to navigate, Return to confirm, Space to activate the focused button, and Esc to close cancellable states. Progress updates preserve your chosen focus.\n",
-    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.5"
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.5",
+    "publishedAt": "2026-10-17T18:23:57Z"
   },
   {
     "version": "1.3.4",

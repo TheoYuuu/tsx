@@ -31,6 +31,7 @@ struct TranslationServicePicker: View {
 struct NativeTranslationServicePicker: NSViewRepresentable {
     let model: TranslationModel
     let maximumWidth: CGFloat
+    var screenshotChevron = false
     let openSettings: () -> Void
     @Environment(\.translateXTheme) private var theme
 
@@ -42,6 +43,7 @@ struct NativeTranslationServicePicker: NSViewRepresentable {
     }
     func updateNSView(_ control: TranslationServiceMenuControl, context: Context) {
         control.maximumWidth = maximumWidth
+        control.screenshotChevron = screenshotChevron
         control.font = .systemFont(ofSize: 13)
         let enabled = context.environment.isEnabled && !model.isComposing
         control.contentTintColor = NSColor(enabled ? theme.ink : theme.disabledInk)
@@ -55,6 +57,7 @@ struct NativeTranslationServicePicker: NSViewRepresentable {
 @MainActor
 final class TranslationServiceMenuControl: NSPopUpButton, NSMenuDelegate {
     var maximumWidth: CGFloat = 160
+    var screenshotChevron = false
     var hoverCursor: HoverCursor = .pointingHand {
         didSet { if oldValue != hoverCursor { window?.invalidateCursorRects(for: self) } }
     }
@@ -107,8 +110,11 @@ final class TranslationServiceMenuControl: NSPopUpButton, NSMenuDelegate {
             name += "…"
         }
         let value = NSMutableAttributedString(string: name + "  ", attributes: [.font: font, .foregroundColor: contentTintColor ?? .labelColor])
-        let arrow = NSTextAttachment(); arrow.image = NSImage(systemSymbolName: "chevron.down", accessibilityDescription: nil)
-        arrow.bounds = NSRect(x: 0, y: 1, width: 8, height: 6); value.append(NSAttributedString(attachment: arrow))
+        let arrow = NSTextAttachment()
+        arrow.image = screenshotChevron ? ScreenshotToolbarIcon.chevronDown.image(size: 11, color: contentTintColor ?? .labelColor)
+            : NSImage(systemSymbolName: "chevron.down", accessibilityDescription: nil)
+        arrow.bounds = screenshotChevron ? NSRect(x: 0, y: -1.5, width: 11, height: 11) : NSRect(x: 0, y: 1, width: 8, height: 6)
+        value.append(NSAttributedString(attachment: arrow))
         menu?.items.first?.attributedTitle = value
     }
     private func choice(_ title: String, id: UUID?, selected: Bool, image: NSImage?) -> NSMenuItem {

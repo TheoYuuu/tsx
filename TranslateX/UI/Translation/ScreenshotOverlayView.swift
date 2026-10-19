@@ -32,6 +32,7 @@ struct ScreenshotOverlayView: View {
     @Environment(\.translateXTheme) private var theme
     @State private var showsOriginal = false
     @State private var controlsWidth: CGFloat = 660
+    @State private var toolbarAnchor = ScreenshotToolbarAnchor()
 
     private var requesting: Bool { model.phase == .recognizing || model.phase == .translating || model.phase == .preparingLanguages }
     private var canSubmit: Bool { model.canTranslate && !model.needsSourceLanguage && !model.needsReverseLanguage }
@@ -124,19 +125,18 @@ struct ScreenshotOverlayView: View {
                     .accessibilityIdentifier("screenshotOverlay.service")
                 HStack(spacing: 0) {
                     language(.source)
-                    icon("arrow.right", "Swap languages", id: "swapLanguages") { model.swapScreenshotLanguages() }
+                    icon(.arrowRight, "Swap languages", id: "swapLanguages", hoverInset: 2) { model.swapScreenshotLanguages() }
                         .disabled(!model.canSwapLanguages || model.phase == .recognizing)
                     language(.target)
                 }
                 .padding(1)
                 .frame(height: 30)
                 .overlay { RoundedRectangle(cornerRadius: 7).strokeBorder(theme.divider, lineWidth: theme.increaseContrast ? 1 : 0.5).allowsHitTesting(false) }
-                Rectangle().fill(theme.divider).frame(width: 1, height: 18).padding(.horizontal, 3).accessibilityHidden(true)
                 primary
                 compare
-                icon("doc.text", "View full translation", id: "fullText") { showsFullText = true }
+                icon(.fileText, "View full translation", id: "fullText") { showsFullText = true }
                     .disabled(model.screenshot?.regions.isEmpty != false)
-                icon("doc.on.doc", "Copy translation", id: "copy") { onCopy(.translatedText) }
+                icon(.copy, "Copy translation", id: "copy") { onCopy(.translatedText) }
                     .disabled(!hasTranslation)
                 saveMenu
                 moreMenu
@@ -149,6 +149,7 @@ struct ScreenshotOverlayView: View {
         }
         .scrollIndicators(.hidden)
         .frame(width: min(controlsWidth, toolbarWidth), height: 44)
+        .background(ScreenshotToolbarAnchorReader(anchor: toolbarAnchor))
         .background {
             RoundedRectangle(cornerRadius: 11).fill(theme.card)
                 .shadow(color: .black.opacity(theme.isDark ? 0.13 : 0.10), radius: 10, y: 3)
@@ -168,7 +169,7 @@ struct ScreenshotOverlayView: View {
             enabled: !model.isComposing && model.phase != .recognizing,
             displayTitle: side == .source && model.source == "auto" ? model.resolvedSource.map {
                 String(format: L10n.string("Auto · %@"), LanguageCatalog.displayName(for: $0))
-            } : nil, maximumWidth: 116, grouped: true)
+            } : nil, maximumWidth: 123, grouped: true, screenshotChevron: true)
             .fixedSize()
             .translateXTooltip(L10n.string(side == .source ? "Source language" : "Target language"))
             .accessibilityIdentifier("screenshotOverlay.\(side == .source ? "sourceLanguage" : "targetLanguage")")
@@ -181,13 +182,10 @@ struct ScreenshotOverlayView: View {
             else if needsRecapture { onRecapture() }
             else { model.submit() }
         } label: {
-            Group {
-                if requesting { Image(systemName: "stop.fill").font(.system(size: 12)) }
-                else if needsRecapture { Image(systemName: "viewfinder").font(.system(size: 16)) }
-                else { ScreenshotSymbol(symbol: .retranslate) }
-            }.frame(width: 30, height: 30)
+            ScreenshotToolbarSymbol(icon: requesting ? .stop : needsRecapture ? .capture : .retranslate)
+                .frame(width: 30, height: 30)
         }
-        .buttonStyle(ScreenshotIconButtonStyle(tint: requesting ? nil : theme.accent))
+        .buttonStyle(ScreenshotIconButtonStyle(tint: theme.accent))
         .keyboardShortcut(.return, modifiers: .command)
         .disabled(!requesting && !needsRecapture && !canSubmit)
         .accessibilityLabel(Text(L10n.string(title)))
@@ -200,13 +198,13 @@ struct ScreenshotOverlayView: View {
     }
 
     private var compare: some View {
-        icon("photo", showsOriginal ? "Show translation" : "Show original", id: "compare", selected: showsOriginal) {
+        icon(.image, showsOriginal ? "Show translation" : "Show original", id: "compare", selected: showsOriginal) {
             showsOriginal.toggle()
         }.disabled(!hasTranslation)
     }
 
     private var saveMenu: some View {
-        ScreenshotActionMenu(title: "Save", savesImage: true, items: [
+        ScreenshotActionMenu(title: "Save", savesImage: true, usesToolbarIcons: true, items: [
             ScreenshotMenuItem(title: "Save translated image", enabled: hasTranslation) { onSave(.translatedImage) },
             ScreenshotMenuItem(title: "Save original image") { onSave(.originalImage) }
         ])
@@ -215,13 +213,13 @@ struct ScreenshotOverlayView: View {
     }
 
     private var moreMenu: some View {
-        ScreenshotActionMenu(title: "More actions", items: [
-            ScreenshotMenuItem(title: "Copy translated image", symbol: "photo.on.rectangle", enabled: hasTranslation) { onCopy(.translatedImage) },
-            ScreenshotMenuItem(title: "Copy original", symbol: "list.clipboard", enabled: model.screenshot?.sourceText.isEmpty == false) { onCopy(.originalText) },
-            ScreenshotMenuItem(title: "Copy original image", symbol: "photo") { onCopy(.originalImage) },
+        ScreenshotActionMenu(title: "More actions", toolbarAnchor: toolbarAnchor, items: [
+            ScreenshotMenuItem(title: "Copy translated image", icon: .images, enabled: hasTranslation) { onCopy(.translatedImage) },
+            ScreenshotMenuItem(title: "Copy original", icon: .clipboardText, enabled: model.screenshot?.sourceText.isEmpty == false) { onCopy(.originalText) },
+            ScreenshotMenuItem(title: "Copy original image", icon: .image) { onCopy(.originalImage) },
             .separator,
-            ScreenshotMenuItem(title: "Edit in main window", symbol: "macwindow", enabled: model.phase != .recognizing, action: onEditInMain),
-            ScreenshotMenuItem(title: "Capture again", symbol: "viewfinder", action: onRecapture)
+            ScreenshotMenuItem(title: "Edit in main window", icon: .edit, enabled: model.phase != .recognizing, action: onEditInMain),
+            ScreenshotMenuItem(title: "Capture again", icon: .capture, action: onRecapture)
         ])
         .translateXTooltip(L10n.string("More actions"))
         .accessibilityIdentifier("screenshotOverlay.more")
@@ -229,8 +227,17 @@ struct ScreenshotOverlayView: View {
 
     private func icon(_ symbol: String, _ key: String, id: String, tint: Color? = nil, selected: Bool = false,
                       action: @escaping () -> Void) -> some View {
-        Button(action: action) { Image(systemName: symbol).font(.system(size: 15)).frame(width: 30, height: 28) }
+        Button(action: action) { Image(systemName: symbol).font(.system(size: 15)).frame(width: 30, height: 30) }
             .buttonStyle(ScreenshotIconButtonStyle(tint: tint, selected: selected))
+            .accessibilityLabel(Text(L10n.string(key)))
+            .translateXTooltip(L10n.string(key))
+            .accessibilityIdentifier("screenshotOverlay.\(id)")
+    }
+
+    private func icon(_ symbol: ScreenshotToolbarIcon, _ key: String, id: String, selected: Bool = false, hoverInset: CGFloat = 0,
+                      action: @escaping () -> Void) -> some View {
+        Button(action: action) { ScreenshotToolbarSymbol(icon: symbol).frame(width: 30, height: 28) }
+            .buttonStyle(ScreenshotIconButtonStyle(selected: selected, hoverInset: hoverInset))
             .accessibilityLabel(Text(L10n.string(key)))
             .translateXTooltip(L10n.string(key))
             .accessibilityIdentifier("screenshotOverlay.\(id)")
@@ -269,7 +276,7 @@ struct ScreenshotOverlayView: View {
                 Text(L10n.string("Full translation")).font(.system(size: 13, weight: .semibold))
                 Spacer()
                 icon("xmark", "Close", id: "closeFullText") { showsFullText = false }
-            }
+            }.padding(.trailing, -4)
             if overflowCount > 0 {
                 Text(L10n.string("Long passages remain unchanged in the image. Open the full text to read their translations."))
                     .font(.system(size: 11)).foregroundStyle(theme.muted).fixedSize(horizontal: false, vertical: true)
@@ -287,8 +294,9 @@ struct ScreenshotOverlayView: View {
                             Divider()
                         }
                     }
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 6)
-            }.frame(height: 300)
+                }.frame(maxWidth: .infinity, alignment: .leading).padding(.trailing, 10)
+                    .translateXScrollContent()
+            }.frame(height: 300).padding(.trailing, -4)
             HStack {
                 Text(LanguageCatalog.displayName(for: model.target)).font(.system(size: 11)).foregroundStyle(theme.muted)
                 Spacer()

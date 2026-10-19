@@ -1,5 +1,6 @@
 import AppKit
 import ImageIO
+import SwiftUI
 import XCTest
 @testable import TranslateX
 
@@ -271,6 +272,236 @@ final class ScreenshotOverlayTests: XCTestCase {
         XCTAssertNil(windows.inputModel.screenshot)
     }
 
+    func testReturningToScreenshotCarriesCurrentEditsAndLanguagesWithoutRetranslating() async throws {
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        let overlay = ScreenshotOverlayController(windows: windows, model: try await completedModel())
+        defer { overlay.dismiss(restoreFocus: false) }
+        let original = try XCTUnwrap(overlay.model.screenshot)
+        let region = try XCTUnwrap(original.regions.first)
+        overlay.present(source: nil, selection: CGRect(x: 200, y: 200, width: 350, height: 200))
+        overlay.editInMain()
+        windows.inputModel.target = "fr"
+        windows.inputModel.editScreenshotRegion(region.id, text: "An edited source passage.", side: .source)
+        windows.inputModel.editScreenshotRegion(region.id, text: "Une traduction corrigée.", side: .target)
+        let edited = try XCTUnwrap(windows.inputModel.screenshot)
+        let main = try visibleMainWindow()
+
+        windows.returnToScreenshot()
+
+        XCTAssertTrue(overlay.isVisible)
+        XCTAssertEqual(overlay.model.screenshot, edited)
+        XCTAssertTrue(overlay.model.screenshot?.image === original.image)
+        XCTAssertEqual(overlay.model.text, "An edited source passage.")
+        XCTAssertEqual(overlay.model.translatedText, "Une traduction corrigée.")
+        XCTAssertEqual(overlay.model.source, "en")
+        XCTAssertEqual(overlay.model.target, "fr")
+        XCTAssertNil(overlay.model.request, "Returning edited content must not start another translation")
+        XCTAssertNil(windows.inputModel.request)
+        XCTAssertNil(windows.screenshotReturn.documentID)
+        XCTAssertFalse(main.isVisible)
+    }
+
+    func testReturningToScreenshotPreservesDraggedFrameImageAndToolbarOrientation() async throws {
+        let screen = try XCTUnwrap(NSScreen.main).visibleFrame
+        for above in [false, true] {
+            let windows = try isolatedWindows()
+            defer { windows.shutdown() }
+            let overlay = ScreenshotOverlayController(windows: windows, model: try await completedModel())
+            defer { overlay.dismiss(restoreFocus: false) }
+            let selection = CGRect(x: screen.midX - 175, y: above ? screen.minY + 12 : screen.midY,
+                                   width: 350, height: 200)
+            overlay.present(source: nil, selection: selection)
+            let panel = try screenshotPanel()
+            panel.contentView?.layoutSubtreeIfNeeded()
+            let surface = try XCTUnwrap(dragView(in: try XCTUnwrap(panel.contentView)))
+            let pointer = CGPoint(x: panel.frame.midX, y: panel.frame.midY)
+            overlay.handleImageDrag(.began(pointer))
+            overlay.handleImageDrag(.moved(CGPoint(x: pointer.x + 30, y: pointer.y + 20)))
+            overlay.handleImageDrag(.ended)
+            let moved = panel.frame
+            let imageFrame = panel.convertToScreen(surface.convert(surface.bounds, to: nil))
+            let image = try XCTUnwrap(overlay.model.screenshot?.image)
+            XCTAssertEqual(imageFrame.minY - moved.minY,
+                           ScreenshotOverlayPlacement.shadowInset + (above ? 0 : ScreenshotOverlayPlacement.toolbarHeight),
+                           accuracy: 0.01)
+
+            overlay.editInMain()
+            windows.returnToScreenshot()
+
+            let returnedPanel = try screenshotPanel()
+            returnedPanel.contentView?.layoutSubtreeIfNeeded()
+            let returnedSurface = try XCTUnwrap(dragView(in: try XCTUnwrap(returnedPanel.contentView)))
+            let returnedImageFrame = returnedPanel.convertToScreen(returnedSurface.convert(returnedSurface.bounds, to: nil))
+            XCTAssertEqual(returnedPanel.frame, moved)
+            XCTAssertEqual(returnedImageFrame, imageFrame, "Image offset also preserves which side holds the toolbar")
+            XCTAssertTrue(overlay.image(for: .originalImage) === image)
+        }
+    }
+
+    func testTwoScreenshotRoundTripsKeepTheOriginalRecoverableDraft() async throws {
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        let draft = "The draft from before either screenshot round trip."
+        windows.inputModel.text = draft
+        let overlay = ScreenshotOverlayController(windows: windows, model: try await completedModel())
+        defer { overlay.dismiss(restoreFocus: false) }
+        let documentID = try XCTUnwrap(overlay.model.screenshot?.id)
+        let regionID = try XCTUnwrap(overlay.model.screenshot?.regions.first?.id)
+        overlay.present(source: nil, selection: CGRect(x: 200, y: 200, width: 350, height: 200))
+        for round in 1...2 {
+            overlay.editInMain()
+            XCTAssertEqual(windows.screenshotReturn.documentID, documentID)
+            XCTAssertTrue(windows.inputModel.canRestorePreviousWorkspace)
+            windows.inputModel.editScreenshotRegion(regionID, text: "第\(round)次修改后的译文", side: .target)
+            windows.returnToScreenshot()
+            XCTAssertEqual(overlay.model.translatedText, "第\(round)次修改后的译文")
+            XCTAssertNil(overlay.model.request)
+        }
+        overlay.editInMain()
+        windows.restorePreviousTranslation()
+        XCTAssertEqual(windows.inputModel.text, draft)
+        XCTAssertNil(windows.inputModel.screenshot)
+        XCTAssertFalse(windows.inputModel.canRestorePreviousWorkspace)
+        XCTAssertNil(windows.screenshotReturn.documentID)
+        windows.returnToScreenshot()
+        XCTAssertFalse(overlay.isVisible, "Restoring the original draft retires the screenshot return destination")
+    }
+
+    func testClearingRestoringOrDeliveringANewCaptureRetiresTheOldScreenshotReturn() async throws {
+        for replacement in ["clear", "restore", "main capture", "overlay capture"] {
+            let windows = try isolatedWindows()
+            defer { windows.shutdown() }
+            windows.inputModel.text = "A recoverable draft."
+            let overlay = ScreenshotOverlayController(windows: windows, model: try await completedModel())
+            defer { overlay.dismiss(restoreFocus: false) }
+            let oldID = try XCTUnwrap(overlay.model.screenshot?.id)
+            overlay.present(source: nil, selection: CGRect(x: 200, y: 200, width: 350, height: 200))
+            overlay.editInMain()
+            let replacementDocument = try document()
+            switch replacement {
+            case "clear": windows.inputModel.clear()
+            case "restore": windows.restorePreviousTranslation()
+            case "main capture":
+                windows.prepareCapturedTranslation()
+                windows.inputModel.submitCapturedDocument(replacementDocument,
+                    serviceRevision: windows.inputModel.captureServiceIntent(), startAutomatically: false)
+            default:
+                overlay.model.submitCapturedDocument(replacementDocument,
+                    serviceRevision: overlay.model.captureServiceIntent(), startAutomatically: false)
+                overlay.present(source: nil, selection: CGRect(x: 250, y: 250, width: 300, height: 180))
+            }
+            windows.returnToScreenshot()
+            if replacement == "overlay capture" {
+                XCTAssertTrue(overlay.isVisible)
+                XCTAssertEqual(overlay.model.screenshot?.id, replacementDocument.id,
+                               "A delivered new picture must not be replaced by the editor's previous picture")
+            } else {
+                XCTAssertFalse(overlay.isVisible, replacement)
+                XCTAssertNotEqual(windows.inputModel.screenshot?.id, oldID, replacement)
+            }
+            let deadline = Date().addingTimeInterval(2)
+            while windows.screenshotReturn.documentID != nil, Date() < deadline { await Task.yield() }
+            XCTAssertNil(windows.screenshotReturn.documentID, replacement)
+        }
+    }
+
+    func testClosingAndReopeningMainOrCancellingCaptureKeepsScreenshotReturn() async throws {
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        let overlay = ScreenshotOverlayController(windows: windows, model: try await completedModel())
+        defer { overlay.dismiss(restoreFocus: false) }
+        let expected = try XCTUnwrap(overlay.model.screenshot)
+        overlay.present(source: nil, selection: CGRect(x: 200, y: 200, width: 350, height: 200))
+        overlay.editInMain()
+        let main = try visibleMainWindow()
+        main.performClose(nil)
+        XCTAssertFalse(main.isVisible)
+        XCTAssertEqual(windows.screenshotReturn.documentID, expected.id)
+        windows.showMain()
+        XCTAssertTrue(main.isVisible)
+        windows.cancelExternalCapture()
+        XCTAssertEqual(windows.screenshotReturn.documentID, expected.id,
+                       "Starting or cancelling capture without a replacement image must preserve the return destination")
+        windows.returnToScreenshot()
+        XCTAssertTrue(overlay.isVisible)
+        XCTAssertEqual(overlay.model.screenshot, expected)
+        XCTAssertNil(overlay.model.request)
+    }
+
+    func testReturningCancelsTheActiveEditorRequestAndRejectsItsLateResult() async throws {
+        let windows = try isolatedWindows()
+        defer { windows.shutdown() }
+        let overlay = ScreenshotOverlayController(windows: windows, model: try await completedModel())
+        defer { overlay.dismiss(restoreFocus: false) }
+        overlay.present(source: nil, selection: CGRect(x: 200, y: 200, width: 350, height: 200))
+        overlay.editInMain()
+        // Only the controlled provider may run: this fixture must not create an Apple session.
+        try visibleMainWindow().contentView = nil
+        let regionID = try XCTUnwrap(windows.inputModel.screenshot?.regions.first?.id)
+        windows.inputModel.editScreenshotRegion(regionID, text: "A source awaiting a delayed result.", side: .source)
+        windows.inputModel.editScreenshotRegion(regionID, text: "先保留这段手动译文", side: .target)
+        windows.inputModel.submit()
+        let request = try XCTUnwrap(windows.inputModel.request)
+        let provider = OverlayDelayedProvider()
+        let work = Task { await windows.inputModel.run(request, provider: provider) }
+        defer { provider.complete(); work.cancel() }
+        let deadline = Date().addingTimeInterval(2)
+        while provider.continuation == nil, Date() < deadline { await Task.yield() }
+        XCTAssertNotNil(provider.continuation)
+        XCTAssertEqual(windows.inputModel.request?.id, request.id)
+        let currentDocument = try XCTUnwrap(windows.inputModel.screenshot)
+
+        windows.returnToScreenshot()
+
+        XCTAssertTrue(overlay.isVisible)
+        XCTAssertNil(windows.inputModel.request)
+        XCTAssertNil(overlay.model.request)
+        XCTAssertEqual(overlay.model.screenshot, currentDocument)
+        provider.complete()
+        await work.value
+        XCTAssertEqual(overlay.model.screenshot, currentDocument, "Late editor output must not overwrite the returned picture")
+        XCTAssertEqual(windows.inputModel.screenshot, currentDocument, "Cancelled work cannot overwrite the retained editor copy either")
+        XCTAssertNil(overlay.model.request)
+    }
+
+    func testRestoredPlacementAfterDisplayRemovalPreservesScaleAndKeepsToolbarReachable() {
+        let originalScreen = CGRect(x: 0, y: 0, width: 1920, height: 1080)
+        let remainingScreen = CGRect(x: -1024, y: -200, width: 1024, height: 700)
+        for above in [false, true] {
+            for size in [CGSize(width: 350, height: 200), CGSize(width: 1400, height: 800)] {
+                let selection = CGRect(origin: CGPoint(x: 200, y: above ? 12 : 200), size: size)
+                let original = ScreenshotOverlayPlacement(selection: selection, visibleFrame: originalScreen)
+                XCTAssertEqual(original.toolbarAbove, above)
+                let dragged = original.panelFrame.offsetBy(dx: 300, dy: 40)
+                let restored = original.restored(at: dragged, visibleFrames: [remainingScreen])
+                let safe = remainingScreen.insetBy(dx: 8, dy: 8)
+                XCTAssertEqual(restored.panelFrame.size, original.panelFrame.size)
+                XCTAssertEqual(restored.imageFrame.size, original.imageFrame.size)
+                XCTAssertEqual(restored.toolbarAbove, above)
+                XCTAssertEqual(restored.imageFrame.minX - restored.frame.minX,
+                               original.imageFrame.minX - original.frame.minX, accuracy: 0.001)
+                XCTAssertEqual(restored.imageFrame.minY - restored.frame.minY,
+                               original.imageFrame.minY - original.frame.minY, accuracy: 0.001)
+                if restored.frame.width <= safe.width && restored.frame.height <= safe.height {
+                    XCTAssertTrue(safe.contains(restored.frame))
+                } else {
+                    XCTAssertEqual(restored.frame.midX, safe.midX)
+                    XCTAssertEqual(above ? restored.frame.maxY : restored.frame.minY,
+                                   above ? safe.maxY : safe.minY)
+                }
+            }
+        }
+    }
+
+    private func screenshotPanel() throws -> NSWindow {
+        try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.screenshotResult" && $0.isVisible })
+    }
+
+    private func visibleMainWindow() throws -> NSWindow {
+        try XCTUnwrap(NSApp.windows.first { $0.identifier?.rawValue == "translatex.main" && $0.isVisible })
+    }
+
     func testClosingOverlayCancelsRecognitionAndReleasesItsPixelsWithoutTouchingMain() throws {
         let windows = try isolatedWindows()
         defer { windows.shutdown() }
@@ -347,6 +578,201 @@ final class ScreenshotOverlayTests: XCTestCase {
         XCTAssertEqual(copies, 1)
     }
 
+    func testGroupedLanguageHoverStaysWithinItsSwiftUILayoutWithoutChangingMainMenus() throws {
+        _ = NSApplication.shared
+        for grouped in [false, true] {
+            let view = LanguageMenu(label: "Source language", selection: .constant("en"),
+                languages: [TranslationLanguage(id: "en", name: "English")],
+                minimumWidth: 116, maximumWidth: 116, grouped: grouped, screenshotChevron: grouped)
+            let height: CGFloat = grouped ? 28 : 30
+            let host = NSHostingView(rootView: view.frame(width: 116, height: height))
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 116, height: height),
+                                  styleMask: [.borderless], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            defer { window.close() }
+            window.contentView = host
+            host.layoutSubtreeIfNeeded()
+            let control = try XCTUnwrap(nativeControl(LanguageMenuControl.self, in: host))
+            let frame = control.convert(control.bounds, to: host)
+            if grouped {
+                XCTAssertEqual(frame.minX, 0, accuracy: 0.01)
+                XCTAssertEqual(frame.width, 116, accuracy: 0.01)
+                XCTAssertEqual(frame.height, height, accuracy: 0.01)
+                control.hoverColor = .red
+                control.mouseEntered(with: try hoverEvent(window))
+                let fill = try hoverPixelBounds(of: control)
+                XCTAssertEqual(fill.minX, 2, accuracy: 0.5)
+                XCTAssertEqual(fill.minY, 2, accuracy: 0.5)
+                XCTAssertEqual(fill.maxX, frame.width - 2, accuracy: 0.5)
+                XCTAssertEqual(fill.maxY, frame.height - 2, accuracy: 0.5)
+            } else {
+                let native = NSPopUpButton(frame: .zero, pullsDown: true)
+                native.isBordered = false
+                (native.cell as? NSPopUpButtonCell)?.arrowPosition = .noArrow
+                XCTAssertEqual(control.alignmentRectInsets.left, native.alignmentRectInsets.left,
+                               "Main-window dropdown alignment must retain its existing native inset.")
+            }
+        }
+    }
+
+    func testToolbarMenuHoverRendersAsSquaresWithoutChangingMainWindowSave() throws {
+        _ = NSApplication.shared
+        for (savesImage, usesToolbarIcons) in [(false, false), (true, true), (true, false)] {
+            let view = ScreenshotActionMenu(title: "Actions", savesImage: savesImage,
+                                            usesToolbarIcons: usesToolbarIcons, items: [])
+            let host = NSHostingView(rootView: view.frame(width: 30, height: 30))
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 30, height: 30),
+                                  styleMask: [.borderless], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            defer { window.close() }
+            window.contentView = host
+            host.layoutSubtreeIfNeeded()
+            let control = try XCTUnwrap(nativeControl(ScreenshotActionMenuControl.self, in: host))
+            let frame = control.convert(control.bounds, to: host)
+            if savesImage && !usesToolbarIcons {
+                let native = NSPopUpButton(frame: .zero, pullsDown: true)
+                native.isBordered = false
+                (native.cell as? NSPopUpButtonCell)?.arrowPosition = .noArrow
+                let insets = native.alignmentRectInsets
+                XCTAssertEqual(frame.minX, -insets.left, accuracy: 0.01)
+                XCTAssertEqual(frame.width, 30 + insets.left + insets.right, accuracy: 0.01,
+                               "The main-window save control must retain its existing native layout.")
+                continue
+            }
+            XCTAssertEqual(frame.minX, 0, accuracy: 0.01)
+            XCTAssertEqual(frame.width, 30, accuracy: 0.01)
+            XCTAssertEqual(frame.height, 30, accuracy: 0.01)
+            control.hoverFill = .red
+            control.mouseEntered(with: try hoverEvent(window))
+            let fill = try hoverPixelBounds(of: control)
+            XCTAssertEqual(fill.width, fill.height, accuracy: 0.5)
+            XCTAssertEqual(fill.width, 30, accuracy: 0.5)
+            XCTAssertEqual(fill.midX, frame.width / 2, accuracy: 0.5)
+            XCTAssertEqual(fill.midY, frame.height / 2, accuracy: 0.5)
+        }
+    }
+
+    private func nativeControl<T: NSView>(_ type: T.Type, in view: NSView) -> T? {
+        if let control = view as? T { return control }
+        return view.subviews.compactMap { nativeControl(type, in: $0) }.first
+    }
+
+    private func hoverEvent(_ window: NSWindow) throws -> NSEvent {
+        try XCTUnwrap(NSEvent.enterExitEvent(with: .mouseEntered, location: .zero, modifierFlags: [], timestamp: 0,
+            windowNumber: window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil))
+    }
+
+    private func hoverPixelBounds(of view: NSView) throws -> CGRect {
+        let scale: CGFloat = 2
+        let bitmap = try XCTUnwrap(NSBitmapImageRep(bitmapDataPlanes: nil,
+            pixelsWide: Int(view.bounds.width * scale), pixelsHigh: Int(view.bounds.height * scale),
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+        let context = try XCTUnwrap(NSGraphicsContext(bitmapImageRep: bitmap))
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        context.cgContext.scaleBy(x: scale, y: scale)
+        view.draw(view.bounds)
+        NSGraphicsContext.restoreGraphicsState()
+        var painted = CGRect.null
+        for y in 0..<bitmap.pixelsHigh {
+            for x in 0..<bitmap.pixelsWide {
+                guard let color = bitmap.colorAt(x: x, y: y)?.usingColorSpace(.deviceRGB),
+                      color.redComponent > 0.9, color.greenComponent < 0.1,
+                      color.blueComponent < 0.1, color.alphaComponent > 0.5 else { continue }
+                painted = painted.union(CGRect(x: CGFloat(x) / scale, y: CGFloat(y) / scale,
+                                               width: 1 / scale, height: 1 / scale))
+            }
+        }
+        XCTAssertFalse(painted.isNull, "The real hovered control must paint its background.")
+        return painted
+    }
+
+    func testMoreMenuKeyboardSkipsDisabledItemsAndUsesLiveActions() throws {
+        _ = NSApplication.shared
+        let window = NSWindow(contentRect: NSRect(x: 120, y: 300, width: 400, height: 240),
+                              styleMask: [.titled], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        let control = ScreenshotActionMenuControl()
+        control.frame = NSRect(x: 300, y: 170, width: 30, height: 30)
+        window.contentView?.addSubview(control)
+        let toolbarView = NSView(frame: NSRect(x: 50, y: 163, width: 340, height: 44))
+        window.contentView?.addSubview(toolbarView, positioned: .below, relativeTo: control)
+        let toolbarAnchor = ScreenshotToolbarAnchor()
+        toolbarAnchor.view = toolbarView
+        control.toolbarAnchor = toolbarAnchor
+        window.makeKeyAndOrderFront(nil)
+        defer { control.dismissMoreMenu(); window.close() }
+        var copies = 0
+        func entries(enabled: Bool) -> [ScreenshotMenuItem] {
+            [ScreenshotMenuItem(title: "Copy translated image", icon: .images, enabled: false), .separator,
+             ScreenshotMenuItem(title: "Copy original", icon: .clipboardText, enabled: enabled) { copies += 1 },
+             ScreenshotMenuItem(title: "Capture again", icon: .capture)]
+        }
+        control.configure(entries(enabled: true))
+        let mouse = try XCTUnwrap(NSEvent.mouseEvent(with: .leftMouseDown,
+            location: NSPoint(x: control.frame.midX, y: control.frame.midY), modifierFlags: [], timestamp: 0,
+            windowNumber: window.windowNumber, context: nil, eventNumber: 1, clickCount: 1, pressure: 1))
+        window.makeFirstResponder(control)
+        control.mouseDown(with: mouse)
+        XCTAssertNotNil(control.morePanel, "Mouse activation still opens the menu without a focus ring")
+        XCTAssertEqual(control.focusRingType, .none)
+        control.dismissMoreMenu()
+        XCTAssertEqual(control.focusRingType, .none, "Returning from the menu must not add a blue ring")
+        control.performClick(nil)
+        let panel = try XCTUnwrap(control.morePanel)
+        XCTAssertTrue(panel.isVisible)
+        let toolbarFrame = window.convertToScreen(toolbarView.convert(toolbarView.bounds, to: nil))
+        XCTAssertEqual(panel.frame.maxX, toolbarFrame.maxX, accuracy: 0.5,
+                       "The action surface aligns with the toolbar, not the More button")
+        XCTAssertEqual(toolbarFrame.minY - panel.frame.maxY, 9, accuracy: 0.5)
+        XCTAssertEqual(panel.selectedIndex, 2)
+        func press(_ code: UInt16) throws {
+            let event = try XCTUnwrap(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+                windowNumber: panel.windowNumber, context: nil, characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: code))
+            panel.firstResponder?.keyDown(with: event)
+        }
+        try press(125)
+        XCTAssertEqual(panel.selectedIndex, 3)
+        try press(125)
+        XCTAssertEqual(panel.selectedIndex, 2)
+        control.configure(entries(enabled: false))
+        XCTAssertNil(panel.selectedIndex)
+        control.choose(index: 2)
+        XCTAssertEqual(copies, 0)
+        XCTAssertNotNil(control.morePanel)
+        control.configure(entries(enabled: true))
+        try press(125)
+        try press(36)
+        XCTAssertEqual(copies, 1)
+        XCTAssertNil(control.morePanel)
+        XCTAssertFalse(panel.isVisible)
+        XCTAssertTrue(window.isVisible)
+        control.performClick(nil)
+        let reopened = try XCTUnwrap(control.morePanel)
+        reopened.cancelOperation(nil)
+        XCTAssertNil(control.morePanel)
+        XCTAssertTrue(window.isVisible, "Escape dismisses only the menu")
+        control.performClick(nil)
+        let removed = try XCTUnwrap(control.morePanel)
+        control.removeFromSuperview()
+        XCTAssertNil(control.morePanel)
+        XCTAssertFalse(removed.isVisible, "Removing the toolbar must close its menu and event monitors")
+    }
+
+    func testMoreMenuFitsScreenEdgesAndNegativeOriginDisplays() {
+        let screen = NSRect(x: -1280, y: -300, width: 1280, height: 800)
+        let size = NSSize(width: 224, height: 195)
+        for anchor in [NSRect(x: -1275, y: 0, width: 30, height: 30),
+                       NSRect(x: -40, y: 0, width: 30, height: 30),
+                       NSRect(x: -500, y: -290, width: 30, height: 30)] {
+            let frame = ScreenshotMoreMenuPanel.placement(anchor: anchor, size: size, visibleFrame: screen)
+            XCTAssertTrue(screen.contains(frame))
+            XCTAssertEqual(frame.size, size)
+            XCTAssertFalse(frame.intersects(anchor))
+        }
+    }
+
     private func completedModel() async throws -> TranslationModel {
         let model = TranslationModel()
         model.source = "en"
@@ -376,5 +802,22 @@ private final class OverlayLayoutFixture {
 private struct OverlayTestProvider: TranslationProvider {
     func translate(_ request: TranslationRequest) async throws -> TranslationResult {
         TranslationResult(text: "一段清晰的文字。", source: request.source, target: request.target)
+    }
+}
+
+@MainActor
+private final class OverlayDelayedProvider: TranslationProvider {
+    var continuation: CheckedContinuation<TranslationResult, any Error>?
+    private var request: TranslationRequest?
+
+    func translate(_ request: TranslationRequest) async throws -> TranslationResult {
+        self.request = request
+        return try await withCheckedThrowingContinuation { continuation = $0 }
+    }
+
+    func complete() {
+        guard let continuation, let request else { return }
+        self.continuation = nil
+        continuation.resume(returning: TranslationResult(text: "不应出现的迟到译文", source: request.source, target: request.target))
     }
 }

@@ -45,11 +45,14 @@ struct TranslationWorkspace: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: compact ? 7 : 9) {
                 languageMenu(side)
+                    // NSPopUpButton's visible leading edge extends beyond its alignment rect.
+                    .padding(.leading, catalog == nil ? 0 : 5)
                 if side == .source, model.source == "auto", let detected = model.resolvedSource {
                     Text(LanguageCatalog.displayName(for: detected)).font(.system(size: 11)).foregroundStyle(theme.muted).lineLimit(1)
                 }
                 Spacer(minLength: 2)
-                CopyButton(text: model.text(on: side), label: side == .source ? "Copy original" : "Copy translation", size: compact ? 28 : 32)
+                CopyButton(text: model.text(on: side), label: side == .source ? "Copy original" : "Copy translation",
+                           size: compact ? 28 : 32, outlined: true)
                     .disabled(model.isComposing)
             }
             .frame(height: compact ? 28 : 30)
@@ -94,7 +97,7 @@ struct TranslationWorkspace: View {
                 languages: catalog.languages(for: model.serviceConfiguration, asTarget: side == model.destinationSide),
                 includeAuto: side == .source && model.inputSide == .source,
                 prominent: !compact, enabled: !model.isComposing)
-                .fixedSize()
+                .fixedSize(horizontal: true, vertical: true)
         } else {
             Text(LanguageCatalog.displayName(for: side == .source ? model.source : model.target))
                 .font(.system(size: 12, weight: .medium))

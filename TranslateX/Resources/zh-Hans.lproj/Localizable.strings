@@ -1116,6 +1116,8 @@
 "Typed input" = "手动输入";
 "Restore previous translation" = "恢复上一条";
 "Restore the content replaced by the last capture" = "恢复上次取词或截图替换前的内容";
+"Return to floating window" = "返回悬浮窗";
+"Keep current edits and return to the screenshot floating window" = "保留当前修改，回到截图悬浮窗";
 
 // In-place screenshot translation
 "%d passages need the full-text view" = "有 %d 段译文需展开查看";

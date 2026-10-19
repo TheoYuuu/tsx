@@ -125,11 +125,109 @@ final class TranslateXScrollStyleTests: XCTestCase {
         try await Task.sleep(for: .milliseconds(150))
         let scroll = try XCTUnwrap(findScrollView(host))
         let document = try XCTUnwrap(scroll.documentView)
-        XCTAssertTrue(scroll.horizontalScroller is TranslateXScroller)
+        let scroller = try XCTUnwrap(scroll.horizontalScroller as? TranslateXScroller)
+        let initialKnob = scroller.rect(for: .knob)
+        XCTAssertGreaterThan(initialKnob.width, initialKnob.height * 4,
+                             "A horizontal thumb must retain horizontal native knob geometry.")
         XCTAssertGreaterThanOrEqual(document.frame.width, 900)
         document.scroll(NSPoint(x: 400, y: 0))
         scroll.reflectScrolledClipView(scroll.contentView)
         XCTAssertGreaterThan(scroll.contentView.bounds.minX, 300)
+        XCTAssertGreaterThan(scroller.rect(for: .knob).minX, initialKnob.minX)
+        XCTAssertGreaterThan(scroller.doubleValue, 0)
+    }
+
+    func testBothNativeScrollAxesKeepKnobGeometryAcrossPaneSizesAndRemounting() async throws {
+        _ = NSApplication.shared
+        let preferred = NSScroller.preferredScrollerStyle
+        let host = NSHostingView(rootView: ScrollView([.horizontal, .vertical]) {
+            Text("Constructed screenshot canvas").frame(width: 1200, height: 1500).translateXScrollContent()
+        })
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 378, height: 470),
+                              styleMask: [.titled, .resizable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        window.contentView = host
+        window.orderFront(nil)
+
+        // Exercise the narrow/tall and wide/short canvas shapes of both layouts.
+        for size in [NSSize(width: 378, height: 470), NSSize(width: 740, height: 270)] {
+            window.setContentSize(size)
+            host.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(150))
+            let scroll = try XCTUnwrap(findScrollView(host))
+            for reset in [false, true] {
+                if reset {
+                    scroll.hasHorizontalScroller = false
+                    scroll.hasVerticalScroller = false
+                    scroll.scrollerStyle = .legacy
+                    scroll.hasHorizontalScroller = true
+                    scroll.hasVerticalScroller = true
+                    try await Task.sleep(for: .milliseconds(150))
+                }
+                let horizontal = try XCTUnwrap(scroll.horizontalScroller as? TranslateXScroller)
+                let vertical = try XCTUnwrap(scroll.verticalScroller as? TranslateXScroller)
+                let horizontalKnob = horizontal.rect(for: .knob)
+                let verticalKnob = vertical.rect(for: .knob)
+                XCTAssertGreaterThan(horizontalKnob.width, horizontalKnob.height * 4)
+                XCTAssertGreaterThan(verticalKnob.height, verticalKnob.width * 4)
+                XCTAssertTrue(horizontal.bounds.contains(horizontalKnob))
+                XCTAssertTrue(vertical.bounds.contains(verticalKnob))
+                XCTAssertEqual(scroll.scrollerStyle, .overlay)
+                XCTAssertEqual(scroll.contentSize.width, scroll.bounds.width, accuracy: 0.5)
+                XCTAssertEqual(scroll.contentSize.height, scroll.bounds.height, accuracy: 0.5)
+                XCTAssertNotNil(horizontal.target)
+                XCTAssertNotNil(horizontal.action)
+                XCTAssertNotNil(vertical.target)
+                XCTAssertNotNil(vertical.action)
+                let document = try XCTUnwrap(scroll.documentView)
+                document.scroll(NSPoint(x: 350, y: 600))
+                scroll.reflectScrolledClipView(scroll.contentView)
+                XCTAssertGreaterThan(scroll.contentView.bounds.minX, 300)
+                XCTAssertGreaterThan(scroll.contentView.bounds.minY, 500)
+                XCTAssertGreaterThan(horizontal.doubleValue, 0)
+                XCTAssertGreaterThan(vertical.doubleValue, 0)
+            }
+        }
+        XCTAssertEqual(NSScroller.preferredScrollerStyle, preferred)
+    }
+
+    func testScreenshotWorkspaceUsesSharedScrollersOnBothImageAxesAfterNativeReset() async throws {
+        _ = NSApplication.shared
+        let fixture = try isolatedWindows()
+        let context = try XCTUnwrap(CGContext(data: nil, width: 800, height: 600, bitsPerComponent: 8, bytesPerRow: 3200,
+            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        let model = TranslationModel(automaticallyTranslates: false, services: fixture.services)
+        model.submitCapturedDocument(ScreenshotDocument(image: try XCTUnwrap(context.makeImage()), regions: []), serviceRevision: 0)
+        let host = NSHostingView(rootView: ScreenshotTranslationWorkspace(model: model, catalog: nil)
+            .environment(\.translationLayout, .sideBySide))
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 720, height: 480),
+                              styleMask: [.titled, .resizable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        defer { window.close() }
+        window.contentView = host
+        window.orderFront(nil)
+        for layout in TranslationLayout.allCases {
+            host.rootView = ScreenshotTranslationWorkspace(model: model, catalog: nil)
+                .environment(\.translationLayout, layout)
+            window.setContentSize(layout == .sideBySide ? NSSize(width: 720, height: 480) : NSSize(width: 760, height: 780))
+            try await Task.sleep(for: .milliseconds(150))
+            let scrolls = findScrollViews(host)
+            let canvas = try XCTUnwrap(scrolls.first { $0.hasHorizontalScroller && $0.hasVerticalScroller })
+            let regions = try XCTUnwrap(scrolls.first { $0.hasVerticalScroller && !$0.hasHorizontalScroller })
+            XCTAssertTrue(canvas.verticalScroller is TranslateXScroller)
+            XCTAssertTrue(canvas.horizontalScroller is TranslateXScroller)
+            XCTAssertEqual(canvas.scrollerStyle, .overlay)
+            XCTAssertTrue(regions.verticalScroller is TranslateXScroller)
+            XCTAssertEqual(regions.scrollerStyle, .overlay)
+            canvas.scrollerStyle = .legacy
+            canvas.verticalScroller = NSScroller(frame: .zero)
+            canvas.horizontalScroller = NSScroller(frame: .zero)
+            try await Task.sleep(for: .milliseconds(150))
+            XCTAssertTrue(canvas.verticalScroller is TranslateXScroller)
+            XCTAssertTrue(canvas.horizontalScroller is TranslateXScroller)
+            XCTAssertEqual(canvas.scrollerStyle, .overlay)
+        }
     }
 
     func testServicePickerScrollersSurviveReopeningAndNativeStyleReset() async throws {

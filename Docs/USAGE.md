@@ -36,7 +36,7 @@
 
 截图完成后，结果显示在所选区域附近，保持完整原图，并在对应文字位置生成译文；主窗口当前内容不受影响。开启所选服务的自动互译时，松开鼠标后自动翻译；关闭时点击「翻译」。工具栏可切换源语言与目标语言、交换语言、停止或重试、对照原图和查看全文。按 Esc 收起结果并返回来源应用；菜单、全文浮层或保存对话框打开时，Esc 优先关闭它们。
 
-可复制原文、译文、原图或译图，也可分别保存原图和译图为 PNG。图片按原始像素尺寸导出，不包含工具栏。需要编辑识别文字或译文时，选择「更多 → 在主窗口打开」，再使用文字模式或原图模式。复杂表格、竖排文字和复杂背景可能影响识别或排版；过长或重叠区域保留原图并提供完整译文，原图排版不等于无痕修图或原字体重建。
+可复制原文、译文、原图或译图，也可分别保存原图和译图为 PNG。图片按原始像素尺寸导出，不包含工具栏。需要编辑识别文字或译文时，选择「更多 → 在主窗口编辑」，再使用文字模式或原图模式。修改后点击右上角「返回悬浮窗」，即可保留当前编辑和语言，回到原位置的截图与工具条；重复往返仍可恢复截图前的内容。复杂表格、竖排文字和复杂背景可能影响识别或排版；过长或重叠区域保留原图并提供完整译文，原图排版不等于无痕修图或原字体重建。
 
 ## 翻译服务与内容保留
 
@@ -98,7 +98,7 @@ Both sides of a regular translation are editable. With automatic translation ena
 
 After capture, the result appears near the selected region, preserving the full original image and placing translations over the corresponding text. The current main-window content stays intact. With automatic translation enabled for the selected service, translation starts after you release the mouse; otherwise, click Translate. The toolbar lets you select or swap languages, stop or retry, compare the original, and read the full text. Esc dismisses the result and returns to the source app; open menus, the full-text popover, and save dialogs handle Esc first.
 
-Copy the source text, translation, original image, or translated image, or save either image as PNG. Exports preserve the original pixel dimensions and exclude the toolbar. To edit recognized text or translations, choose More → Open in main window and use its text or image view. Complex tables, vertical text, and intricate backgrounds may affect recognition and layout. Regions with text that cannot fit or overlaps another region retain the original pixels and offer the full translation. Image layout does not provide seamless retouching or font reconstruction.
+Copy the source text, translation, original image, or translated image, or save either image as PNG. Exports preserve the original pixel dimensions and exclude the toolbar. To edit recognized text or translations, choose More → Edit in main window and use its text or image view. After editing, choose Back to floating window at the upper right to return to the screenshot and toolbar in their previous position, keeping your edits and language choices. Repeated round trips still preserve the content from before the screenshot. Complex tables, vertical text, and intricate backgrounds may affect recognition and layout. Regions with text that cannot fit or overlaps another region retain the original pixels and offer the full translation. Image layout does not provide seamless retouching or font reconstruction.
 
 ## Services and session content
 

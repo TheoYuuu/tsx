@@ -63,10 +63,12 @@ struct ScreenshotTranslationWorkspace: View {
         return VStack(spacing: 8) {
             HStack(spacing: 6) {
                 language(side)
+                    // Align the native popup's visible border, not its inset alignment rect.
+                    .padding(.leading, catalog == nil ? 0 : 5)
                 Spacer(minLength: 2)
                 tabs(side)
                 CopyButton(text: side == .source ? document.sourceText : document.translatedText,
-                           label: side == .source ? "Copy original" : "Copy translation", size: 26)
+                           label: side == .source ? "Copy original" : "Copy translation", size: 26, outlined: true)
                     .disabled(model.isComposing)
             }.frame(height: 30)
             if imageVisible { imageCanvas(document, side: side) }
@@ -99,7 +101,7 @@ struct ScreenshotTranslationWorkspace: View {
     }
 
     private func language(_ side: TranslationSide) -> some View {
-        Group {
+        return Group {
             if let catalog {
                 LanguageMenu(label: L10n.string(side == .source ? "Source language" : "Target language"),
                     selection: side == .source ? $model.source : $model.target,
@@ -108,7 +110,7 @@ struct ScreenshotTranslationWorkspace: View {
             } else {
                 Text(LanguageCatalog.displayName(for: side == .source ? model.source : model.target)).font(.system(size: 12))
             }
-        }.fixedSize()
+        }.fixedSize(horizontal: true, vertical: true)
     }
 
     private func footer(_ document: ScreenshotDocument, side: TranslationSide, imageVisible: Bool) -> some View {
@@ -152,8 +154,11 @@ struct ScreenshotTranslationWorkspace: View {
                     ForEach(Array(document.regions.enumerated()), id: \.element.id) { index, region in
                         regionEditor(region, index: index, document: document, side: side).id(region.id)
                     }
-                }.frame(maxWidth: .infinity, alignment: .leading).translateXScrollContent()
+                }.frame(maxWidth: .infinity, alignment: .leading)
+                    // Extend only the scroll viewport; region cards keep their existing width.
+                    .padding(.trailing, 10).translateXScrollContent()
             }
+            .padding(.trailing, -10)
             .onChange(of: selectedRegion) { if let selectedRegion { proxy.scrollTo(selectedRegion, anchor: .center) } }
             .onAppear { if let selectedRegion { proxy.scrollTo(selectedRegion, anchor: .center) } }
         }.accessibilityIdentifier("screenshot.\(side == .source ? "originalText" : "translatedText")")
@@ -217,7 +222,10 @@ struct ScreenshotTranslationWorkspace: View {
                 }
                 .frame(width: size.width, height: size.height)
                 .frame(minWidth: geometry.size.width, minHeight: geometry.size.height, alignment: .center)
-            }.accessibilityIdentifier(side == .source ? "screenshot.preview" : "screenshot.imageCanvas")
+                .padding(.trailing, 10)
+                .translateXScrollContent()
+            }.padding(.trailing, -10)
+                .accessibilityIdentifier(side == .source ? "screenshot.preview" : "screenshot.imageCanvas")
         }
     }
 

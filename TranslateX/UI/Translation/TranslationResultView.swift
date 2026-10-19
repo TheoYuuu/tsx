@@ -155,6 +155,8 @@ struct CopyButton: View {
     let text: String
     let label: String
     var size: CGFloat = 32
+    var outlined = false
+    @Environment(\.translateXTheme) private var theme
     @State private var copied = false
     var body: some View {
         Button {
@@ -174,6 +176,12 @@ struct CopyButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(TranslateXIconButtonStyle())
+        .overlay {
+            if outlined {
+                RoundedRectangle(cornerRadius: 6).strokeBorder(theme.divider, lineWidth: 1)
+                    .allowsHitTesting(false)
+            }
+        }
         .translateXTooltip(L10n.string(label))
         .accessibilityLabel(Text(L10n.string(label)))
         .disabled(text.isEmpty)

@@ -37,11 +37,20 @@ final class TranslationWindow: NSWindow {
 }
 
 @MainActor
+@Observable
+final class ScreenshotReturnState {
+    var documentID: UUID?
+}
+
+@MainActor
 final class WindowCoordinator: NSObject, NSWindowDelegate {
     let preferences: AppPreferences
     let permissions = PermissionStatus()
     let services: TranslationServiceStore
     let inputModel: TranslationModel
+    let screenshotReturn = ScreenshotReturnState()
+    private var screenshotReturnAction: ((TranslationHandoff) -> Bool)?
+    private var screenshotReturnGeneration = UUID()
     let languages = LanguageCatalog()
     var updates: AppUpdateController? {
         didSet { trackMainModal(); trackSettingsModal() }
@@ -202,6 +211,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     /// Replace content only after a capture has succeeded. Failed permission
     /// checks and cancelled region selection leave the existing workspace intact.
     func prepareCapturedTranslation() {
+        clearScreenshotReturn()
         inputEditor?.finishCompositionForReplacement()
         inputTranslationEditor?.finishCompositionForReplacement()
         if inputModel.beginExternalReplacement() { previousSourceApplication = sourceApplication }
@@ -210,6 +220,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
 
     func restorePreviousTranslation() {
         guard inputModel.canRestorePreviousWorkspace, !inputModel.isComposing else { return }
+        clearScreenshotReturn()
         onQuickOperationCancelled?()
         inputEditor?.finishCompositionForReplacement()
         inputTranslationEditor?.finishCompositionForReplacement()
@@ -221,12 +232,54 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
 
     func showTranslationWindow() { showMain() }
 
-    func acceptScreenshot(_ handoff: TranslationHandoff, source: NSRunningApplication?) {
-        prepareCapturedTranslation()
+    func acceptScreenshot(_ handoff: TranslationHandoff, source: NSRunningApplication?,
+                          returnToOverlay: ((TranslationHandoff) -> Bool)? = nil) {
+        clearScreenshotReturn()
+        // Reopening this same picture must not replace the pre-capture recovery slot.
+        if handoff.screenshot?.id == nil || inputModel.screenshot?.id != handoff.screenshot?.id {
+            prepareCapturedTranslation()
+        }
         inputModel.acceptHandoff(handoff)
         inputModel.useScreenshotSourceName()
         sourceApplication = source
+        screenshotReturnAction = returnToOverlay
+        screenshotReturn.documentID = returnToOverlay == nil ? nil : handoff.screenshot?.id
+        trackScreenshotReturn()
         presentMain(focusEditor: false)
+    }
+
+    func clearScreenshotReturn() {
+        screenshotReturnGeneration = UUID()
+        screenshotReturn.documentID = nil
+        screenshotReturnAction = nil
+    }
+
+    private func trackScreenshotReturn() {
+        guard let expected = screenshotReturn.documentID else { return }
+        let generation = screenshotReturnGeneration
+        withObservationTracking { _ = inputModel.screenshot } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, self.screenshotReturnGeneration == generation,
+                      self.screenshotReturn.documentID == expected else { return }
+                if self.inputModel.screenshot?.id != expected { self.clearScreenshotReturn() }
+                else { self.trackScreenshotReturn() }
+            }
+        }
+    }
+
+    func returnToScreenshot() {
+        guard let id = screenshotReturn.documentID, inputModel.screenshot?.id == id,
+              inputModel.phase != .recognizing, updates?.isPresentingMainModal != true,
+              mainWindow?.attachedSheet == nil, let action = screenshotReturnAction else { return }
+        inputEditor?.finishCompositionForReplacement()
+        inputTranslationEditor?.finishCompositionForReplacement()
+        guard let handoff = inputModel.makeHandoff(), action(handoff) else { return }
+        // Stop the editor's request without cancelling the newly restored overlay.
+        inputModel.cancel()
+        rememberMainSize()
+        needsInputFocus = false
+        mainWindow?.orderOut(nil)
+        clearScreenshotReturn()
     }
 
     func showMain(handoff: TranslationHandoff? = nil) {
@@ -278,7 +331,9 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
                 },
                 translationEditorReady: { [weak self] in self?.inputTranslationEditor = $0 as? TranslationInputTextView },
                 updates: updates, restorePrevious: { [weak self] in self?.restorePreviousTranslation() },
-                saveScreenshot: { [weak self] in self?.saveScreenshot($0) }
+                saveScreenshot: { [weak self] in self?.saveScreenshot($0) },
+                screenshotReturn: screenshotReturn,
+                returnToScreenshot: { [weak self] in self?.returnToScreenshot() }
             ))
         }
         syncMainModal()
@@ -698,6 +753,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     }
 
     func shutdown() {
+        clearScreenshotReturn()
         observesAccountQueries = false
         accounts.stopAutomaticRefresh()
         rememberMainSize()
