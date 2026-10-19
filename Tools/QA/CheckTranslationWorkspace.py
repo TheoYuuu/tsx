@@ -61,20 +61,22 @@ for key, current in metrics.items():
         continue
     if not scene.startswith(('main', 'quick')):
         continue
-    prefix = 'main' if scene.startswith('main') else 'quick'
-    compact, stacked = prefix == 'quick', 'stacked' in scene
+    # Input and captured-text fixtures both render the unified main workspace.
+    prefix = 'main'
+    stacked = 'stacked' in scene
     bar = current[f'{prefix}.commandBar']
-    width = bar['width'] + 24
+    inset = 12
+    width = bar['width'] + 2 * inset
     require(bar['height'] in (42, 72), f'{key} compact toolbar height')
-    equal(bar['x'], 12, f'{key} toolbar inset')
-    equal(bar['y'], 38 if compact else 44, f'{key} toolbar follows compact titlebar')
+    equal(bar['x'], inset, f'{key} toolbar inset')
+    equal(bar['y'], 44, f'{key} toolbar follows titlebar')
     source, target = (current[f'{prefix}.{name}Column'] for name in ('source', 'result'))
     for axis in ('width', 'height', 'x' if stacked else 'y'):
         equal(source[axis], target[axis], f'{key} equal panes {axis}')
     axis, extent = ('y', 'height') if stacked else ('x', 'width')
     equal(target[axis] - source[axis] - source[extent], 1, f'{key} divider')
     equal(source['y'] - bar['y'] - bar['height'], 10, f'{key} toolbar/editor gap')
-    height = target['y'] + target['height'] + 12
+    height = target['y'] + target['height'] + inset
     for side, column in (('source', source), ('target', target)):
         require(f'{prefix}.{side}Feedback' not in current, f'{key} no single-sided feedback')
         editor = current[f'{prefix}.{side}Editor']
@@ -112,6 +114,7 @@ for key, current in metrics.items():
     if prefix == 'main':
         require('main.brand' not in current, f'{key} no header brand')
         equal(current['main.titlebar']['height'], 44, f'{key} titlebar')
+        equal(current['main.trafficLights']['x'], inset, f'{key} traffic light leading inset')
         equal(center(current['main.trafficLights'], 'y'), 22, f'{key} traffic light center')
 
 print(f'Passed {checks} native layout checks across {len(metrics)} scenes (0.5 pt tolerance).')

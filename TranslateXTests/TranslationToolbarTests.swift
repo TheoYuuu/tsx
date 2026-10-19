@@ -294,6 +294,104 @@ final class TranslationToolbarTests: XCTestCase {
         XCTAssertEqual(visible, true)
     }
 
+    func testTrafficLightTrackingDisappearsWhenScrolledOutAndReturnsWhenVisible() throws {
+        _ = NSApplication.shared
+        let window = NSWindow(contentRect: NSRect(x: 240, y: 240, width: 240, height: 120),
+                              styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                              backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        let scroll = NSScrollView(frame: NSRect(x: 0, y: 0, width: 240, height: 120))
+        scroll.contentView.clipsToBounds = true
+        let document = NSView(frame: NSRect(x: 0, y: 0, width: 240, height: 600))
+        let lights = NativeTrafficLights()
+        lights.setFrameOrigin(NSPoint(x: 20, y: 70))
+        document.addSubview(lights)
+        scroll.documentView = document
+        window.contentView = scroll
+        window.makeKeyAndOrderFront(nil)
+        defer { window.close() }
+
+        for offset in [CGFloat(0), 350, 0] {
+            scroll.contentView.scroll(to: NSPoint(x: 0, y: offset))
+            scroll.reflectScrolledClipView(scroll.contentView)
+            scroll.layoutSubtreeIfNeeded()
+            let visible = offset == 0
+            let clipped = lights.bounds.intersection(lights.visibleRect)
+            XCTAssertEqual(clipped.isEmpty, !visible, "The real clip view must move the control out of view")
+            // Repeated updates also verify that removing an offscreen
+            // area's saved reference does not remove it twice.
+            lights.updateTrackingAreas()
+            lights.updateTrackingAreas()
+            XCTAssertEqual(lights.trackingAreas.count, visible ? 1 : 0)
+            if visible {
+                let tracking = try XCTUnwrap(lights.trackingAreas.first)
+                XCTAssertEqual(tracking.rect, clipped)
+                XCTAssertTrue(tracking.options.contains(.mouseEnteredAndExited))
+                XCTAssertFalse(tracking.options.contains(.cursorUpdate))
+            }
+        }
+    }
+
+    func testTrafficLightHoverRevealsAllNativeGlyphsAndClearsOnExitOrDisable() throws {
+        _ = NSApplication.shared
+        let window = NSWindow(contentRect: NSRect(x: 240, y: 240, width: 240, height: 100),
+                              styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        window.isReleasedWhenClosed = false
+        let lights = NativeTrafficLights()
+        window.contentView?.addSubview(lights)
+        defer { window.close() }
+        let buttons = lights.subviews.compactMap { $0 as? NSButton }.sorted { $0.frame.minX < $1.frame.minX }
+        XCTAssertEqual(buttons.count, 3)
+        let first = try XCTUnwrap(buttons.first)
+        let second = try XCTUnwrap(buttons.dropFirst().first)
+        let buttonPoint = lights.convert(NSPoint(x: first.frame.midX, y: first.frame.midY), to: nil)
+        let gapPoint = lights.convert(NSPoint(x: (first.frame.maxX + second.frame.minX) / 2,
+                                             y: first.frame.midY), to: nil)
+        func pixels(_ button: NSButton) throws -> Data {
+            let rep = try XCTUnwrap(button.bitmapImageRepForCachingDisplay(in: button.bounds))
+            button.cacheDisplay(in: button.bounds, to: rep)
+            return try XCTUnwrap(rep.representation(using: .png, properties: [:]))
+        }
+        let before = try buttons.map(pixels)
+        let entered = try XCTUnwrap(NSEvent.enterExitEvent(with: .mouseEntered, location: buttonPoint, modifierFlags: [], timestamp: 0,
+            windowNumber: window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil))
+        let exited = try XCTUnwrap(NSEvent.enterExitEvent(with: .mouseExited, location: .zero, modifierFlags: [], timestamp: 1,
+            windowNumber: window.windowNumber, context: nil, eventNumber: 1, trackingNumber: 0, userData: nil))
+        let enteredAtGap = try XCTUnwrap(NSEvent.enterExitEvent(with: .mouseEntered, location: gapPoint, modifierFlags: [], timestamp: 2,
+            windowNumber: window.windowNumber, context: nil, eventNumber: 2, trackingNumber: 0, userData: nil))
+        lights.mouseEntered(with: entered)
+        for (index, button) in buttons.enumerated() {
+            XCTAssertTrue(button.isHighlighted)
+            XCTAssertNotEqual(try pixels(button), before[index], "Hover must change the rendered native glyph")
+        }
+        lights.mouseExited(with: exited)
+        XCTAssertTrue(buttons.allSatisfy { !$0.isHighlighted })
+        lights.mouseEntered(with: enteredAtGap)
+        XCTAssertTrue(buttons.allSatisfy(\.isHighlighted), "The native button group also reveals its glyphs when entered through a gap")
+        window.styleMask.remove(.miniaturizable)
+        lights.refreshEnabledState()
+        XCTAssertFalse(second.isEnabled)
+        XCTAssertFalse(second.isHighlighted, "Disabled window actions must not retain a hover glyph")
+        window.styleMask.insert(.miniaturizable)
+        lights.refreshEnabledState()
+        XCTAssertTrue(buttons.allSatisfy { $0.isEnabled && $0.isHighlighted })
+        lights.mouseExited(with: exited)
+        lights.updateTrackingAreas()
+        lights.updateTrackingAreas()
+        XCTAssertEqual(lights.trackingAreas.count, 1)
+        let tracking = try XCTUnwrap(lights.trackingAreas.first)
+        XCTAssertTrue(lights.bounds.contains(tracking.rect))
+        XCTAssertEqual(tracking.rect, lights.bounds.intersection(lights.visibleRect))
+        XCTAssertTrue(tracking.options.contains(.activeInActiveApp))
+        XCTAssertTrue(tracking.options.contains(.mouseEnteredAndExited))
+        XCTAssertFalse(tracking.options.contains(.mouseMoved))
+        XCTAssertFalse(tracking.options.contains(.cursorUpdate))
+        XCTAssertFalse(tracking.options.contains(.inVisibleRect))
+        lights.mouseEntered(with: entered)
+        lights.removeFromSuperview()
+        XCTAssertTrue(buttons.allSatisfy { !$0.isHighlighted }, "Detached controls must discard hover state")
+    }
+
     private func tooltipAnchor(in view: NSView) -> TooltipAnchorView? {
         if let anchor = view as? TooltipAnchorView { return anchor }
         return view.subviews.compactMap(tooltipAnchor).first

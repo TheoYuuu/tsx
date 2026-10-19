@@ -306,11 +306,11 @@
     },
     "Tools/QA/CheckTranslationWorkspace.py": {
       "mode": "100644",
-      "sha256": "8fe7b09edce3162d87ab92899ad992be34fa749b85429d5321981ba7f4e4cde6"
+      "sha256": "7a1aa99173f84c46d1c1a64442b321dee50cfe5384438acf798054c91bfab849"
     },
     "Tools/QA/CheckWindowLayout.py": {
       "mode": "100644",
-      "sha256": "a89b537c0a367dff6e968b912f8e03bd1962c5eda66a40808e345c665f330e45"
+      "sha256": "b44895bf2d061e85067396268809e0e54b5fd913aac63185bb95defa14c23150"
     },
     "Tools/QA/CodexAuthProbe/Cargo.lock": {
       "mode": "100644",
@@ -478,7 +478,7 @@
     },
     "TranslateX.xcodeproj/project.pbxproj": {
       "mode": "100644",
-      "sha256": "a58e495a8c723bfdb1ba3ef72706daf67f332c183b834d2d23f23a79ed84eb1b"
+      "sha256": "07c048d27291af9fc43abdb5d685419756802e0ff24b5a96c313b3ef884638e2"
     },
     "TranslateX.xcodeproj/project.xcworkspace/contents.xcworkspacedata": {
       "mode": "100644",
@@ -786,7 +786,7 @@
     },
     "TranslateX/Resources/PublishedReleaseNotes.json": {
       "mode": "100644",
-      "sha256": "b565e3a7cf2c05499e8f72e28e07289612c124dac0ebcc944a2624e68c50c5f9"
+      "sha256": "6bc4029e4cffaaf11c9d2c7e591675c998a54571050e9e2a33149c6e0d9a071d"
     },
     "TranslateX/Resources/ScreenshotIconNotices.txt": {
       "mode": "100644",
@@ -1066,7 +1066,7 @@
     },
     "TranslateX/UI/Design/TranslateXTheme.swift": {
       "mode": "100644",
-      "sha256": "a56a01bcc54e8037c70ac8a07a2040eeb9d21f8138b9af2d0538889a63c545b6"
+      "sha256": "503413d9622a81ece71d26ea0e7352d749aab5879809fa114a324b98433eea90"
     },
     "TranslateX/UI/Design/TranslateXTooltip.swift": {
       "mode": "100644",
@@ -1494,7 +1494,7 @@
     },
     "TranslateXTests/TranslationToolbarTests.swift": {
       "mode": "100644",
-      "sha256": "6ae656e5ca5bb5b3552e288065e489b972d876555fce12cda80ae826721e177a"
+      "sha256": "46221677d5ad9b828c333397a6c15826153249b89ac26454326b65861a1f9897"
     },
     "TranslateXTests/TranslationUsageDashboardTests.swift": {
       "mode": "100644",
@@ -1530,7 +1530,7 @@
     },
     "project.yml": {
       "mode": "100644",
-      "sha256": "a7c064efae8d6b159374e4c15816ebd3759bdc428c81c05d78a843073f3dc9e6"
+      "sha256": "39ba82a281d57cc5927042ded6845467797689d1ea1eca3d0056508b4881c91c"
     }
   },
   "version": 1

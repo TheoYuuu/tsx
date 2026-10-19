@@ -16,14 +16,15 @@ def equal(actual, expected, description):
 
 scenes = {
     "main": (980, 598), "main-stacked": (760, 780), "main-stacked-minimum": (660, 640),
-    "quick": (720, 430), "quick-stacked": (540, 620),
-    "quick-stacked-long": (540, 620), "quick-stacked-minimum": (460, 480),
+    # Captured text now uses the same main workspace; retain fixture scene names.
+    "quick": (980, 598), "quick-stacked": (760, 780),
+    "quick-stacked-long": (760, 780), "quick-stacked-minimum": (660, 640),
 }
 for theme in ("light", "dark", "glass"):
     for scene, (width, height) in scenes.items():
         key = f"{scene}-{theme}"
         current = metrics[key]
-        prefix = "main" if scene.startswith("main") else "quick"
+        prefix = "main"
         source, result = current[f"{prefix}.sourceColumn"], current[f"{prefix}.resultColumn"]
         for axis in ("width", "height", "x" if "stacked" in scene else "y"):
             equal(source[axis], result[axis], f"{key} equal panes {axis}")
@@ -40,5 +41,11 @@ for theme in ("light", "dark", "glass"):
                 equal(frame[axis], metrics[f"{scene}-light"][name][axis], f"{key} stable {name} {axis}")
         if prefix == "main":
             assert "main.brand" not in current, f"{key} unexpected brand"
-            equal(current["main.titlebar"]["height"], 44, f"{key} compact titlebar")
+            equal(current["main.titlebar"]["height"], 44, f"{key} compact titlebar height")
+            lights = current["main.trafficLights"]
+            equal(lights["x"], 12, f"{key} traffic light leading inset")
+            equal(lights["y"] + lights["height"] / 2, 22, f"{key} traffic light center")
+            equal(source["x"], 12, f"{key} workspace leading inset")
+            equal(width - result["x"] - result["width"], 12, f"{key} workspace trailing inset")
+            equal(height - result["y"] - result["height"], 12, f"{key} workspace bottom inset")
 print(f"Passed {checks} native window geometry comparisons (0.5 pt tolerance).")

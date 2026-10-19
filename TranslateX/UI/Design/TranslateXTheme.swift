@@ -148,6 +148,8 @@ struct WindowTrafficLights: NSViewRepresentable {
 @MainActor
 final class NativeTrafficLights: NSView {
     private var buttons: [NSButton] = []
+    private var hoverArea: NSTrackingArea?
+    private var hovered = false
     override var intrinsicContentSize: NSSize { NSSize(width: 58, height: 14) }
     override var mouseDownCanMoveWindow: Bool { false }
 
@@ -165,12 +167,42 @@ final class NativeTrafficLights: NSView {
     }
 
     required init?(coder: NSCoder) { nil }
-    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); refreshEnabledState() }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        hovered = false
+        refreshHover()
+        refreshEnabledState()
+    }
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let hoverArea { removeTrackingArea(hoverArea) }
+        hoverArea = nil
+        let rect = bounds.intersection(visibleRect)
+        guard !rect.isEmpty else { return }
+        let area = NSTrackingArea(rect: rect,
+                                  options: [.mouseEnteredAndExited, .activeInActiveApp], owner: self)
+        addTrackingArea(area)
+        hoverArea = area
+    }
+    override func mouseEntered(with event: NSEvent) {
+        hovered = true
+        refreshHover()
+    }
+    override func mouseExited(with event: NSEvent) {
+        hovered = false
+        refreshHover()
+    }
+    private func refreshHover() {
+        // Standalone standard buttons have no native titlebar hover group.
+        // Highlight their native cells together to reveal the system glyphs.
+        for button in buttons { button.highlight(hovered && button.isEnabled) }
+    }
     func refreshEnabledState() {
         guard buttons.count == 3, let window else { return }
         buttons[0].isEnabled = window.styleMask.contains(.closable)
         buttons[1].isEnabled = window.styleMask.contains(.miniaturizable)
         buttons[2].isEnabled = window.styleMask.contains(.resizable)
+        refreshHover()
     }
     @objc private func closeWindow() { window?.performClose(nil) }
     @objc private func minimizeWindow() { window?.miniaturize(nil) }
