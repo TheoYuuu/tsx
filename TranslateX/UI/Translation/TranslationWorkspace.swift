@@ -8,6 +8,7 @@ struct TranslationWorkspace: View {
     var compact = false
     var editorReady: (NSTextView) -> Void = { _ in }
     var translationEditorReady: (NSTextView) -> Void = { _ in }
+    var speechSession: TranslationSpeechSession? = nil
     @Environment(\.translateXTheme) private var theme
     @Environment(\.translationLayout) private var layout
 
@@ -39,6 +40,17 @@ struct TranslationWorkspace: View {
             .disabled(!model.canSwapLanguages)
             .serviceDesignMetric("\(metricPrefix).swap")
         }
+        .onDisappear { speechSession?.stop() }
+        .alert(L10n.string("Unable to read aloud"), isPresented: Binding(
+            get: { speechSession?.playback.failure != nil },
+            set: { if !$0 { speechSession?.playback.clearFailure() } }
+        )) {
+            Button(L10n.string("OK")) { speechSession?.playback.clearFailure() }
+        } message: {
+            Text(L10n.string(speechSession?.playback.failure == .languageUnknown
+                            ? "Choose the original language before reading aloud."
+                            : "This system voice is unavailable. Add a matching voice in System Settings > Accessibility, then try again."))
+        }
     }
 
     private func pane(_ side: TranslationSide) -> some View {
@@ -51,17 +63,22 @@ struct TranslationWorkspace: View {
                     Text(LanguageCatalog.displayName(for: detected)).font(.system(size: 11)).foregroundStyle(theme.muted).lineLimit(1)
                 }
                 Spacer(minLength: 2)
+                if let speechSession {
+                    TranslationSpeechControls(session: speechSession, side: side, text: model.text(on: side),
+                                              compact: compact, enabled: !model.isComposing, metricPrefix: metricPrefix)
+                }
                 CopyButton(text: model.text(on: side), label: side == .source ? "Copy original" : "Copy translation",
                            size: compact ? 28 : 32, outlined: true)
                     .disabled(model.isComposing)
             }
             .frame(height: compact ? 28 : 30)
-            .padding(.bottom, compact || layout == .stacked ? 12 : 23)
+            .serviceDesignMetric("\(metricPrefix).\(side == .source ? "source" : "target")Header")
+            .padding(.bottom, 12)
             editor(side)
                 .serviceDesignMetric("\(metricPrefix).\(side == .source ? "sourceEditor" : "targetEditor")")
         }
-        .padding(.horizontal, compact ? 16 : 24)
-        .padding(.top, compact ? 12 : layout == .stacked ? 13 : 18)
+        .padding(.horizontal, 10)
+        .padding(.top, 12)
         .padding(.bottom, compact ? 14 : layout == .stacked ? 15 : 22)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityIdentifier("\(metricPrefix).\(side == .source ? "sourceColumn" : "resultColumn")")
@@ -96,8 +113,11 @@ struct TranslationWorkspace: View {
                 selection: side == .source ? $model.source : $model.target,
                 languages: catalog.languages(for: model.serviceConfiguration, asTarget: side == model.destinationSide),
                 includeAuto: side == .source && model.inputSide == .source,
-                prominent: !compact, enabled: !model.isComposing)
-                .fixedSize(horizontal: true, vertical: true)
+                prominent: !compact, enabled: !model.isComposing,
+                maximumWidth: speechSession == nil ? .greatestFiniteMagnitude : 140,
+                allowsCompression: speechSession != nil)
+                .fixedSize(horizontal: speechSession == nil, vertical: true)
+                .layoutPriority(1)
         } else {
             Text(LanguageCatalog.displayName(for: side == .source ? model.source : model.target))
                 .font(.system(size: 12, weight: .medium))

@@ -77,6 +77,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
+    func applicationDidHide(_ notification: Notification) {
+        windows.speechSession.stop()
+    }
+
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         guard !isTerminating else { return false }
         screenshots.cancel()

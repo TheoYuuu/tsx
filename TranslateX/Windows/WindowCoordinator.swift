@@ -48,6 +48,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     let permissions = PermissionStatus()
     let services: TranslationServiceStore
     let inputModel: TranslationModel
+    let speechSession: TranslationSpeechSession
     let screenshotReturn = ScreenshotReturnState()
     private var screenshotReturnAction: ((TranslationHandoff) -> Bool)?
     private var screenshotReturnGeneration = UUID()
@@ -87,12 +88,14 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
 
     override convenience init() { self.init(preferences: AppPreferences()) }
 
-    init(preferences: AppPreferences, services: TranslationServiceStore = TranslationServiceStore()) {
+    init(preferences: AppPreferences, services: TranslationServiceStore = TranslationServiceStore(),
+         speech: SpeechPlaybackController? = nil) {
         self.preferences = preferences
         L10n.apply(preferences.interfaceLanguage)
         presentedLayout = preferences.translationLayout
         self.services = services
         inputModel = TranslationModel(automaticallyTranslates: true, services: services)
+        speechSession = TranslationSpeechSession(model: inputModel, playback: speech ?? SpeechPlaybackController())
         super.init()
         inputModel.target = preferences.defaultTarget
         trackLayout()
@@ -276,6 +279,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
         guard let handoff = inputModel.makeHandoff(), action(handoff) else { return }
         // Stop the editor's request without cancelling the newly restored overlay.
         inputModel.cancel()
+        speechSession.stop()
         rememberMainSize()
         needsInputFocus = false
         mainWindow?.orderOut(nil)
@@ -333,7 +337,8 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
                 updates: updates, restorePrevious: { [weak self] in self?.restorePreviousTranslation() },
                 saveScreenshot: { [weak self] in self?.saveScreenshot($0) },
                 screenshotReturn: screenshotReturn,
-                returnToScreenshot: { [weak self] in self?.returnToScreenshot() }
+                returnToScreenshot: { [weak self] in self?.returnToScreenshot() },
+                speechSession: speechSession
             ))
         }
         syncMainModal()
@@ -672,6 +677,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
 
     func dismissTranslation(restoreFocus: Bool = true) {
         guard updates?.isPresentingMainModal != true, mainWindow?.attachedSheet == nil else { return }
+        speechSession.stop()
         rememberMainSize()
         needsInputFocus = false
         let shouldRestoreFocus = restoreFocus && mainWindow?.isKeyWindow == true && NSApp.isActive
@@ -721,6 +727,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     /// Hide our content before the user chooses pixels. Restore only the window
     /// the user was working in, without bringing an inactive app to the front.
     func hideForScreenshot() -> ScreenshotRestoration {
+        speechSession.stop()
         let restoration: ScreenshotRestoration
         if NSApp.isActive, settingsWindow?.isKeyWindow == true {
             restoration = .settings
@@ -753,6 +760,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
     }
 
     func shutdown() {
+        speechSession.stop()
         clearScreenshotReturn()
         observesAccountQueries = false
         accounts.stopAutomaticRefresh()
@@ -846,6 +854,7 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
 
     func windowWillClose(_ notification: Notification) {
         if notification.object as? NSWindow === mainWindow {
+            speechSession.stop()
             rememberMainSize()
             cancelCapturedOperation()
             needsInputFocus = false
@@ -854,5 +863,9 @@ final class WindowCoordinator: NSObject, NSWindowDelegate {
             settingsShortcuts?.endRecording()
             NotificationCenter.default.post(name: .translateXTranslationSettingsClosed, object: nil)
         }
+    }
+
+    func windowDidMiniaturize(_ notification: Notification) {
+        if notification.object as? NSWindow === mainWindow { speechSession.stop() }
     }
 }

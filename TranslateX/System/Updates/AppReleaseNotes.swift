@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Sparkle
 
 struct AppRelease: Codable, Identifiable, Equatable, Sendable {
     let version: String
@@ -7,7 +8,7 @@ struct AppRelease: Codable, Identifiable, Equatable, Sendable {
     // the actual timestamp rather than substituting the build time.
     let publishedAt: Date?
     let notes: String
-    let url: URL
+    let url: URL?
     var id: String { version }
 
     func localizedNotes(languageIdentifier: String) -> String? {
@@ -16,6 +17,27 @@ struct AppRelease: Codable, Identifiable, Equatable, Sendable {
 }
 
 enum AppUpdateLinks {
+    static func allowedReleaseURL(_ url: URL?) -> URL? {
+        guard let url, url.scheme == "https", url.user == nil, url.password == nil,
+              url.port == nil || url.port == 443,
+              url.query == nil, url.fragment == nil,
+              !url.absoluteString.contains("%"), !url.pathComponents.contains("..") else { return nil }
+        let permitted: Bool
+        switch url.host {
+        case "github.com":
+            permitted = ["/TheoYuuu/tsx/releases", "/uuthings/tsx/releases"].contains {
+                url.path == $0 || url.path.hasPrefix($0 + "/tag/")
+            }
+        case "lumaxspace.com":
+            permitted = ["/products/tsx", "/zh/products/tsx"].contains {
+                url.path == $0 || url.path.hasPrefix($0 + "/")
+            }
+        case "uuthings.com": permitted = url.path.hasPrefix("/products/tsx/")
+        default: permitted = false
+        }
+        return permitted ? url : nil
+    }
+
     static func productPage(languageIdentifier: String) -> URL {
         let chinese = Locale.Language(identifier: languageIdentifier).languageCode?.identifier == "zh"
         return URL(string: chinese ? "https://lumaxspace.com/zh/products/tsx/" : "https://lumaxspace.com/products/tsx/")!
@@ -84,80 +106,28 @@ enum ReleaseNotesLocalization {
     }
 }
 
-/// Public release text is separate from trusted update selection. This client
-/// cannot supply an installer URL, signing key, or installable appcast item.
-struct AppReleaseNotesClient: Sendable {
-    enum LoadError: Error { case response, tooLarge, invalidRelease }
-    private static let pageByteLimit = 2 * 1_024 * 1_024
+/// Only the updater delegate supplies these values, after Sparkle has parsed the
+/// appcast. The store still checks the feed validation result before using them.
+struct AppcastReleaseNotes: Sendable {
+    var version: String
+    var build: String
+    var publishedAt: Date?
+    var notes: String?
+    var format: String?
+    var url: URL?
+    var channel: String?
 
-    func load() async throws -> [AppRelease] {
-        let configuration = URLSessionConfiguration.ephemeral
-        configuration.httpShouldSetCookies = false
-        configuration.httpCookieStorage = nil
-        configuration.urlCache = nil
-        configuration.urlCredentialStorage = nil
-        configuration.timeoutIntervalForRequest = 20
-        configuration.timeoutIntervalForResource = 30
-        let session = URLSession(configuration: configuration, delegate: ReleaseNotesRedirectGuard(), delegateQueue: nil)
-        defer { session.invalidateAndCancel() }
-        var releases: [AppRelease] = []
-        for page in 1...20 {
-            try Task.checkCancellation()
-            guard let url = URL(string: "https://api.github.com/repos/TheoYuuu/tsx/releases?per_page=100&page=\(page)") else { throw LoadError.response }
-            var request = URLRequest(url: url)
-            request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-            request.setValue("TSX", forHTTPHeaderField: "User-Agent")
-            let (bytes, response) = try await session.bytes(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-                  http.url?.host == "api.github.com", response.expectedContentLength <= Self.pageByteLimit else { throw LoadError.response }
-            var data = Data()
-            for try await byte in bytes {
-                guard data.count < Self.pageByteLimit else { throw LoadError.tooLarge }
-                data.append(byte)
-            }
-            let pageResult = try Self.decodePage(data)
-            releases.append(contentsOf: pageResult.releases)
-            if pageResult.count < 100 {
-                var seen = Set<String>()
-                return releases.filter { seen.insert($0.version).inserted }.sorted {
-                    ($0.publishedAt ?? .distantPast) > ($1.publishedAt ?? .distantPast)
-                }
-            }
-        }
-        throw LoadError.tooLarge
+    init(version: String, build: String, publishedAt: Date? = nil, notes: String? = nil,
+         format: String? = "plain-text", url: URL? = nil, channel: String? = nil) {
+        self.version = version; self.build = build; self.publishedAt = publishedAt
+        self.notes = notes; self.format = format; self.url = url; self.channel = channel
     }
 
-    static func decodePage(_ data: Data) throws -> (releases: [AppRelease], count: Int) {
-        struct RemoteRelease: Decodable {
-            let tag_name: String
-            let published_at: Date?
-            let body: String?
-            let html_url: URL
-            let draft: Bool
-            let prerelease: Bool
-        }
-        guard data.count <= pageByteLimit else { throw LoadError.tooLarge }
-        let decoder = JSONDecoder(); decoder.dateDecodingStrategy = .iso8601
-        let rows = try decoder.decode([RemoteRelease].self, from: data)
-        var releases: [AppRelease] = []
-        for row in rows where !row.draft && !row.prerelease {
-            guard let published = row.published_at,
-                  row.html_url.scheme == "https", row.html_url.host == "github.com",
-                  row.html_url.user == nil, row.html_url.password == nil,
-                  row.html_url.path.hasPrefix("/TheoYuuu/tsx/releases/tag/"),
-                  row.tag_name.range(of: "^v?[0-9]+(?:\\.[0-9]+){1,3}$", options: .regularExpression) != nil,
-                  row.tag_name.count < 64, (row.body?.utf8.count ?? 0) <= 128 * 1_024 else { throw LoadError.invalidRelease }
-            let version = row.tag_name.hasPrefix("v") ? String(row.tag_name.dropFirst()) : row.tag_name
-            releases.append(.init(version: version, publishedAt: published, notes: row.body ?? "", url: row.html_url))
-        }
-        return (releases, rows.count)
+    init(_ item: SUAppcastItem) {
+        self.init(version: item.displayVersionString, build: item.versionString, publishedAt: item.date,
+                  notes: item.itemDescription, format: item.itemDescriptionFormat,
+                  url: item.fullReleaseNotesURL, channel: item.channel)
     }
-}
-
-private final class ReleaseNotesRedirectGuard: NSObject, URLSessionTaskDelegate {
-    func urlSession(_ session: URLSession, task: URLSessionTask,
-                    willPerformHTTPRedirection response: HTTPURLResponse, newRequest request: URLRequest,
-                    completionHandler: @escaping (URLRequest?) -> Void) { completionHandler(nil) }
 }
 
 @MainActor
@@ -167,32 +137,64 @@ final class AppReleaseNotesStore {
     private(set) var isLoading = false
     private(set) var failed = false
     private(set) var hasLoaded = false
-    @ObservationIgnored private let loader: @Sendable () async throws -> [AppRelease]
     @ObservationIgnored private let allowsNetworkLoading: Bool
 
-    init(entries: [AppRelease]? = nil, allowsNetworkLoading: Bool = true,
-         loader: @escaping @Sendable () async throws -> [AppRelease] = { try await AppReleaseNotesClient().load() }) {
+    init(entries: [AppRelease]? = nil, allowsNetworkLoading: Bool = true) {
         self.entries = entries ?? Self.bundledEntries()
         self.allowsNetworkLoading = allowsNetworkLoading
-        self.loader = loader
     }
 
-    func load(force: Bool = false) async {
-        guard !isLoading, force || !hasLoaded else { return }
-        guard allowsNetworkLoading else { hasLoaded = true; return }
+    func needsLoad(force: Bool = false) -> Bool {
+        allowsNetworkLoading && !isLoading && (force || !hasLoaded)
+    }
+
+    @discardableResult
+    func beginLoading(force: Bool = false) -> Bool {
+        guard needsLoad(force: force) else { return false }
         isLoading = true; failed = false
-        defer { isLoading = false }
-        do {
-            let fetched = try await loader()
-            try Task.checkCancellation()
-            // A temporarily empty upstream list must not erase shipped notes.
-            if !fetched.isEmpty { entries = fetched }
-            hasLoaded = true
-        } catch is CancellationError {
-            return
-        } catch { failed = true }
+        return true
     }
 
+    func loadingFailed() {
+        guard isLoading else { return }
+        isLoading = false; failed = true
+    }
+
+    /// Never persist remote notes. An invalid/unsigned feed or an interrupted
+    /// check leaves the bundled and previously verified in-memory entries intact.
+    func receive(_ items: [AppcastReleaseNotes], status: SPUAppcastSigningValidationStatus) {
+        guard status == .succeeded, items.count <= 200,
+              items.reduce(0, { $0 + ($1.notes?.utf8.count ?? 0) }) <= 2 * 1_024 * 1_024 else {
+            isLoading = false; failed = true; return
+        }
+        let comparator = SUStandardVersionComparator()
+        var selected: [String: AppcastReleaseNotes] = [:]
+        for item in items {
+            guard item.channel == nil || item.channel == "stable",
+                  Self.validVersion(item.version), Self.validBuild(item.build),
+                  (item.notes?.utf8.count ?? 0) <= 128 * 1_024 else { continue }
+            if let previous = selected[item.version],
+               comparator.compareVersion(item.build, toVersion: previous.build) != .orderedDescending { continue }
+            selected[item.version] = item
+        }
+        var merged = Dictionary(entries.map { ($0.version, $0) }, uniquingKeysWith: { first, _ in first })
+        for (version, item) in selected {
+            let previous = merged[version]
+            let text = item.format == "plain-text" ? item.notes?.trimmingCharacters(in: .whitespacesAndNewlines) : nil
+            merged[version] = .init(version: version, publishedAt: item.publishedAt ?? previous?.publishedAt,
+                                    notes: text.flatMap { $0.isEmpty ? nil : $0 } ?? previous?.notes ?? "",
+                                    url: AppUpdateLinks.allowedReleaseURL(item.url) ?? previous?.url)
+        }
+        entries = merged.values.sorted { comparator.compareVersion($0.version, toVersion: $1.version) == .orderedDescending }
+        isLoading = false; failed = false; hasLoaded = true
+    }
+
+    private static func validVersion(_ value: String) -> Bool {
+        value.count < 64 && value.range(of: "^[0-9]+(?:\\.[0-9]+){1,3}$", options: .regularExpression) != nil
+    }
+    private static func validBuild(_ value: String) -> Bool {
+        value.count < 64 && value.range(of: "^[0-9]+(?:\\.[0-9]+)*$", options: .regularExpression) != nil
+    }
     private static func bundledEntries() -> [AppRelease] {
         guard let url = Bundle.main.url(forResource: "PublishedReleaseNotes", withExtension: "json"),
               let data = try? Data(contentsOf: url) else { return [] }

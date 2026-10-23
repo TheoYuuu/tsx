@@ -127,6 +127,10 @@ final class AppUpdateController {
     @ObservationIgnored private var updateReply: ((SPUUserUpdateChoice) -> Void)?
     @ObservationIgnored private var cancellation: (() -> Void)?
     @ObservationIgnored private var automaticSession = false
+    private enum CheckOrigin { case launch, manual, releaseNotes }
+    private enum SessionPhase { case checking, offered, installing, cancelled }
+    @ObservationIgnored private var checkOrigin: CheckOrigin = .launch
+    @ObservationIgnored private var sessionPhase: SessionPhase = .checking
     @ObservationIgnored private var automaticInstallAttemptedVersion: String?
     @ObservationIgnored private var installRequested = false
     @ObservationIgnored private var directlyRequestedVersion: String?
@@ -167,6 +171,8 @@ final class AppUpdateController {
         // A launch always checks, including when installation is disabled. The
         // information-only API cannot download or install an update.
         automaticSession = automaticUpdatesEnabled
+        checkOrigin = .launch; sessionPhase = .checking
+        releases.beginLoading(force: true)
         isChecking = true
         if automaticSession { backend.checkUpdates() }
         else { backend.checkInformation() }
@@ -206,6 +212,8 @@ final class AppUpdateController {
         directlyRequestedVersion = version
         installRequested = false
         automaticSession = false
+        checkOrigin = .manual; sessionPhase = .checking
+        releases.beginLoading(force: true)
         lastCheckFailed = false
         isChecking = true
         backend?.checkUpdates()
@@ -253,6 +261,7 @@ final class AppUpdateController {
         if !enabled, automaticSession {
             let cancel = cancellation
             cancellation = nil
+            if cancel != nil { sessionPhase = .cancelled }
             cancel?()
         }
     }
@@ -274,14 +283,22 @@ final class AppUpdateController {
     func checkFailed() {
         directlyRequestedVersion = nil; installRequested = false
         lastCheckFailed = true; isChecking = false
+        releases.loadingFailed()
     }
     func checkAborted(_ error: any Error) {
         let error = error as NSError
         if error.domain == SUSparkleErrorDomain && error.code == Int(SUError.noUpdateError.rawValue) { foundNoUpdate() }
         else if error.domain != SUSparkleErrorDomain || error.code != Int(SUError.installationCanceledError.rawValue) { checkFailed() }
-        else { directlyRequestedVersion = nil; installRequested = false; isChecking = false }
+        else {
+            directlyRequestedVersion = nil; installRequested = false; isChecking = false
+            sessionPhase = .cancelled; releases.loadingFailed()
+        }
     }
-    func finishedCheck() { isChecking = false; refreshUpdaterState() }
+    func finishedCheck() {
+        isChecking = false; releases.loadingFailed(); refreshUpdaterState()
+        // Preserve origin/phase until the next session: Sparkle may deliver the
+        // error acknowledgement after its delegate/completion callbacks.
+    }
 
     func installPendingUpdate() {
         guard updatePresentation?.informationOnly == false, let reply = updateReply else { return }
@@ -318,6 +335,7 @@ final class AppUpdateController {
         cancellation = nil
         let reply = updateReply
         updateReply = nil
+        sessionPhase = .cancelled
         updatePresentation = nil
         cancel?()
         reply?(presentation.phase == .ready ? .skip : .dismiss)
@@ -326,12 +344,17 @@ final class AppUpdateController {
 
     func showUpdateCheck(cancellation: @escaping () -> Void) {
         self.cancellation = cancellation
-        if !automaticSession { present(.init(phase: .checking)) }
+        sessionPhase = .checking
+        if !automaticSession {
+            checkOrigin = .manual
+            present(.init(phase: .checking))
+        }
     }
 
     func offerUpdate(version: String, informationOnly: Bool, informationURL: URL?, publishedAt: Date? = nil,
                      userInitiated: Bool, reply: @escaping (SPUUserUpdateChoice) -> Void) {
         foundUpdate(version, publishedAt: publishedAt)
+        sessionPhase = .offered
         isChecking = false
         cancellation = nil
         updateReply = reply
@@ -347,6 +370,7 @@ final class AppUpdateController {
     }
 
     func downloadStarted(cancellation: @escaping () -> Void) {
+        sessionPhase = .installing
         self.cancellation = cancellation
         receivedDownloadBytes = 0; expectedDownloadBytes = 0
         setPhase(.downloading, progress: nil)
@@ -371,8 +395,10 @@ final class AppUpdateController {
     }
     func installing() { cancellation = nil; updateReply = nil; setPhase(.installing, progress: nil) }
     func updateErrored(_ error: (any Error)? = nil) {
-        let isCheckFailure = updatePresentation?.phase == .checking
+        let isCheckFailure = sessionPhase == .checking
+        let silent = sessionPhase == .cancelled || (isCheckFailure && checkOrigin != .manual)
         checkFailed(); cancellation = nil; updateReply = nil
+        guard !silent else { return }
         present(.init(version: availableVersion, phase: .failed, isCheckFailure: isCheckFailure,
                       failure: error.flatMap { AppUpdateFailure.classify($0) }))
     }
@@ -387,6 +413,7 @@ final class AppUpdateController {
     }
     func focusUpdate() { if updatePresentation != nil { onPresentUpdate?() } }
     private func setPhase(_ phase: AppUpdatePresentation.Phase, progress: Double?) {
+        if [.downloading, .extracting, .ready, .installing].contains(phase) { sessionPhase = .installing }
         var presentation = updatePresentation ?? .init(version: availableVersion, phase: phase, publishedAt: availablePublishedAt)
         presentation.phase = phase; presentation.progress = progress
         presentation.downloadedBytes = phase == .downloading ? receivedDownloadBytes : 0
@@ -445,7 +472,24 @@ final class AppUpdateController {
             mainReleaseNotesPresentation = nil
         }
     }
-    func loadReleaseNotes() async { await releases.load() }
+    func loadReleaseNotes(force: Bool = false) async {
+        guard releases.needsLoad(force: force), startBackend() else { return }
+        if isChecking {
+            releases.beginLoading(force: force)
+            return
+        }
+        guard canCheckForUpdates, releases.beginLoading(force: force) else { return }
+        automaticSession = false
+        checkOrigin = .releaseNotes; sessionPhase = .checking
+        isChecking = true; lastCheckFailed = false
+        backend?.checkInformation()
+    }
+
+    func loadedAppcast(_ appcast: SUAppcast) {
+        // A failed signature can still reach this callback in Sparkle's recovery
+        // mode. Never display that remote content, even if Sparkle finds an update.
+        releases.receive(appcast.items.map(AppcastReleaseNotes.init), status: appcast.signingValidationStatus)
+    }
 
     func configureMenuItem(_ item: NSMenuItem) {
         item.title = L10n.string("Check for updates")

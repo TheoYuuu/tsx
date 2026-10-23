@@ -68,6 +68,7 @@ final class TranslationServiceVisualReview: NSObject {
     private var defaults: UserDefaults?
     private var fixture: VisualCodexAccount?
     private var workspaceModel: TranslationModel?
+    private var workspaceSpeechSession: TranslationSpeechSession?
     private var reviewWindows: WindowCoordinator?
     private var reviewSourceApplication: NSRunningApplication?
     private var unifiedObservationTimer: Timer?
@@ -1048,6 +1049,8 @@ final class TranslationServiceVisualReview: NSObject {
     }
 
     private func closeReviewWindow() {
+        workspaceSpeechSession?.stop()
+        workspaceSpeechSession = nil
         NSWorkspace.shared.notificationCenter.removeObserver(self, name: NSWorkspace.didActivateApplicationNotification, object: nil)
         for name in [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification] {
             NotificationCenter.default.removeObserver(self, name: name, object: window)
@@ -1229,8 +1232,10 @@ final class TranslationServiceVisualReview: NSObject {
         window.identifier = NSUserInterfaceItemIdentifier("translatex.service.visual-review")
         window.isReleasedWhenClosed = false
         if isQuick || isMain {
-            let reviewSource = "Good design makes complex things feel effortless.\nKeep useful tools close to the text.\nSmall adjustments can bring noticeable improvements."
-            let reviewTarget = "好的设计，让复杂的事情变得轻松。\n让常用工具贴近内容。\n小小的调整，也能带来明显的改善。"
+            let isSpeechReview = scene.hasPrefix("main-speech")
+            let isSpeechWord = isSpeechReview && !scene.contains("long")
+            let reviewSource = isSpeechWord ? "serendipity" : "Good design makes complex things feel effortless.\nKeep useful tools close to the text.\nSmall adjustments can bring noticeable improvements."
+            let reviewTarget = isSpeechWord ? "意外发现美好事物的幸运" : "好的设计，让复杂的事情变得轻松。\n让常用工具贴近内容。\n小小的调整，也能带来明显的改善。"
             if scene.contains("partial") || scene.contains("long-name") || scene.contains("interactive") { try? services.select(deepSeek.id) }
             let model = TranslationModel(automaticallyTranslates: true, services: services, remoteProvider: { _, _, partial in
                 WorkspaceReviewProvider(source: reviewSource, target: reviewTarget, partial: partial, fragment: scene.contains("partial"))
@@ -1248,6 +1253,7 @@ final class TranslationServiceVisualReview: NSObject {
                 await model.run(request, provider: FixtureProvider(output: scene.contains("long") ? Array(repeating: translated, count: 15).joined(separator: "\n\n") : translated))
             }
             if scene.contains("swapped") { model.swapLanguages() }
+            if isSpeechReview, scene.contains("reversed") { model.swapLanguages() }
             if scene.contains("edited") || scene.contains("manual") {
                 if scene.contains("manual") { model.setAutomaticTranslation(false) }
                 model.editingChanged(reviewTarget, isComposing: false, side: .target)
@@ -1282,8 +1288,16 @@ final class TranslationServiceVisualReview: NSObject {
             }
             // Legacy quick-* scene names remain useful fixtures for captured
             // content, but always render the one shipping translation workspace.
-            let main = InputTranslationView(model: model, catalog: LanguageCatalog(), translateSelection: {}, translateScreenshot: {}, openSettings: {})
-            if scene.contains("motion") {
+            if isSpeechReview {
+                // Speech interactions stay fully local and silent in visual QA.
+                // A retained fake playback lets native controls animate until
+                // the reviewer stops it; no AVFoundation object is constructed.
+                let backend = SpeechVisualReviewBackend()
+                let playback = SpeechPlaybackController(defaults: defaults, makeBackend: { backend })
+                workspaceSpeechSession = TranslationSpeechSession(model: model, playback: playback)
+            }
+            let main = InputTranslationView(model: model, catalog: LanguageCatalog(), translateSelection: {}, translateScreenshot: {}, openSettings: {}, speechSession: workspaceSpeechSession)
+            if scene.contains("motion") || isSpeechReview {
                 window.contentView = WindowSurface(preferences: preferences, content: ServiceReviewSurface(content: main.environment(\.translationReviewReduceMotion, scene.contains("reduced")), report: { [weak self] in self?.frames = $0 }))
             } else {
                 window.contentView = WindowSurface(preferences: preferences, content: ServiceReviewSurface(content: main.environment(\.translationReviewCaptureMode, scene.contains("original") ? "original" : scene.contains("image") ? "image" : "text"), report: { [weak self] in self?.frames = $0 }))
@@ -1297,6 +1311,11 @@ final class TranslationServiceVisualReview: NSObject {
         window.makeFirstResponder(nil)
         NSApp.activate(ignoringOtherApps: true)
         self.window = window
+        if scene.hasPrefix("main-speech"), scene.contains("playing") {
+            // Only the explicitly named playing fixture starts automatically,
+            // using the silent backend above. Ordinary speech scenes stay idle.
+            workspaceSpeechSession?.toggle(scene.contains("reversed") ? .target : .source)
+        }
         if let editor = session?.editor {
             Task {
                 try? await Task.sleep(for: .milliseconds(150))
@@ -1314,6 +1333,20 @@ final class TranslationServiceVisualReview: NSObject {
             }
         }
     }
+}
+
+@MainActor
+private final class SpeechVisualReviewBackend: SpeechPlaybackBackend {
+    var onCompletion: (@MainActor @Sendable (UUID) -> Void)?
+
+    func availableVoices() -> [SpeechPlaybackVoice] {
+        [SpeechPlaybackVoice(identifier: "constructed-speech-american", language: "en-US"),
+         SpeechPlaybackVoice(identifier: "constructed-speech-british", language: "en-GB"),
+         SpeechPlaybackVoice(identifier: "constructed-speech-chinese", language: "zh-CN")]
+    }
+
+    func speak(text: String, voiceIdentifier: String, requestID: UUID) -> Bool { true }
+    func stop() {}
 }
 
 @MainActor

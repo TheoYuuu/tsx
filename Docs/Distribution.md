@@ -46,7 +46,7 @@ TSX 是免费、MIT 开源的 macOS 应用。源码与安装包位于 [GitHub](h
 
 正式主 App、helper 和嵌入代码使用预期 Developer ID、安全时间戳和 Hardened Runtime；不放宽运行时安全权限。发布检查仅对固定 Sparkle Autoupdate 组件允许其上游既定身份 entitlement，其他路径不能借此获得例外。
 
-应用使用 Sparkle，更新清单固定为 `https://lumaxspace.com/updates/tsx/appcast.xml`，安装包来自 GitHub Releases。清单和安装包都需 Ed25519 验签；仓库与 App 保留公钥，更新私钥只在安全的私有存储中。更新密钥、公证凭据与 Developer ID 私钥是独立材料，不得互相替代。
+当前源码使用 Sparkle，更新清单固定为 `https://updates.uuthings.com/tsx/macos/stable/appcast.xml`，安装包位于同一域名的 `tsx/macos/releases/<版本>-<Build>/`。该更新服务独立于两个官网和代码托管平台；GitHub Releases 可保留下载镜像。旧发行版仍读取其内置旧地址；安装新版后使用新地址。清单和安装包都需 Ed25519 验签；仓库与 App 保留公钥，更新私钥只在安全的私有存储中。更新密钥、公证凭据与 Developer ID 私钥是独立材料，不得互相替代。
 
 完整流程见 [RELEASING.md](RELEASING.md)。上传成功、归档成功或安装包签名有效，都不能单独证明已通过公证、安装或真实跨版本升级。
 

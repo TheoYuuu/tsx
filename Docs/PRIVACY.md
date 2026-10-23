@@ -7,6 +7,7 @@
 ## 本机处理
 
 - 默认通过 Apple 系统翻译能力处理文字；支持的语言及所需资源由系统提供，首次准备语言包可能需要联网。
+- 朗读使用 macOS 设备上的语音合成，仅在主动点击时播放原文或译文，不录音、不上传正文、不保存音频或朗读历史。仅保存英语口音偏好；可用声音取决于系统已安装资源，新增声音可能需要由用户通过系统设置下载。
 - 截图文字识别和译图合成在本机完成。截图默认保存在运行内存中，不作为翻译请求上传；只有主动选择复制或保存时，才写入剪贴板或你指定的图片文件。
 - TSX 不把翻译正文和译文保存为磁盘历史，也不将它们写入应用诊断日志。退出应用后不会恢复这些内容。
 - 偏好设置、服务地址、模型选择及服务测试的时间与结果状态会保存在本机。测试状态记录不包含翻译正文或完整响应。
@@ -21,7 +22,7 @@
 
 ## 应用更新
 
-通过 Sparkle 检查更新，更新信息来自 `https://lumaxspace.com/updates/tsx/appcast.xml`，安装包通过 GitHub 下载。应用启动时检查新版本；自动下载、安装和重启默认关闭，可在「关于」中开启自动更新。近期更新内容来自公开 GitHub Releases；用户主动刷新定价时，会无认证地连接 models.dev 获取公共美元参考费率。请求会向网站及下载托管服务提供 IP 地址、应用版本等常规连接信息，不包含翻译正文、截图、服务凭据或本机用量记录。未开启 Sparkle 系统信息采集。更新信息和安装包分别验证更新签名，正式安装包还需通过 Apple 签名及公证验证。
+通过 Sparkle 检查更新，更新信息来自 `https://updates.uuthings.com/tsx/macos/stable/appcast.xml`，安装包由同一更新域名提供（Cloudflare R2/CDN）。应用启动时检查新版本；自动下载、安装和重启默认关闭，可在「关于」中开启自动更新。近期更新内容来自 Sparkle 已验签的更新清单，与随包说明合并后仅保存在内存，不再访问 GitHub API；点击外部完整说明链接时才打开相应网站。用户主动刷新定价时，会无认证地连接 models.dev 获取公共美元参考费率。请求会向网站及下载托管服务提供 IP 地址、应用版本等常规连接信息，不包含翻译正文、截图、服务凭据或本机用量记录。未开启 Sparkle 系统信息采集。更新信息和安装包分别验证更新签名，正式安装包还需通过 Apple 签名及公证验证。
 
 ## 权限与剪贴板
 
@@ -42,6 +43,7 @@ This notice describes data behavior in the current TSX source. For a published v
 ## Processing on your Mac
 
 - Apple system translation is the default. Supported languages and resources depend on the system; preparing language resources may require an internet connection.
+- Reading aloud uses macOS on-device speech synthesis and starts only when you click the speaker for the original or translated text. It does not record audio, upload text, or save audio or playback history. Only the English accent preference is stored. Available voices depend on installed system resources; you may need to download additional voices through System Settings.
 - Screenshot text recognition and translated-image composition run on your Mac. Images stay in runtime memory and are not uploaded as translation requests. Only explicit copy or save actions write text or images to the clipboard or an image file you choose.
 - TSX does not save translation text or results as disk history or include them in application diagnostic logs. They are not restored after quitting.
 - Preferences, service endpoints, model selections, and service-test timestamps and status are stored locally. Test status records do not include translation text or full responses.
@@ -56,7 +58,7 @@ Third-party retention, processing, and billing follow each service's own policie
 
 ## Software updates
 
-Sparkle retrieves update information from `https://lumaxspace.com/updates/tsx/appcast.xml`; installers are downloaded from GitHub. The app checks for new versions at launch. Automatic downloading, installation and restart are off by default and can be enabled in About. Release history comes from public GitHub Releases. Refreshing model prices makes an unauthenticated request to models.dev for public USD reference rates. Hosting providers receive ordinary connection information, such as IP address and app version, but no translation text, screenshots, service credentials or local usage records. Sparkle system profiling is disabled. Update metadata and archives have update signatures; official installers also require Apple code signing and notarization.
+Sparkle retrieves update information from `https://updates.uuthings.com/tsx/macos/stable/appcast.xml`; installers use the same update domain, hosted by Cloudflare R2/CDN. The app checks for new versions at launch. Automatic downloading, installation and restart are off by default and can be enabled in About. Release history merges the signature-verified appcast with bundled notes in memory. It no longer requests the GitHub API; external release links open only when clicked. Refreshing model prices makes an unauthenticated request to models.dev for public USD reference rates. Hosting providers receive ordinary connection information, such as IP address and app version, but no translation text, screenshots, service credentials or local usage records. Sparkle system profiling is disabled. Update metadata and archives have update signatures; official installers also require Apple code signing and notarization.
 
 ## Permissions and clipboard
 

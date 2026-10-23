@@ -1,43 +1,22 @@
 # 官网版发布流程
 
-TSX 通过 GitHub Releases 分发，官网提供下载入口与 Sparkle 签名更新清单。发布需有明确授权；普通开发不自动递增版本、创建 Tag/Release 或推送。已测范围与限制见 [Validation.md](Validation.md)。
+当前源码采用 `updates.uuthings.com` 的 R2 更新清单与安装包，官网提供下载入口，GitHub Releases 可提供镜像。旧发行版的官网清单仍按原地址运行；完成源码接入不代表正式更新服务已经切换。发布需有明确授权；普通开发不自动递增版本、创建 Tag/Release 或推送。已测范围与限制见 [Validation.md](Validation.md)。
 
 ## 手动发布的完整顺序
 
 手动发布是由维护者逐步执行下面的操作；可以使用仓库工具完成重复检查，无需手工重写签名和打包逻辑。只有 App 公证及导出必须在 Xcode Organizer 中操作。首次准备见 [BUILDING.md](BUILDING.md)，各阶段的命令和核对项目见本文后续章节。
 
 1. **核对三个工作区。** 私有开发仓库、独立公开源码仓库和官网仓库分别检查 `git status`、`git remote -v`，再 `git fetch origin` 检查远端进展。确认没有未处理改动或冲突，两套应用仓库不能共用 Git 历史。只有本次发版涉及的文件进入提交；不得覆盖其他工作。
-2. **在私有源码确定版本。** 在 `project.yml` 同时更新 `MARKETING_VERSION` 和递增的 `CURRENT_PROJECT_VERSION`，运行 `xcodegen generate`。在 `TranslateX/Resources/PublishedReleaseNotes.json` 开头加入本版中英文说明，当前尚未发布的版本不填写虚构发布时间；上一版时间可按 GitHub 的真实发布时间补齐。准备本版公开说明，描述用户可见的变化和必要升级提醒。
+2. **在私有源码确定版本。** 在 `project.yml` 同时更新 `MARKETING_VERSION` 和递增的 `CURRENT_PROJECT_VERSION`，运行 `xcodegen generate`。在 `TranslateX/Resources/PublishedReleaseNotes.json` 开头加入本版中英文说明，当前尚未发布的版本不填写虚构发布时间；上一版时间可按正式更新清单的真实发布时间补齐。准备本版公开说明，描述用户可见的变化和必要升级提醒。
 3. **验证并提交私有源码。** 运行 `Scripts/verify.sh`；发布工具变化时再运行本文的工具测试。完成本次界面及行为检查，记录真实覆盖范围。查看 `git diff`，按文件暂存，再检查 `git diff --cached` 和剩余差异，创建发布提交。通过私有历史和固定远端检查后执行 `git push origin main`。
 4. **同步独立公开源码。** 按 [双仓文件同步](PUBLIC_REPOSITORY.md#双仓库文件同步) 在公开工作区对上一步的准确 commit 生成导出预览，审阅后带 `--expect-plan` 应用。README、Docs、AGENTS 和策略属于公开仓库独立维护内容，逐项检查跳过项并同步适用的说明。检查真实暂存区，必要时执行策略差异审核；运行公开 `staged` 检查、相关构建验证并提交，再运行 `history main` 和 `git push origin main`。记录两边 commit 对应关系，记录只保存在私有归档中。
 5. **从干净的公开提交归档。** 在公开源码根目录运行 `python3 Tools/Release/release.py archive`。保存工具输出的候选目录和 `.xcarchive` 路径；后续所有命令使用同一个候选目录。真实归档保留在 Xcode 默认 Archives 目录，候选长期保存在仓库外。不能拿 Debug/TestHost 或普通 Release 构建目录冒充发行归档。
 6. **在 Xcode 公证并导出 App。** 打开 **Window → Organizer → Archives**，选择本版、对应 Build 的归档，执行 **Distribute App → Direct Distribution**；旧界面可能为 **Custom → Developer ID → Upload**。沿用有效的签名身份，核对后上传；等待 **Ready to distribute**，再点击 **Export Notarized App**，导出到本次候选的 `XcodeExport/`。只查询同一上传，不因等待而重复提交；登录或协议问题由账号持有人处理。
 7. **制作并公证 DMG。** 使用本文的 `prepare → submit --stage dmg → status → finish` 命令。`prepare` 核验导出 App、备份完整归档并制作签名 DMG；`submit` 上传容器；`status` 查询同一提交；状态为 Accepted 后 `finish` 附票并生成 `artifacts/`。只发布 `artifacts/` 内的最终 DMG 和 SHA256SUMS，不使用候选根目录中提交公证的原始 DMG，也不重新签名导出的 App。
 8. **验证最终产物。** 核对 `release.json`、`verification.json`、App／DMG 公证记录、归档备份与最终摘要。挂载最终 DMG 检查 App，执行适用的安装和升级测试；需要保留旧版时不覆盖日常应用，并明确记录未执行真实替换。使用 `shasum -a 256 -c SHA256SUMS.txt` 时先进入 `artifacts/`。保留失败与未测项，不将模拟更新当成真实升级通过。
-9. **发布 GitHub 版本。** 在公开仓库为实际构建 commit 创建新的版本 Tag 并推送，通过历史检查后创建 Release。可在 GitHub **Releases → Draft a new release** 中选择该 Tag，填写双语说明并上传最终 DMG 和 SHA256SUMS，检查后发布；也可使用下面的命令。私有仓库只推送源码，不需要复制公开 Release 或安装包。已存在的 Tag 或发布资产不得覆盖。
-
-   ```sh
-   git tag -a vX.Y.Z PUBLIC_BUILD_COMMIT -m "TSX vX.Y.Z"
-   Scripts/check-public-repo.sh history main vX.Y.Z
-   git push origin vX.Y.Z
-   gh release create vX.Y.Z --repo TheoYuuu/tsx --verify-tag \
-     --title "TSX vX.Y.Z" --notes-file "/path/to/release-notes.md" \
-     "/path/to/candidate/artifacts/TSX-X.Y.Z-macOS-universal.dmg" \
-     "/path/to/candidate/artifacts/SHA256SUMS.txt"
-   ```
-
-10. **核对附件后上线官网更新。** 从刚发布的 Release 重新下载附件，核对摘要和公证。将候选 `artifacts/appcast.xml` 中的新条目合入官网 `public/updates/tsx/appcast.xml`，保留旧条目，使用真实 Release 时间并核对 Build、版本、下载 URL、长度和安装包签名。维护双语更新摘要及官网显示版本。XML 最后一次修改后，用同一 Sparkle 密钥重新签名并验证，再运行官网检查、构建、提交和推送，等待已有部署集成完成。安装包可下载之前不能上线更新清单。
-
-    从公开源码工作区调用已校验的固定 Sparkle 工具，下面参数是官网文件的实际路径：
-
-    ```sh
-    .build/ReleaseTools/Sparkle-2.10.0/bin/sign_update \
-      --account com.lumax.tsx "/path/to/site/public/updates/tsx/appcast.xml"
-    .build/ReleaseTools/Sparkle-2.10.0/bin/sign_update \
-      --account com.lumax.tsx --verify "/path/to/site/public/updates/tsx/appcast.xml"
-    ```
-
-11. **验证线上并完成留档。** 获取官网实际返回的原始 appcast 并验签，核对最新版、附件地址和字节数，打开中英文产品页检查版本与下载入口。把 Release 信息、重新下载的附件校验、最终线上 appcast、公开源码与官网 commit、实际测试结果补存到本次候选目录并更新索引。保留 Xcode 默认目录中的归档及仓库外完整副本，确认 Organizer 能查询该版；不要把清理构建缓存当成清理发行档案。
+9. **在 QA 通道验证同一最终包。** 按下方 R2 工具流程准备并上传 `qa/appcast.xml` 和独立批次目录中的 DMG。使用独立 macOS 测试账号或 VM，旧版安装在该账号自己的 `~/Applications`，不使用共享的 `/Applications`。先保存原来的 `SUFeedURL` 偏好，再临时指向 QA；完整验证下载、验签、替换、重启，测试后恢复原值（原本没有才删除）。第一轮可用旧版到候选版测试，不必等下一次发行。系统朗读等未发布功能也要覆盖。
+10. **正式授权后发布 R2。** 从同一最终 DMG 本地副本重新准备 stable；安装包不重建、不重签，路径改为 `releases/<版本>-<Build>/`，清单因地址和发布时间改变而重新生成并签名。先上传并核对安装包，再使用准备时读取的 ETag 条件更新 stable 清单。上传包必须 `PutObject + If-None-Match: *`，不以服务端 CopyObject 晋升候选，沿用已验证的本地副本条件上传。冲突必须停止重新审阅，不强行覆盖。
+11. **同步下载入口并留档。** 首次切换时，按单独发布授权将 GitHub 的主要下载版本更新为内置新地址的版本，并同步官网的最小版本、下载与隐私说明。后续 GitHub 镜像是否同步可按项目需要决定。旧官网 appcast 是否桥接另行决定，不自动修改两个网站。公开 Tag 必须指向实际构建的公开源码。正式发布后清除 QA 覆盖，再用新版“检查更新”验证内置 stable 地址、验签和“已是最新”；把实际线上清单、回读摘要、上传回执、源码映射及安装证据归档。清理 QA 对象前保留证据；不删除长期发行档案。
 
 下一次发版从第 1 步重新开始，使用新版本、新 Build 和新候选目录。有效的 Developer ID、Bundle ID、团队、Sparkle 密钥及 DMG 公证 profile 均沿用。Release、官网部署、App 公证和 DMG 公证是独立状态，不能用其中一个成功代替其余步骤。
 
@@ -45,7 +24,7 @@ TSX 通过 GitHub Releases 分发，官网提供下载入口与 Sparkle 签名�
 
 - 首次公开发行介绍产品能力、系统要求、安装包选择及简明安装步骤，链接完整使用说明和许可证。后续发行以新增、改进和修复为主，末尾保留简短的「下载与验证」：本版本安装包、系统与架构要求、实际验证的签名／公证状态、校验文件及[安装指南](USAGE.md)。不重复整套安装教程。
 - 系统要求、数据兼容或升级方式变化时，单独突出「升级前须知」和必要操作；中英文事实保持一致。已知限制见验证与使用文档，影响本次升级的重要限制仍需明确说明。
-- 应用内弹窗仅展示版本、发布时间、更新内容和必要升级提醒，不展示常规安装附录。随包说明在构建时尚无真实发布时间，可留空；线上说明使用 Release 的真实发布时间，不填入构建或安装时间。已发布版本的离线记录应与公开元数据一致。
+- 应用内弹窗仅展示版本、发布时间、更新内容和必要升级提醒，不展示常规安装附录。随包说明在构建时尚无真实发布时间，可留空；线上说明使用正式清单的真实发布时间，不填入构建或安装时间。已发布版本的离线记录应与公开元数据一致。
 - `SHA256SUMS.txt` 可以公开，仅包含最终安装包的文件名和摘要，在签名、打包和附票全部完成后生成。校验值用于核对文件完整性，不替代签名、公证或来源验证。不得将凭据、私人路径或原始公证日志放入公开说明。
 
 ## 发布前准备
@@ -58,7 +37,7 @@ TSX 通过 GitHub Releases 分发，官网提供下载入口与 Sparkle 签名�
 
 更新签名、Developer ID 代码签名与 Apple 公证是三个独立步骤，不能互相替代。
 
-维护发布工具后运行 `python3 -m unittest discover -s Tools/Release -p 'test_*.py'`。这些测试使用构造归档并替代外部命令，不执行真实签名或上传，也不能替代实际 Organizer 分发和安装验收。
+R2 发布工具要求 Python 3.10+，先在独立虚拟环境安装 `Tools/Release/requirements-r2.txt`；使用该环境运行 `python -m unittest discover -s Tools/Release -p 'test_*.py'`。这些测试使用构造归档并替代外部命令，不执行真实签名或上传，也不能替代实际 Organizer 分发和安装验收。
 
 ## Xcode Archive 与 Organizer 分发（强制）
 
@@ -127,14 +106,48 @@ python3 Tools/Release/release.py finish \
 - 翻译正文和截图只在内存；更新前复制需要保留的内容，不为升级增加正文磁盘历史。
 - 记录实际环境、失败和未覆盖范围。发布说明准确描述系统要求及影响使用的已知问题，不作未经验证的兼容承诺。
 
-## 公开顺序
+## R2 服务配置与发布工具
 
-1. 核对候选来源、版本与最终源码，将已授权源码同步到 `main`，为实际候选来源创建版本 Tag。
-2. 创建 GitHub Release，上传最终 DMG 与 SHA256SUMS，说明功能、系统要求、许可和重要使用限制。自动生成的源码归档不是安装包。
-3. 重新下载附件并复核摘要、签名和公证票据。
-4. 更新网站 `public/updates/tsx/appcast.xml`，保留必要旧版本条目；任何修改后重新签名。附件已可下载后才能公布更新条目。
-5. 在获得网站推送授权后同步页面和下载链接，通过网站既有部署流程上线。
-6. 获取线上清单的原始文件，验证签名、版本、大小和下载地址，再检查实际应用更新行为。将网站最终签名清单、重新下载的附件校验结果、公开源码／网站 commit 与实际验证记录补存到同一持久候选目录，保留候选清单和线上清单的区别。
+更新服务本身不需要 Worker 或单独 Git 仓库。域名和桶必须在同一个 Cloudflare 账号；仅连接 `updates.uuthings.com`，不改两个官网。不开启 r2.dev 公共地址。Cloudflare 的 R2 开通可能要求接受按用量计费条款，不能将免费额度当作永远免费。
+
+```text
+tsx/macos/stable/appcast.xml
+tsx/macos/qa/appcast.xml
+tsx/macos/qa/artifacts/<批次>/TSX-<版本>-macOS-universal.dmg
+tsx/macos/qa/artifacts/<批次>/SHA256SUMS.txt
+tsx/macos/releases/<版本>-<Build>/TSX-<版本>-macOS-universal.dmg
+tsx/macos/releases/<版本>-<Build>/SHA256SUMS.txt
+```
+
+- 不可变锁仅覆盖 `tsx/macos/releases/`，使用 Indefinite；日常发布凭据不能管理锁，管理员可解除。不能锁住 `stable/` 或 `qa/`。
+- stable XML 为 `no-cache`，整个 `qa/` 为 `no-store`，二者均通过 Cache Rule 绕过 CDN 缓存；正式包为 `public, max-age=31536000, immutable`。XML、DMG、摘要的类型分别为 `application/xml; charset=utf-8`、`application/x-apple-diskimage`、`text/plain; charset=utf-8`。
+- 更新域名不能出现验证页、登录或验证码。Bot Fight Mode 保持关闭；若以后官网使用 Under Attack，须单独设计仅覆盖官网的规则，不能影响更新请求。发布工具核对当前约定，发现漂移停止。
+- 第一个应用可用只限专用桶的 Object Read & Write 凭据；上线第二个应用或 CI 前增加前缀临时凭据隔离。日常发布不使用 Wrangler 的整个账号登录。配置核验使用独立只读令牌，所需权限为指定账号 R2 Read、指定 zone 的 Zone Read / Zone Settings Read / Cache Settings Read / Bot Management Read。创建时以 Cloudflare 控制台实际权限名称和只读 API 验证为准，不用管理员令牌兜底。
+- 发布凭据、审计令牌存 Keychain；配置文件只记录账号、桶、zone 和 Keychain 引用，不包含秘密。通用路径/缓存/锁约定及真实云端配置另存私有运维档案，默认 `~/Library/Application Support/UUThings/UpdateService/`。
+
+Cache Rule 使用下列表达式、动作 Bypass cache，放在可能覆盖它的缓存规则之后。工具会验证该规则是最后一条启用的缓存规则；有更多应用时先明确拓展规范与检查再调整。
+
+```text
+(http.host eq "updates.uuthings.com" and (starts_with(http.request.uri.path, "/tsx/macos/qa/") or http.request.uri.path eq "/tsx/macos/stable/appcast.xml"))
+```
+
+私有配置字段为 `account_id`、`zone_id`、`bucket`、`public_origin`（固定 `https://updates.uuthings.com`）、`publisher_keychain_service`、`audit_keychain_service`、`keychain_account`。发布 Keychain 项内容为包含 `access_key_id`、`secret_access_key` 和可选 `session_token` 的 JSON；审计项为只读 Cloudflare API token。工具仅在内存读取，不把秘密放进命令行、仓库或回执。
+
+```sh
+python3 -m venv .build/r2-venv
+.build/r2-venv/bin/python -m pip install -r Tools/Release/requirements-r2.txt
+.build/r2-venv/bin/python -m unittest discover -s Tools/Release -p 'test_*.py'
+
+.build/r2-venv/bin/python Tools/Release/r2_updates.py --config /private/path/config.json prepare \
+  --candidate /private/path/notarized-candidate --output /private/path/new-qa-plan \
+  --channel qa --published-at 'YYYY-MM-DDTHH:MM:SSZ'
+.build/r2-venv/bin/python Tools/Release/r2_updates.py --config /private/path/config.json upload \
+  --directory /private/path/new-qa-plan
+```
+
+`prepare` 读取远端当前清单并验签，使用归档保存的随包说明生成双语 plain-text 描述，保留 Sparkle 生成的包签名与系统要求，写入新的签名清单和可审阅 `plan.json`，不上传。`upload` 核验当前配置、来源摘要和 ETag，按“包 → 摘要 → 清单”顺序上传，每步回读原始字节并检查公开响应头，保存回执。仅出现一次 MISS 不算失败；测试/可变文件出现 HIT 或陈旧缓存则停止。
+
+正式发布必须另行获得授权；重新运行 `prepare --channel stable` 使用新的正式发布时间和同一包，再对已审阅的计划使用 `upload --confirm-production`。工具不创建 Tag、Release、不推送源码、不部署官网。任何已上传正式文件不得覆盖；修复候选使用新的 Build。
 
 已发布安装包不得仅因文档整理或工程改名而替换、重新构建或重新签名。旧 Tag、归档名称和构建证据中的旧工程路径保留其真实含义；当前工程改名不修改既有版本来源记录。若必须修正历史或版本来源记录，应明确区分原始构建证据与整理后的源码，不能捏造产物来源。
 

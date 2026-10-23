@@ -58,6 +58,7 @@ private final class AppSparkleDelegate: NSObject, SPUUpdaterDelegate {
         }
     }
     func updater(_ updater: SPUUpdater, shouldDownloadReleaseNotesForUpdate item: SUAppcastItem) -> Bool { false }
+    func updater(_ updater: SPUUpdater, didFinishLoading appcast: SUAppcast) { owner?.loadedAppcast(appcast) }
     func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
         owner?.foundUpdate(item.displayVersionString, publishedAt: item.date)
     }
@@ -100,7 +101,7 @@ private final class AppSparkleUserDriver: NSObject, SPUUserDriver {
                           userInitiated: state.userInitiated, reply: reply)
     }
     func showUpdateReleaseNotes(with downloadData: SPUDownloadData) {
-        // Release history uses the fixed public repository feed. Sparkle's
+        // Release history uses the verified appcast description. Sparkle's
         // downloaded HTML is never executed inside the settings interface.
     }
     func showUpdateReleaseNotesFailedToDownloadWithError(_ error: any Error) {}

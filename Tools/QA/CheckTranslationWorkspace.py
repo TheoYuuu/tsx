@@ -84,6 +84,24 @@ for key, current in metrics.items():
         require(editor['x'] >= column['x'] and editor['y'] >= column['y'], f'{key} editor origin')
         require(editor['x'] + editor['width'] <= column['x'] + column['width'] + .5, f'{key} editor right')
         require(editor['y'] + editor['height'] <= column['y'] + column['height'] + .5, f'{key} editor bottom')
+        header = current.get(f'{prefix}.{side}Header')
+        if header:
+            equal(editor['x'] - column['x'], 10, f'{key} {side} content leading inset')
+            equal(column['x'] + column['width'] - editor['x'] - editor['width'], 10,
+                  f'{key} {side} content trailing inset')
+            equal(header['y'] - column['y'], 12, f'{key} {side} header top inset')
+            equal(editor['y'] - header['y'] - header['height'], 12,
+                  f'{key} {side} header/editor gap')
+            speech = current.get(f'{prefix}.{side}Speech')
+            accent = current.get(f'{prefix}.{side}Accent')
+            if speech:
+                require(speech['x'] >= header['x'] - .5
+                        and speech['x'] + speech['width'] <= header['x'] + header['width'] + .5,
+                        f'{key} {side} speech control fits header')
+                require(speech['width'] >= 28 and speech['height'] >= 28,
+                        f'{key} {side} usable speech action')
+            if speech and accent:
+                require(not overlaps(speech, accent), f'{key} {side} accent and speech do not overlap')
     feedback = current[f'{prefix}.feedback']
     equal(center(feedback, 'x'), width / 2, f'{key} status centers on entire window')
     swap = current[f'{prefix}.swap']

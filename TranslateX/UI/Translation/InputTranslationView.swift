@@ -14,6 +14,7 @@ struct InputTranslationView: View {
     var saveScreenshot: (ScreenshotOutput) -> Void = { _ in }
     var screenshotReturn: ScreenshotReturnState? = nil
     var returnToScreenshot: () -> Void = {}
+    var speechSession: TranslationSpeechSession? = nil
     @Environment(\.translateXTheme) private var theme
     @Environment(\.translationLayout) private var layout
 
@@ -77,7 +78,7 @@ struct InputTranslationView: View {
                     ScreenshotTranslationWorkspace(model: model, catalog: catalog, save: saveScreenshot)
                 } else {
                     TranslationWorkspace(model: model, catalog: catalog, editorReady: editorReady,
-                                         translationEditorReady: translationEditorReady)
+                                         translationEditorReady: translationEditorReady, speechSession: speechSession)
                 }
             }.padding(.horizontal, 12).padding(.bottom, 12)
         }

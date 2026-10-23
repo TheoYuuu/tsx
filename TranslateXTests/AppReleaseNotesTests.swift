@@ -1,4 +1,5 @@
 import XCTest
+import Sparkle
 @testable import TranslateX
 
 final class AppReleaseNotesTests: XCTestCase {
@@ -51,71 +52,78 @@ final class AppReleaseNotesTests: XCTestCase {
         }
     }
 
-    func testOnlyPublishedStableReleasesBecomeNotes() throws {
-        let data = Data("""
-        [
-          {"tag_name":"v1.0.0","published_at":"2026-01-01T00:00:00Z","body":"- Public feature","html_url":"https://github.com/TheoYuuu/tsx/releases/tag/v1.0.0","draft":false,"prerelease":false},
-          {"tag_name":"v2.0.0","published_at":null,"body":"draft","html_url":"https://github.com/TheoYuuu/tsx/releases/tag/v2.0.0","draft":true,"prerelease":false},
-          {"tag_name":"v2.0.0-beta","published_at":"2026-02-01T00:00:00Z","body":"beta","html_url":"https://github.com/TheoYuuu/tsx/releases/tag/v2.0.0-beta","draft":false,"prerelease":true}
-        ]
-        """.utf8)
-        let result = try AppReleaseNotesClient.decodePage(data)
-        XCTAssertEqual(result.count, 3)
-        XCTAssertEqual(result.releases.map(\.version), ["1.0.0"])
-        XCTAssertEqual(result.releases.first?.notes, "- Public feature")
-    }
-
-    func testForeignReleaseLinksAndOversizedNotesAreRejected() {
-        for link in ["https://example.invalid/releases/v1.0.0", "file:///installer", "https://github.com/another/project/releases/tag/v1.0.0"] {
-            let data = Data("""
-            [{"tag_name":"v1.0.0","published_at":"2026-01-01T00:00:00Z","body":"text","html_url":"\(link)","draft":false,"prerelease":false}]
-            """.utf8)
-            XCTAssertThrowsError(try AppReleaseNotesClient.decodePage(data))
-        }
-        XCTAssertThrowsError(try AppReleaseNotesClient.decodePage(Data(repeating: 32, count: 2 * 1_024 * 1_024 + 1)))
-    }
-
     @MainActor
-    func testNetworkFailurePreservesShippedNotesAndAllowsRetry() async {
-        enum FixtureError: Error { case unavailable }
-        let entry = AppRelease(version: "1.0.0", publishedAt: .distantPast, notes: "Published note",
-                               url: URL(string: "https://github.com/TheoYuuu/tsx/releases/tag/v1.0.0")!)
-        let store = AppReleaseNotesStore(entries: [entry], loader: { throw FixtureError.unavailable })
-        await store.load()
+    func testOnlyVerifiedAppcastContentIsAcceptedAndFailurePreservesNotes() {
+        let bundled = AppRelease(version: "1.0.0", publishedAt: nil, notes: "Bundled", url: nil)
+        let store = AppReleaseNotesStore(entries: [bundled])
+        let remote = AppcastReleaseNotes(version: "1.0.0", build: "2", publishedAt: Date(timeIntervalSince1970: 42), notes: "Verified")
+        for status in [SPUAppcastSigningValidationStatus.skipped, .failed] {
+            store.beginLoading(force: true)
+            store.receive([remote], status: status)
+            XCTAssertTrue(store.failed)
+            XCTAssertEqual(store.entries, [bundled])
+        }
+        store.receive([remote], status: .succeeded)
+        XCTAssertEqual(store.entries.first?.notes, "Verified")
+        XCTAssertEqual(store.entries.first?.publishedAt, Date(timeIntervalSince1970: 42))
+        store.beginLoading(force: true)
+        store.loadingFailed()
+        XCTAssertEqual(store.entries.first?.notes, "Verified")
         XCTAssertTrue(store.failed)
+    }
+
+    @MainActor
+    func testMergeUsesHighestBuildKeepsOlderBundledNotesAndRejectsEmptyOrHTMLReplacement() {
+        let url = URL(string: "https://github.com/TheoYuuu/tsx/releases/tag/v1.0.0")!
+        let store = AppReleaseNotesStore(entries: [
+            .init(version: "1.0.0", publishedAt: nil, notes: "Bundled", url: url),
+            .init(version: "0.9.0", publishedAt: nil, notes: "Older", url: nil)
+        ])
+        store.receive([
+            .init(version: "2.0.0", build: "9", notes: "Old build"),
+            .init(version: "2.0.0", build: "10", notes: "Newest build"),
+            .init(version: "1.0.0", build: "2", notes: "<script>untrusted markup</script>", format: "html"),
+            .init(version: "3.0.0-beta", build: "20", notes: "Beta"),
+            .init(version: "3.0.0", build: "21", notes: "Beta", channel: "beta"),
+            .init(version: "4.0.0", build: "invalid", notes: "Bad build")
+        ], status: .succeeded)
+        XCTAssertEqual(store.entries.map(\.version), ["2.0.0", "1.0.0", "0.9.0"])
+        XCTAssertEqual(store.entries[0].notes, "Newest build")
+        XCTAssertEqual(store.entries[1].notes, "Bundled")
+        XCTAssertEqual(store.entries[1].url, url)
+        store.receive([.init(version: "1.0.0", build: "3", notes: "  ")], status: .succeeded)
+        XCTAssertEqual(store.entries[1].notes, "Bundled")
+    }
+
+    @MainActor
+    func testSignedFullReleaseNotesLinkStillRequiresAllowedHTTPSHostAndPath() {
+        let allowed = URL(string: "https://github.com/uuthings/tsx/releases/tag/v1.0.0")!
+        let store = AppReleaseNotesStore(entries: [])
+        store.receive([.init(version: "1.0.0", build: "1", notes: "Text", url: allowed)], status: .succeeded)
+        XCTAssertEqual(store.entries.first?.url, allowed)
+        for raw in ["http://github.com/uuthings/tsx/releases", "https://example.invalid/releases/v1.0.0",
+                    "file:///installer", "https://github.com/another/project/releases/tag/v1.0.0",
+                    "https://user@github.com/uuthings/tsx/releases", "https://github.com:444/uuthings/tsx/releases",
+                    "https://github.com/uuthings/tsx/releases/../settings", "https://github.com/uuthings/tsx/releases?redirect=bad"] {
+            XCTAssertNil(AppUpdateLinks.allowedReleaseURL(URL(string: raw)), raw)
+        }
+        store.receive([.init(version: "1.0.0", build: "2", url: URL(string: "https://example.invalid"))], status: .succeeded)
+        XCTAssertEqual(store.entries.first?.url, allowed)
+    }
+
+    @MainActor
+    func testBoundsRejectOversizedFeedAndSkipOversizedIndividualNotes() {
+        let store = AppReleaseNotesStore(entries: [])
+        store.receive(Array(repeating: .init(version: "1.0.0", build: "1"), count: 201), status: .succeeded)
+        XCTAssertTrue(store.failed)
+        store.receive([.init(version: "1.0.0", build: "1", notes: String(repeating: "x", count: 128 * 1024 + 1))], status: .succeeded)
+        XCTAssertTrue(store.entries.isEmpty)
+    }
+
+    @MainActor
+    func testPreviewDoesNotStartNetworkLoadingEvenWhenForced() {
+        let store = AppReleaseNotesStore(entries: [], allowsNetworkLoading: false)
+        XCTAssertFalse(store.beginLoading(force: true))
         XCTAssertFalse(store.isLoading)
-        XCTAssertFalse(store.hasLoaded)
-        XCTAssertEqual(store.entries, [entry])
-    }
-
-    @MainActor
-    func testAllFetchedVersionsRemainAvailable() async {
-        let entries = ["1.2.0", "1.1.0", "1.0.0"].map { version in
-            AppRelease(version: version, publishedAt: .distantPast, notes: "Published \(version)",
-                       url: URL(string: "https://github.com/TheoYuuu/tsx/releases/tag/v\(version)")!)
-        }
-        let store = AppReleaseNotesStore(entries: [], loader: { entries })
-        await store.load()
-        XCTAssertEqual(store.entries.map(\.version), ["1.2.0", "1.1.0", "1.0.0"])
-        XCTAssertTrue(store.hasLoaded)
-    }
-
-    @MainActor
-    func testIsolatedPreviewNeverInvokesNetworkLoaderEvenWhenForced() async {
-        actor Counter {
-            var calls = 0
-            func increment() { calls += 1 }
-        }
-        let counter = Counter()
-        let store = AppReleaseNotesStore(entries: [], allowsNetworkLoading: false, loader: {
-            await counter.increment()
-            return []
-        })
-        await store.load()
-        await store.load(force: true)
-        let calls = await counter.calls
-        XCTAssertEqual(calls, 0)
-        XCTAssertTrue(store.hasLoaded)
-        XCTAssertFalse(store.failed)
     }
 }

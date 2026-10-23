@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>SUFeedURL</key>
-    <string>https://lumaxspace.com/updates/tsx/appcast.xml</string>
+    <string>https://updates.uuthings.com/tsx/macos/stable/appcast.xml</string>
     <key>SUPublicEDKey</key>
     <string>hE9ai+/xiB+SIzYZUDyWemAArX6ad7uSc3UxexIarpk=</string>
     <key>SUEnableAutomaticChecks</key>

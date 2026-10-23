@@ -13,6 +13,7 @@ from pathlib import Path
 
 import archive_evidence as evidence
 from archive_evidence import sha
+import update_feed
 
 ROOT = Path(__file__).resolve().parents[2]
 TEAM = "97K37J92QD"
@@ -93,7 +94,7 @@ def verify(app):
     info = plistlib.loads((app / "Contents/Info.plist").read_bytes())
     if info["CFBundleIdentifier"] != ACCOUNT:
         raise RuntimeError("Unexpected app identity")
-    if info.get("SUFeedURL") != "https://lumaxspace.com/updates/tsx/appcast.xml":
+    if info.get("SUFeedURL") != update_feed.FEED:
         raise RuntimeError("Unexpected update feed")
     if not info.get("SURequireSignedFeed") or not info.get("SUVerifyUpdateBeforeExtraction"):
         raise RuntimeError("Update signature verification must be enabled")
@@ -331,7 +332,7 @@ def finish(args, metadata):
     recorded_command(attempt, "dmg-stapler", "xcrun", "stapler", "validate", final_dmg)
     recorded_command(attempt, "dmg-gatekeeper", "spctl", "--assess", "--type", "open", "--context", "context:primary-signature", "--verbose=4", final_dmg)
     run(TOOLS / "generate_appcast", "--account", ACCOUNT, "--maximum-deltas", "0",
-        "--download-url-prefix", f"https://github.com/TheoYuuu/tsx/releases/download/v{metadata['version']}/",
+        "--download-url-prefix", "https://updates.uuthings.com/" + update_feed.release_prefix(metadata['version'], metadata['build']),
         "--link", "https://lumaxspace.com/products/tsx/", candidate)
     run(TOOLS / "sign_update", "--account", ACCOUNT, "--verify", candidate / "appcast.xml")
     final_hash = sha(final_dmg)

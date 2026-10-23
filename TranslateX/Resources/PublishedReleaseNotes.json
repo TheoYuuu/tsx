@@ -1,8 +1,14 @@
 [
   {
+    "version": "1.3.8",
+    "notes": "## 中文\n\n- **原文与译文朗读** 两侧新增小喇叭，使用 macOS 系统声音；点击朗读，再次点击立即停止，下次从头播放。默认不自动朗读，同一时间只播放一侧。\n- **英美口音切换** 英语口音直接显示，支持美式与英式切换并记住选择；朗读时显示声波动效，切换口音或修改文字会停止当前播放。\n- **更紧凑的内容区** 缩小两侧内容内边距，对齐语言选择、文字和操作按钮。\n- **独立更新服务** 更新清单与安装包改由 updates.uuthings.com 提供；近期更新使用已验签的清单内容。启动时后台检查失败不打扰，手动检查失败仍会提示。\n\n## English\n\n- **Read either text aloud** Speaker buttons use macOS system voices for the source and translation. Click to read, click again to stop, and start again from the beginning. Playback never starts automatically, and only one side plays at a time.\n- **US and UK accents** English accent choices are visible and remembered. Animated sound waves indicate playback; changing the accent or editing text stops it.\n- **More compact content panes** Reduced inner padding aligns language selectors, text and actions.\n- **Independent update service** Updates and installers are delivered through updates.uuthings.com. Recent updates use verified signed-feed content. Background launch-check failures stay quiet; manual-check failures still show feedback.\n",
+    "url": "https://github.com/uuthings/tsx/releases/tag/v1.3.8"
+  },
+  {
     "version": "1.3.7",
     "notes": "## 中文\n\n- **窗口按钮悬停修复** 鼠标移入主窗口或设置窗口左上角的三个按钮时，正常显示关闭、最小化和全屏图标；移开后隐藏，保留原有按钮位置与主窗口紧凑间距。\n\n## English\n\n- **Window button hover fix** The close, minimize, and full-screen symbols now appear when hovering over the three window buttons in the main and Settings windows, and disappear when the pointer leaves. Button positions and the compact main-window spacing are preserved.\n",
-    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.7"
+    "url": "https://github.com/TheoYuuu/tsx/releases/tag/v1.3.7",
+    "publishedAt": "2026-10-19T09:25:53Z"
   },
   {
     "version": "1.3.6",

@@ -23,7 +23,7 @@ struct ReleaseNotesView: View {
                         Text(L10n.string("Could not refresh release notes. Showing saved notes."))
                             .font(.system(size: 11)).foregroundStyle(p.secondary)
                         Spacer()
-                        Button(L10n.string("Retry")) { Task { await updates.releases.load(force: true) } }
+                        Button(L10n.string("Retry")) { Task { await updates.loadReleaseNotes(force: true) } }
                             .buttonStyle(ReleaseDialogTextStyle())
                     }.padding(.bottom, 18)
                 }
@@ -47,8 +47,8 @@ struct ReleaseNotesView: View {
                         Text(L10n.string("Release notes are not available in this language yet."))
                             .font(.system(size: 12)).foregroundStyle(p.secondary).padding(.top, 18)
                     }
-                    if mode == .recent, index > 0 {
-                        Link(destination: release.url) {
+                    if mode == .recent, index > 0, let url = AppUpdateLinks.allowedReleaseURL(release.url) {
+                        Link(destination: url) {
                             HStack(spacing: 4) { Text(L10n.string("Version details")); Image(systemName: "arrow.up.right") }
                         }
                         .buttonStyle(ReleaseDialogTextStyle()).padding(.leading, 14).padding(.top, 12)
@@ -159,7 +159,7 @@ struct ReleaseMarkdownContent: View {
                 }
             }
         }
-        .environment(\.openURL, OpenURLAction { url in url.scheme == "https" ? .systemAction : .discarded })
+        .environment(\.openURL, OpenURLAction { url in AppUpdateLinks.allowedReleaseURL(url) != nil ? .systemAction : .discarded })
     }
     private func inline(_ text: String) -> AttributedString {
         (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(text)

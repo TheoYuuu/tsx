@@ -128,7 +128,7 @@ final class AppUpdateControllerTests: XCTestCase {
 
     func testPackagedUpdatePolicyRequiresSignaturesAndLeavesScheduledUpdatesOffByDefault() throws {
         let info = try XCTUnwrap(Bundle.main.infoDictionary)
-        XCTAssertEqual(info["SUFeedURL"] as? String, "https://lumaxspace.com/updates/tsx/appcast.xml")
+        XCTAssertEqual(info["SUFeedURL"] as? String, "https://updates.uuthings.com/tsx/macos/stable/appcast.xml")
         let publicKey = try XCTUnwrap(info["SUPublicEDKey"] as? String)
         XCTAssertEqual(Data(base64Encoded: publicKey)?.count, 32)
         XCTAssertEqual(info["SURequireSignedFeed"] as? Bool, true)
@@ -162,6 +162,74 @@ private final class UpdateBackendFixture: AppUpdaterBackend {
 }
 
 extension AppUpdateControllerTests {
+    func testLaunchFailureIsSilentRegardlessOfAutomaticPreferenceAndCallbackOrder() {
+        for automatic in [false, true] {
+            for delegateFirst in [false, true] {
+                let backend = UpdateBackendFixture()
+                backend.automaticallyChecksForUpdates = automatic
+                backend.automaticallyDownloadsUpdates = automatic
+                let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+                    isReleaseBuild: true, recordsInstalledVersions: false, backend: backend)
+                var presentations = 0
+                updates.onPresentUpdate = { presentations += 1 }
+                updates.start()
+                if automatic { updates.showUpdateCheck(cancellation: {}) }
+                let error = URLError(.timedOut)
+                if delegateFirst { updates.checkAborted(error); updates.finishedCheck() }
+                updates.updateErrored(error)
+                if !delegateFirst { updates.checkAborted(error); updates.finishedCheck() }
+                XCTAssertNil(updates.updatePresentation)
+                XCTAssertEqual(presentations, 0)
+                XCTAssertTrue(updates.lastCheckFailed)
+                XCTAssertFalse(updates.hasChecked)
+                XCTAssertTrue(updates.releases.failed)
+                updates.checkForUpdates()
+                updates.showUpdateCheck(cancellation: {})
+                updates.updateErrored(error)
+                XCTAssertEqual(updates.updatePresentation?.phase, .failed)
+                XCTAssertEqual(updates.updatePresentation?.isCheckFailure, true)
+            }
+        }
+    }
+
+    func testCancelledCheckDoesNotResurfaceFromLateErrorCallbacks() {
+        let (updates, _) = aboutUpdateFixture()
+        updates.checkForUpdates()
+        updates.showUpdateCheck(cancellation: {})
+        updates.dismissUpdate()
+        updates.finishedCheck()
+        updates.updateErrored(URLError(.cancelled))
+        XCTAssertNil(updates.updatePresentation)
+    }
+
+    func testAutomaticInstallationFailureIsVisibleEvenAfterPresentationIsDismissed() {
+        let backend = UpdateBackendFixture()
+        backend.automaticallyDownloadsUpdates = true
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+            isReleaseBuild: true, recordsInstalledVersions: false, backend: backend)
+        updates.start()
+        updates.downloadStarted(cancellation: {})
+        updates.installationDismissed()
+        updates.finishedCheck()
+        updates.updateErrored(URLError(.timedOut))
+        XCTAssertEqual(updates.updatePresentation?.phase, .failed)
+        XCTAssertEqual(updates.updatePresentation?.isCheckFailure, false)
+    }
+
+    func testReleaseNotesReuseCurrentCheckAndRetryOnlyProbesInformation() async {
+        let backend = UpdateBackendFixture()
+        let updates = AppUpdateController(bundleIdentifier: "com.lumax.tsx", isTesting: false,
+            isReleaseBuild: true, recordsInstalledVersions: false, backend: backend)
+        updates.start()
+        await updates.loadReleaseNotes(force: true)
+        XCTAssertEqual(backend.calls, ["start", "information"])
+        updates.checkAborted(URLError(.timedOut)); updates.finishedCheck()
+        await updates.loadReleaseNotes(force: true)
+        await updates.loadReleaseNotes(force: true)
+        XCTAssertEqual(backend.calls, ["start", "information", "information"])
+        XCTAssertNil(updates.updatePresentation)
+    }
+
     func testManualCheckReplacesCompactDialogWithExistingOffer() {
         let (updates, _) = aboutUpdateFixture()
         updates.performUpdateAction()
